@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "457481481931",
+    "project_id": "nextmeet-111",
+    "storage_bucket": "nextmeet-111.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:457481481931:android:06c78ff22cad896f70754e",
+        "android_client_info": {
+          "package_name": "com.yousful.nextmeet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "457481481931-5q4qdvirc2er000m6c9ciuri36c149vd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yousful.nextmeet",
+            "certificate_hash": "b3852f9edb7576e8f951e0a218880a981e5d7eea"
+          }
+        },
+        {
+          "client_id": "457481481931-93av0cipnjpmr98e3u9o7k2kkgtcnc3j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yousful.nextmeet",
+            "certificate_hash": "d4bcba4c3c61bd14f44c9d967f239191a1da6527"
+          }
+        },
+        {
+          "client_id": "457481481931-9cdfe8q8lgg8ns4q8fsr6p47rl883qrh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAePQltHYD7e9ElEK52BC7K9bLJ3qbJJvI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "457481481931-9cdfe8q8lgg8ns4q8fsr6p47rl883qrh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

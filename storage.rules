@@ -1,0 +1,21 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Check if user is authenticated.
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Allow authenticated users to upload and view files in relationships.
+    // This fixes "storage/unknown" caused by complex firestore.get() evaluation failures.
+    match /relationships/{relId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Fallback: deny any other access.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

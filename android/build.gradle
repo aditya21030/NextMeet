@@ -1,0 +1,43 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.6.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0"
+    }
+}
+
+allprojects {
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+
+// Fix missing namespace in newer AGP for older plugins
+subprojects {
+    def configureProject = { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (it.hasProperty('namespace') && it.namespace == null) {
+                    it.namespace = "com.nextmeet.${project.name.replaceAll("-", ".")}"
+                }
+            }
+        }
+    }
+
+    if (project.state.executed) {
+        configureProject(project)
+    } else {
+        afterEvaluate {
+            configureProject(project)
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
