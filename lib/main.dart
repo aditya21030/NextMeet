@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/constants.dart';
 import 'core/theme.dart';
 import 'features/onboarding/splash_screen.dart';
 import 'core/services/notification_service.dart';
@@ -23,6 +25,15 @@ void main() async {
     await Firebase.initializeApp();
   } catch (e) {
     debugPrint('Firebase initialization warning: $e');
+  }
+
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.url,
+      anonKey: SupabaseConfig.anonKey,
+    );
+  } catch (e) {
+    debugPrint('Supabase initialization warning: $e');
   }
 
   // Mount UI immediately so the user sees the Splash screen without delay

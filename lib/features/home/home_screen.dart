@@ -13,7 +13,7 @@ import '../../core/models/relationship_model.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../widgets/primary_button.dart';
-import 'chat_screen.dart';
+import 'calendar_screen.dart';
 import 'shared_map_screen.dart';
 import '../../core/services/widget_service.dart';
 import 'package:intl/intl.dart';
@@ -50,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isPressingSync = false;
   Timer? _heartbeatTimer;
   Timer? _syncPulseTimer;
-  Stream<int>? _unreadCountStream;
   final Battery _battery = Battery();
   StreamSubscription<BatteryState>? _batterySubscription;
   Timer? _batteryTimer;
@@ -820,7 +819,6 @@ class _HomeScreenState extends State<HomeScreen> {
     
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB), // Very light grey/white
-      floatingActionButton: _buildQuickChatFab(data),
       body: Stack(
         children: [
           SafeArea(
@@ -976,47 +974,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // Right: Calendar & Chat
+                  // Right: Calendar
                   GestureDetector(
                     onTap: () {
                       VibrationService.medium();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(
-                            relationshipId: data.id ?? '',
-                            partnerName: data.getDisplayPartnerName(_cloudService.currentUid),
-                            partnerUid: data.getPartnerUid(_cloudService.currentUid) ?? '',
+                      if (data.id != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CalendarScreen(
+                              relationshipId: data.id!,
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
                     },
-                    child: SizedBox(
+                    child: Container(
                       width: 44,
                       height: 44,
-                      child: StreamBuilder<int>(
-                        stream: _unreadCountStream ??= _cloudService.streamUnreadCount(data.id!),
-                        builder: (context, snapshot) {
-                          final unreadCount = snapshot.data ?? 0;
-                          return Badge(
-                            label: Text(unreadCount.toString(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                            isLabelVisible: unreadCount > 0,
-                            backgroundColor: Colors.redAccent,
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 10)),
-                                ],
-                              ),
-                              child: const Icon(Icons.mode_comment_rounded, color: Colors.pinkAccent, size: 22),
-                            ),
-                          );
-                        },
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 10)),
+                        ],
                       ),
+                      child: const Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 22),
                     ),
                   ),
                 ],
@@ -1779,50 +1762,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildQuickChatFab(RelationshipModel data) {
-    if (data.id == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 76),
-      child: StreamBuilder<int>(
-        stream: _unreadCountStream ??= _cloudService.streamUnreadCount(data.id!),
-        builder: (context, snapshot) {
-          final unreadCount = snapshot.data ?? 0;
-          return Badge(
-            label: Text(
-              '$unreadCount',
-              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-            ),
-            isLabelVisible: unreadCount > 0,
-            backgroundColor: Colors.redAccent,
-            child: FloatingActionButton.extended(
-              heroTag: 'quick_chat_fab',
-              onPressed: () {
-                VibrationService.medium();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ChatScreen(
-                      relationshipId: data.id ?? '',
-                      partnerName: data.getDisplayPartnerName(_cloudService.currentUid),
-                      partnerUid: data.getPartnerUid(_cloudService.currentUid) ?? '',
-                    ),
-                  ),
-                );
-              },
-              backgroundColor: AppColors.primary,
-              elevation: 4,
-              icon: const Icon(Icons.mode_comment_rounded, color: Colors.white, size: 20),
-              label: Text(
-                'Chat',
-                style: AppTextStyles.bodyM.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          );
-        },
       ),
     );
   }

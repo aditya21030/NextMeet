@@ -215,3 +215,9 @@ class AppLinks {
            "Wait for me there! ✨";
   }
 }
+
+class SupabaseConfig {
+  static const String url = 'https://pumzmskdirdaqpbkghvl.supabase.co';
+  static const String anonKey = 'sb_publishable_-Y856VjMveZ28zMyOe5-zQ_7fMYHnwC';
+}
+

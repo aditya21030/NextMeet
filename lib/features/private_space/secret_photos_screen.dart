@@ -14,6 +14,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../profile/nextmeet_plus_screen.dart';
+import '../../core/services/image_compression_service.dart';
 
 class SecretPhotosScreen extends StatefulWidget {
   const SecretPhotosScreen({super.key});
@@ -152,19 +153,24 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
 
     setState(() => _isUploading = true);
     try {
-      final file = File(image.path);
+      final rawFile = File(image.path);
+      // Compress photo to WebP format to save 90%+ vault storage
+      final file = await ImageCompressionService.compressToWebp(rawFile);
       final int sizeBytes = await file.length();
       
-      // Final check with actual file size
+      // Final check with actual compressed file size
       if ((rel.privateSpaceStorageBytes + sizeBytes) > (limitMb * 1024 * 1024)) {
         _showStorageLimitDialog(rel);
         return;
       }
 
-      final fileName = 'private_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName = 'private_${DateTime.now().millisecondsSinceEpoch}.webp';
       final storageRef = _storage.ref().child('relationships/$relId/private_photos/$fileName');
       
-      await storageRef.putFile(file);
+      await storageRef.putFile(
+        file,
+        SettableMetadata(contentType: 'image/webp'),
+      );
       final downloadUrl = await storageRef.getDownloadURL();
       
       await _cloudService.addPrivatePhoto(relId, downloadUrl, sizeBytes);

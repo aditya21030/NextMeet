@@ -11,6 +11,7 @@ import 'vibration_service.dart';
 import '../cities.dart';
 import '../constants.dart';
 import 'dart:convert';
+import 'image_compression_service.dart';
 
 class CloudRelationshipService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -41,10 +42,15 @@ class CloudRelationshipService {
       throw Exception('Memory limit reached. Upgrade to NextMeet+ for more space! ✨');
     }
 
-    final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    // Compress photo to lightweight WebP format (~60-90KB)
+    final compressedImage = await ImageCompressionService.compressToWebp(image);
+    final String fileName = '${DateTime.now().millisecondsSinceEpoch}.webp';
     final ref = _storage.ref().child('relationships/$relId/memories/$fileName');
     
-    final uploadTask = await ref.putFile(image);
+    final uploadTask = await ref.putFile(
+      compressedImage,
+      SettableMetadata(contentType: 'image/webp'),
+    );
     final String imageUrl = await uploadTask.ref.getDownloadURL();
 
     await _firestore.collection('relationships').doc(relId).collection('memories').add({
@@ -62,59 +68,6 @@ class CloudRelationshipService {
     await incrementStat(relId, 'memories');
   }
 
-  Future<String> uploadChatFile(String relId, File file, String type) async {
-    if (_currentUid == null) throw Exception('User not authenticated');
-    final String extension = type == 'voice' ? 'm4a' : 'jpg';
-    final String fileName = 'chat_${type}_${DateTime.now().millisecondsSinceEpoch}.$extension';
-    final ref = _storage.ref().child('relationships/$relId/chat/$type/$fileName');
-    final uploadTask = await ref.putFile(file);
-    return await uploadTask.ref.getDownloadURL();
-  }
-
-  Future<void> sendChatMessage(String relId, {
-    String? text, 
-    String? imageUrl, 
-    String? voiceUrl, 
-    String? stickerId,
-    String type = 'text',
-  }) async {
-    if (_currentUid == null) return;
-    await _firestore.collection('relationships').doc(relId).collection('messages').add({
-      'senderUid': _currentUid,
-      'text': text,
-      'imageUrl': imageUrl,
-      'voiceUrl': voiceUrl,
-      'stickerId': stickerId,
-      'type': type,
-      'timestamp': FieldValue.serverTimestamp(),
-      'isSeen': false,
-      'seenAt': null,
-    });
-    await updateActivity(relId);
-    await incrementStat(relId, 'chat_messages');
-  }
-
-  Future<void> deleteChatMessage(String relId, String messageId) async {
-    if (_currentUid == null) return;
-    try {
-      final doc = await _firestore.collection('relationships').doc(relId).collection('messages').doc(messageId).get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        final String? imageUrl = data['imageUrl'];
-        final String? voiceUrl = data['voiceUrl'];
-        if (imageUrl != null && imageUrl.isNotEmpty) {
-          try { await _storage.refFromURL(imageUrl).delete(); } catch (_) {}
-        }
-        if (voiceUrl != null && voiceUrl.isNotEmpty) {
-          try { await _storage.refFromURL(voiceUrl).delete(); } catch (_) {}
-        }
-      }
-      await _firestore.collection('relationships').doc(relId).collection('messages').doc(messageId).delete();
-    } catch (e) {
-      print('Error in deleteChatMessage: $e');
-    }
-  }
-
   Future<void> updateActivity(String relId) async {
     if (_currentUid == null) return;
     final relationship = await _relationships.doc(relId).get();
@@ -122,25 +75,6 @@ class CloudRelationshipService {
     final isUser1 = _currentUid == relationship.get('uid1');
     await _relationships.doc(relId).update({
       isUser1 ? 'user1LastActive' : 'user2LastActive': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> markMessagesAsSeen(String relId) async {
-    if (_currentUid == null) return;
-    final query = await _firestore.collection('relationships').doc(relId).collection('messages').where('isSeen', isEqualTo: false).get();
-    final docsToUpdate = query.docs.where((doc) => doc['senderUid'] != _currentUid);
-    if (docsToUpdate.isEmpty) return;
-    final batch = _firestore.batch();
-    for (var doc in docsToUpdate) {
-      batch.update(doc.reference, {'isSeen': true, 'seenAt': FieldValue.serverTimestamp()});
-    }
-    await batch.commit();
-  }
-
-  Stream<int> streamUnreadCount(String relId) {
-    if (_currentUid == null) return Stream.value(0);
-    return _firestore.collection('relationships').doc(relId).collection('messages').where('isSeen', isEqualTo: false).snapshots().map((snapshot) {
-      return snapshot.docs.where((doc) => doc['senderUid'] != _currentUid).length;
     });
   }
 
@@ -652,19 +586,21 @@ class CloudRelationshipService {
   }
 
   Future<String> uploadProfilePhoto(String relId, Uint8List imageBytes) async {
-    final String fileName = 'profile_${_currentUid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    
     if (imageBytes.isEmpty) {
       throw Exception('Image bytes are empty! Scoped storage issue.');
     }
+
+    // Compress profile avatar to lightweight WebP format (~30-50KB)
+    final compressedBytes = await ImageCompressionService.compressBytesToWebp(imageBytes);
+    final String fileName = 'profile_${_currentUid}_${DateTime.now().millisecondsSinceEpoch}.webp';
     
     try {
       final ref = _storage.ref().child('relationships/$relId/profiles/$fileName');
-      final metadata = SettableMetadata(contentType: 'image/jpeg');
-      final uploadTask = await ref.putData(imageBytes, metadata);
+      final metadata = SettableMetadata(contentType: 'image/webp');
+      final uploadTask = await ref.putData(compressedBytes, metadata);
       return await uploadTask.ref.getDownloadURL();
     } catch (e) {
-      throw Exception('Firebase Storage Error: $e');
+      throw Exception('Storage Error: $e');
     }
   }
 
