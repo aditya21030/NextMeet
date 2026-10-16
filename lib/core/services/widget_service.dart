@@ -14,12 +14,23 @@ class WidgetService {
       // Calculate Milestones
       final daysTogether = now.difference(rel.anniversaryDate).inDays;
       final nextMeetDiff = rel.nextMeetingDate.difference(now);
-      
+
+      final bool isToday = now.year == rel.nextMeetingDate.year &&
+          now.month == rel.nextMeetingDate.month &&
+          now.day == rel.nextMeetingDate.day;
+      final bool isPast = !isToday && rel.nextMeetingDate.isBefore(now);
+
       String countdownVal = "Soon ❤️";
       String countdownSub = "NEXT REUNION";
-      if (nextMeetDiff.isNegative) {
-        countdownVal = "TODAY ✨";
-        countdownSub = "TOGETHER AGAIN";
+      String reunionDate = DateFormat('MMM d, yyyy').format(rel.nextMeetingDate).toUpperCase();
+
+      if (isToday) {
+        countdownVal = "TODAY! 🎉";
+        countdownSub = "REUNION DAY ❤️";
+      } else if (isPast) {
+        countdownVal = "PLAN VISIT ✈️";
+        countdownSub = "TAP TO SET REUNION";
+        reunionDate = "DATE PASSED";
       } else if (nextMeetDiff.inDays > 0) {
         countdownVal = "${nextMeetDiff.inDays} DAYS";
         countdownSub = "${nextMeetDiff.inHours % 24}H REMAINING";
@@ -36,15 +47,14 @@ class WidgetService {
       final partnerBatteryStr = partnerBatteryLevel != null ? "$partnerBatteryLevel%" : "--%";
       final isCharging = rel.isPartnerCharging(currentUid);
 
-      // Cities & Route
-      String origin = rel.getMyLocation(currentUid).trim();
+      // Clean City Names (strip commas and country codes)
+      String origin = rel.getMyLocation(currentUid).split(',').first.trim();
       if (origin.isEmpty) origin = "YOU";
-      String dest = rel.getPartnerLocation(currentUid).trim();
+      String dest = rel.getPartnerLocation(currentUid).split(',').first.trim();
       if (dest.isEmpty) dest = partnerName;
 
       // Distance
       final distStr = rel.computedDistance <= 0 ? "0 KM" : "${rel.computedDistance.toStringAsFixed(0)} KM";
-      final reunionDate = DateFormat('MMM d, yyyy').format(rel.nextMeetingDate).toUpperCase();
 
       // Legacy fields
       await HomeWidget.saveWidgetData<String>('partnerName', partnerName);

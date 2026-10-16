@@ -1110,18 +1110,38 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                data.formattedDistance,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                            GestureDetector(
+                              onTap: () {
+                                VibrationService.medium();
+                                if (data.id != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SharedMapScreen(relId: data.id!),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.map_rounded, color: Colors.white70, size: 12),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      data.formattedDistance,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -1135,11 +1155,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             Expanded(
                               child: Text(
                                 data.getMyLocation(_cloudService.currentUid).isNotEmpty
-                                    ? data.getMyLocation(_cloudService.currentUid)
-                                    : 'Your City',
+                                    ? data.getMyLocation(_cloudService.currentUid).split(',').first.trim().toUpperCase()
+                                    : 'YOUR CITY',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 17,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w900,
                                 ),
                                 maxLines: 1,
@@ -1150,24 +1170,24 @@ class _HomeScreenState extends State<HomeScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 8),
                               child: Row(
                                 children: [
-                                  Container(width: 20, height: 1.5, color: const Color(0xFFF59E0B)),
+                                  Container(width: 16, height: 1.5, color: const Color(0xFFF59E0B)),
                                   const Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 4),
                                     child: Icon(Icons.flight_rounded, color: Color(0xFFF59E0B), size: 18),
                                   ),
-                                  Container(width: 20, height: 1.5, color: const Color(0xFFF59E0B)),
+                                  Container(width: 16, height: 1.5, color: const Color(0xFFF59E0B)),
                                 ],
                               ),
                             ),
                             Expanded(
                               child: Text(
                                 data.getPartnerLocation(_cloudService.currentUid).isNotEmpty
-                                    ? data.getPartnerLocation(_cloudService.currentUid)
-                                    : 'Partner City',
+                                    ? data.getPartnerLocation(_cloudService.currentUid).split(',').first.trim().toUpperCase()
+                                    : 'PARTNER CITY',
                                 textAlign: TextAlign.right,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 17,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w900,
                                 ),
                                 maxLines: 1,
@@ -1240,94 +1260,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                       Expanded(
-                        child: _buildHighFidelityButton(
-                          'Miss You ❤️', 
-                          const Color(0xFFFF5E7E), 
-                          Icons.favorite_rounded, 
-                          () => _handleInteraction(data, 'miss'),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.m),
-                       Expanded(
-                        child: _buildHighFidelityButton(
-                          'Hug ✨', 
-                          const Color(0xFFF59E0B), 
-                          Icons.handshake_rounded, 
-                          () => _handleInteraction(data, 'hug'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.m),
-                  _buildHighFidelityButton(
-                    'Touch ⚡', 
-                    const Color(0xFF8B5CF6), 
-                    Icons.touch_app_rounded, 
-                    () => _handleInteraction(data, 'touch'),
-                    isFullWidth: true,
-                  ),
-                ],
-              ),
-            ),
+            // Sleek Tactile Quick Intimacy Bar (Replaces 4 bloated cards with 1 clean chic row)
+            _buildQuickIntimacyBar(data),
+
             const SizedBox(height: 24),
-            
-            // Micro Reactions Row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Row(
-                children: [
-                  _buildReactionItem(data, 'Love', '❤️'),
-                  const SizedBox(width: 8),
-                  _buildReactionItem(data, 'Hug', '🤗'),
-                  const SizedBox(width: 8),
-                  _buildReactionItem(data, 'Kiss', '😘'),
-                  const SizedBox(width: 8),
-                  _buildReactionItem(data, 'Miss', '🔥'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10)),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    _buildStatColumn('$daysTogether', 'DAYS\nTOGETHER'),
-                    _buildStatDivider(),
-                    _buildStatColumn(
-                      data.computedDistance < 0.1 
-                        ? 'SAME PLACE ❤️'
-                        : (data.computedDistance < 1 
-                            ? (data.computedDistance == 0 ? '0' : data.computedDistance.toStringAsFixed(1)) 
-                            : (data.computedDistance == data.computedDistance.toInt() 
-                                ? data.computedDistance.toInt().toString() 
-                                : data.computedDistance.toStringAsFixed(1))), 
-                      'KM\nAPART'
-                    ),
-                    _buildStatDivider(),
-                    _buildStatColumn('$daysSince', 'DAYS\nSINCE'),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
 
             // Discovery Section
             // NEW FEATURE: Heart Sync (Digital Hand Holding)
@@ -1363,7 +1301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: child,
                     ),
                     child: Container(
-                      height: 180,
+                      height: 140,
                       width: double.infinity,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -1497,11 +1435,6 @@ class _HomeScreenState extends State<HomeScreen> {
             
             // Daily Question for Two (Core Retention Hook)
             _buildDailyQuestionCard(data, now),
-
-            const SizedBox(height: 32),
-            
-            // Shared Map Feature (Premium)
-            _buildSharedMapCard(data),
 
             const SizedBox(height: 32),
             
@@ -2044,33 +1977,42 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  Widget _buildHighFidelityButton(String text, Color color, IconData icon, VoidCallback onTap, {bool isFullWidth = false}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+  Widget _buildQuickIntimacyBar(RelationshipModel data) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
       child: Container(
-        height: 56,
-        width: isFullWidth ? double.infinity : null,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         decoration: BoxDecoration(
-          color: color,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
-            BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
           ],
+          border: Border.all(color: const Color(0xFFF1F5F9)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                text,
-                style: AppTextStyles.button.copyWith(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+            _buildQuickTouchPill(
+              emoji: '❤️',
+              label: 'Miss You',
+              onTap: () => _handleInteraction(data, 'miss'),
+            ),
+            _buildQuickTouchDivider(),
+            _buildQuickTouchPill(
+              emoji: '🤗',
+              label: 'Send Hug',
+              onTap: () => _handleInteraction(data, 'hug'),
+            ),
+            _buildQuickTouchDivider(),
+            _buildQuickTouchPill(
+              emoji: '⚡',
+              label: 'Touch',
+              onTap: () => _handleInteraction(data, 'touch'),
             ),
           ],
         ),
@@ -2078,50 +2020,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildReactionItem(RelationshipModel data, String label, String emoji) {
-    return Expanded(
-      child: InkWell(
-        onTap: () => _handleInteraction(data, 'emoji'),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9).withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 22)),
-              const SizedBox(height: 4),
-              Text(
-                label, 
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.bodyS.copyWith(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.textSecondary),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatColumn(String value, String label) {
-    return Expanded(
+  Widget _buildQuickTouchPill({
+    required String emoji,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Column(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(value, style: AppTextStyles.h2.copyWith(fontSize: 20, color: Colors.pinkAccent)),
-            ),
-            const SizedBox(height: 4),
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
             Text(
-              label, 
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyS.copyWith(fontSize: 9, fontWeight: FontWeight.w900, color: AppColors.textSecondary.withValues(alpha: 0.5), letterSpacing: 0.5),
+              label,
+              style: const TextStyle(
+                color: Color(0xFF1E293B),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
@@ -2129,8 +2049,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatDivider() {
-    return Container(width: 1, height: 40, color: const Color(0xFFF1F5F9));
+  Widget _buildQuickTouchDivider() {
+    return Container(
+      width: 1,
+      height: 20,
+      color: const Color(0xFFF1F5F9),
+    );
   }
 
   Widget _buildPartnerLocalTime(RelationshipModel data) {
@@ -2161,78 +2085,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-  Widget _buildSharedMapCard(RelationshipModel data) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-      child: GestureDetector(
-        onTap: () {
-          VibrationService.medium();
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SharedMapScreen(relId: data.id!),
-            ),
-          );
-        },
-        child: Container(
-          width: double.infinity,
-          height: 140,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
-            image: const DecorationImage(
-              image: NetworkImage('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=1000'),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(Colors.black45, BlendMode.darken),
-            ),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 10)),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                bottom: 20,
-                left: 20,
-                right: 20,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.map_rounded, color: Colors.white, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'SHARED LOVE TRAIL',
-                          style: AppTextStyles.h3.copyWith(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Visualize your journey on a beautiful map ✨',
-                      style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              if (data.isPlus)
-                Positioned(
-                  top: 20,
-                  right: 20,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(10)),
-                    child: const Text('PLUS', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
-                  ),
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }

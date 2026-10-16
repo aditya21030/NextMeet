@@ -22,7 +22,6 @@ class OurPulseWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
     ) {
-        // Use HomeWidgetPreferences for correct sync with home_widget plugin
         val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
         val name = prefs.getString("partnerName", null) ?: "MY LOVE"
         val distance = prefs.getString("distance", null) ?: "0 KM"
@@ -31,32 +30,34 @@ class OurPulseWidgetProvider : AppWidgetProvider() {
         val isCharging = prefs.getBoolean("isPartnerCharging", false)
         val origin = prefs.getString("originCity", null) ?: "YOU"
         val dest = prefs.getString("destCity", null) ?: "LOVE"
-        val countdownVal = prefs.getString("countdownVal", null) ?: prefs.getString("nextMeet", null) ?: "Soon ❤️"
+        val countdownVal = prefs.getString("countdownVal", null) ?: "Soon ❤️"
         val countdownSub = prefs.getString("countdownSub", null) ?: "NEXT REUNION"
-        val reunionDate = prefs.getString("reunionDate", null) ?: "SOON"
+        val reunionDate = prefs.getString("reunionDate", null) ?: "TAP TO OPEN"
 
         val views = RemoteViews(context.packageName, R.layout.widget_layout)
 
-        // Route & Header
-        views.setTextViewText(R.id.widget_partner_name, name.uppercase())
-        views.setTextViewText(R.id.widget_origin_city, origin.take(14).uppercase())
-        views.setTextViewText(R.id.widget_dest_city, dest.take(14).uppercase())
-        views.setTextViewText(R.id.widget_distance, distance)
-
-        // Live Battery with dynamic charging indicator
+        // Header: Battery & Partner Name together
         val batteryIcon = if (isCharging) "⚡" else "🔋"
-        views.setTextViewText(R.id.widget_battery, "$batteryIcon $battery")
+        views.setTextViewText(R.id.widget_battery, "$batteryIcon $battery • ${name.uppercase()}")
 
-        // Countdown Hero
+        // Route: Cities & Distance
+        views.setTextViewText(R.id.widget_origin_city, origin.take(12).uppercase())
+        views.setTextViewText(R.id.widget_dest_city, dest.take(12).uppercase())
+        views.setTextViewText(R.id.widget_distance, "$distance APART")
+
+        // Center Hero: Big Countdown
         views.setTextViewText(R.id.widget_countdown_val, countdownVal)
         views.setTextViewText(R.id.widget_countdown_sub, countdownSub)
 
-        // Footer & Legacy compatibility
+        // Footer: Milestone & Reunion Date
+        views.setTextViewText(R.id.widget_days_together, "TOGETHER: $daysTogether")
         views.setTextViewText(R.id.widget_reunion_date, reunionDate)
-        views.setTextViewText(R.id.widget_days_together, daysTogether)
+
+        // Legacy compatibility
+        views.setTextViewText(R.id.widget_partner_name, name.uppercase())
         views.setTextViewText(R.id.widget_next_meet, countdownVal)
 
-        // Launch app on widget tap
+        // Launch app when tapping widget
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
         if (intent != null) {
             val pendingIntent = PendingIntent.getActivity(
