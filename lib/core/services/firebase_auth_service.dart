@@ -12,6 +12,13 @@ class FirebaseAuthService {
   Future<void> sendPasswordResetEmail(String email) =>
       _auth.sendPasswordResetEmail(email);
 
+  Future<void> verifyRecoveryOtp(
+          {required String email, required String token}) =>
+      _auth.verifyRecoveryOtp(email: email, token: token);
+
+  Future<void> setNewPassword(String newPassword) =>
+      _auth.setNewPassword(newPassword);
+
   Future<AppUser?> signInWithEmail(String email, String password) =>
       _auth.signInWithEmail(email, password);
 

@@ -126,7 +126,24 @@ class AuthService {
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
-    await _supabase.auth.resetPasswordForEmail(email.trim());
+    await _supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: 'io.supabase.nextmeet://reset-callback',
+    );
+  }
+
+  Future<void> verifyRecoveryOtp({required String email, required String token}) async {
+    await _supabase.auth.verifyOTP(
+      type: OtpType.recovery,
+      token: token.trim(),
+      email: email.trim(),
+    );
+  }
+
+  Future<void> setNewPassword(String newPassword) async {
+    await _supabase.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
   }
 
   Future<void> updateUserPassword(String oldPassword, String newPassword) async {

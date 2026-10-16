@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -5,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants.dart';
 import 'core/theme.dart';
 import 'features/onboarding/splash_screen.dart';
+import 'features/auth/reset_password_screen.dart';
 import 'core/services/notification_service.dart';
 
 void main() async {
@@ -50,12 +52,41 @@ void main() async {
   }
 }
 
-class NextMeetApp extends StatelessWidget {
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
+class NextMeetApp extends StatefulWidget {
   const NextMeetApp({super.key});
+
+  @override
+  State<NextMeetApp> createState() => _NextMeetAppState();
+}
+
+class _NextMeetAppState extends State<NextMeetApp> {
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        appNavigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'NextMeet',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

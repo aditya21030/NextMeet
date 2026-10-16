@@ -5,6 +5,7 @@ import '../../core/services/vibration_service.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/app_inputs.dart';
 import '../../core/services/firebase_auth_service.dart';
+import 'reset_password_screen.dart';
 
 class ForgotIdentityScreen extends StatefulWidget {
   const ForgotIdentityScreen({super.key});
@@ -15,9 +16,19 @@ class ForgotIdentityScreen extends StatefulWidget {
 
 class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
   final _emailController = TextEditingController();
+  final _otpController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isSent = false;
+  bool _showOtpInput = false;
+  bool _isVerifyingOtp = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
 
   void _handleReset() async {
     if (_formKey.currentState!.validate()) {
@@ -44,6 +55,46 @@ class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
       }
     } else {
       VibrationService.error();
+    }
+  }
+
+  void _handleVerifyOtp() async {
+    final code = _otpController.text.trim();
+    if (code.isEmpty) {
+      VibrationService.error();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter the OTP code from your email'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isVerifyingOtp = true);
+    VibrationService.medium();
+
+    try {
+      await FirebaseAuthService().verifyRecoveryOtp(
+        email: _emailController.text.trim(),
+        token: code,
+      );
+      if (!mounted) return;
+      VibrationService.success();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isVerifyingOtp = false);
+      VibrationService.error();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Verification failed: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
@@ -213,11 +264,58 @@ class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
           Text('Recovery Sent! ✨', style: AppTextStyles.h2.copyWith(fontSize: 26)),
           const SizedBox(height: AppSpacing.s),
           Text(
-            'Check your inbox for instructions to get back to your partner.',
+            'Check your inbox for the recovery email.\nTap the link on your phone to open NextMeet directly.',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
           ),
-          const SizedBox(height: 60),
+          const SizedBox(height: 24),
+          if (!_showOtpInput) ...[
+            TextButton.icon(
+              onPressed: () {
+                VibrationService.light();
+                setState(() => _showOtpInput = true);
+              },
+              icon: const Icon(Icons.pin_rounded, color: AppColors.primary, size: 18),
+              label: Text(
+                'Have a recovery OTP code? Enter Code',
+                style: AppTextStyles.bodyM.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ] else ...[
+            FadeInDown(
+              child: Column(
+                children: [
+                  _buildInputWrapper(
+                    label: 'ENTER OTP CODE FROM EMAIL',
+                    child: TextFormField(
+                      controller: _otpController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.h3.copyWith(
+                        letterSpacing: 6,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                      decoration: AppInputs.premiumInput(
+                        'OTP Code',
+                        hint: '••••••••',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.m),
+                  PrimaryButton(
+                    text: 'Verify Code & Reset',
+                    isLoading: _isVerifyingOtp,
+                    onPressed: _handleVerifyOtp,
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 32),
           PrimaryButton(
             text: 'Back to Login',
             onPressed: () => Navigator.pop(context),
