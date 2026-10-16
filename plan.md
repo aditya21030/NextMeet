@@ -258,8 +258,8 @@ flowchart TD
 | **Phase 2** | 2.1 - 2.4 | Fix atomic transaction crash, stream orphan trap, and live pairing listener | `[x]` Completed |
 | **Phase 3** | 3.1 - 3.5 | UI/UX delight, floating particles, Heart Sync ergonomics, WCAG contrast | `[x]` Completed |
 | **Phase 4** | 4.1 - 4.3 | Clipboard auto-detection, FTUE hierarchy, and flutter analyze verification | `[x]` Completed |
-| **Phase 5** | 5.1 - 5.5 | LDR Purge of 5,000+ lines of dead bloat & Luxury UI/UX Overhaul (Rose Champagne & Cashmere) | `[ ]` In Progress |
-| **Phase 6** | 6.1 - 6.3 | NextMeet Hero Boarding Pass Countdown, Live Locket Bezel, and Local APK Build for Testing | `[ ]` In Progress |
+| **Phase 5** | 5.1 - 5.5 | LDR Purge of 5,000+ lines of dead bloat & Luxury UI/UX Overhaul (Rose Champagne & Cashmere) | `[x]` Completed |
+| **Phase 6** | 6.1 - 6.3 | NextMeet Hero Boarding Pass Countdown, Live Locket Bezel, and Local APK Build for Testing | `[x]` Completed (APK Built) |
 
 ---
 
