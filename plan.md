@@ -259,7 +259,8 @@ flowchart TD
 | **Phase 3** | 3.1 - 3.5 | UI/UX delight, floating particles, Heart Sync ergonomics, WCAG contrast | `[x]` Completed |
 | **Phase 4** | 4.1 - 4.3 | Clipboard auto-detection, FTUE hierarchy, and flutter analyze verification | `[x]` Completed |
 | **Phase 5** | 5.1 - 5.5 | LDR Purge of 5,000+ lines of dead bloat & Luxury UI/UX Overhaul (Rose Champagne & Cashmere) | `[x]` Completed |
-| **Phase 6** | 6.1 - 6.3 | NextMeet Hero Boarding Pass Countdown, Live Locket Bezel, and Local APK Build for Testing | `[x]` Completed (APK Built) |
+| **Phase 6** | 6.1 - 6.3 | NextMeet Hero Boarding Pass Countdown, Live Locket Bezel, and Local APK Build for Testing | `[x]` Completed |
+| **Phase 7** | 7.1 - 7.3 | Shared Calendar 0ms Reactive Cache (infinite spinner fix) & Daily Question for Two Retention Engine | `[x]` Completed |
 
 ---
 
@@ -267,7 +268,7 @@ flowchart TD
 *Goal: Rebuild NextMeet into an ultra-focused, luxury sanctuary for Long-Distance couples ("The app until next meeting the couples") by eliminating ~5,000 lines of disjointed bloat and establishing a mature, tactile Rose Champagne & Cashmere design system.*
 
 ### Step 5.1: Purge Orphaned & Bloated Feature Code
-* **Target Files to Delete:**
+* **Target Files Deleted:**
   * `lib/features/home/planner_screen.dart` (1,231 lines of trip planning/tasks)
   * `lib/features/home/achievements_screen.dart` (1,154 lines of gamified points/badges)
   * `lib/features/home/couple_quiz_screen.dart` (134 lines of trivia)
@@ -280,11 +281,6 @@ flowchart TD
   * `lib/features/private_space/whisper_notes_screen.dart` (212 lines)
   * `lib/features/private_space/voice_memos_screen.dart` (334 lines)
   * `lib/features/private_space/private_notes_screen.dart` & `note_detail_screen.dart` (482 lines)
-* **Actions:**
-  1. Delete unreferenced, orphaned screen files.
-  2. Clean any orphaned imports across the codebase.
-* **Acceptance Criteria:**
-  * Clean repository structure with zero dead weight.
 
 ### Step 5.2: Luxury Color System & Typography Overhaul
 * **Target File:**
@@ -300,7 +296,7 @@ flowchart TD
 * **Target File:**
   * [`lib/features/home/main_navigation_screen.dart`](file:///d:/Flutter/NextMeet/lib/features/home/main_navigation_screen.dart)
 * **Actions:**
-  1. Refactor navigation into 3 primary destinations:
+  1. Refactored navigation into 3 primary destinations:
      * **1. US** (`HomeScreen`): Real-time distance, dual clock & battery, Heart Sync, quick touch pulses.
      * **2. NEXT MEET** (`NextMeetScreen` / `CalendarScreen`): Hero Boarding Pass countdown, reunion ticket, and visit milestones.
      * **3. SANCTUARY** (`PrivateHomeScreen`): Secret photo vault, Love Letters, and Couple Settings.
@@ -325,3 +321,36 @@ flowchart TD
   1. Explicit user request verified: *"first build apk i will test"*.
   2. Execute `flutter build apk --release` to generate the standalone installable APK.
   3. Keep all changes local without pushing to GitHub (`git push` withheld as instructed).
+
+---
+
+## 📅 PHASE 7: SHARED CALENDAR 0MS CACHE & DAILY QUESTION FOR TWO
+*Goal: Eradicate the infinite loading spinner in Shared Calendar by engineering a zero-lag optimistic in-memory cache and embed the "Daily Question for Two" curiosity unlock hook into the daily couple loop.*
+
+### Step 7.1: Zero-Lag In-Memory Calendar Architecture & Supabase Sync
+* **Target Files:**
+  * [`lib/core/models/calendar_event_model.dart`](file:///d:/Flutter/NextMeet/lib/core/models/calendar_event_model.dart)
+  * [`lib/core/services/cloud_relationship_service.dart`](file:///d:/Flutter/NextMeet/lib/core/services/cloud_relationship_service.dart)
+  * [`lib/features/home/calendar_screen.dart`](file:///d:/Flutter/NextMeet/lib/features/home/calendar_screen.dart)
+* **Actions:**
+  1. Replaced broken Firestore subcollection stream with static in-memory broadcast cache (`_cachedEventsMap`, `_eventsStreamControllers`).
+  2. Implemented 0ms optimistic insertions and deletions when scheduling/removing dates, reunions, and travel plans.
+  3. Persisted calendar events directly into `relationships.data['calendarEvents']` synced via Supabase Realtime across both partners.
+  4. Redesigned `CalendarScreen` with Next Reunion banner, "Change Date" modal, category filter chips ('All', 'Date', 'Travel', 'Reunion', 'Special'), and luxury empty states.
+
+### Step 7.2: Daily Question for Two Hook (Curiosity Lock Engine)
+* **Target Files:**
+  * [`lib/core/daily_questions.dart`](file:///d:/Flutter/NextMeet/lib/core/daily_questions.dart)
+  * [`lib/core/models/relationship_model.dart`](file:///d:/Flutter/NextMeet/lib/core/models/relationship_model.dart)
+  * [`lib/features/home/home_screen.dart`](file:///d:/Flutter/NextMeet/lib/features/home/home_screen.dart)
+* **Actions:**
+  1. Created deterministic 365 question bank keyed to day-of-year requiring zero server roundtrips.
+  2. Added atomic `submitDailyAnswer` storing answers in `relationships.data['dailyAnswers'][YYYY-MM-DD]`.
+  3. Created interactive home screen card with curiosity blur: Partner B's response stays blurred/hidden until Partner A writes and submits their own answer, unlocking simultaneous intimacy and eliminating conversation starvation.
+
+### Step 7.3: Zero-Defect Code Verification & Local Release Compilation
+* **Target Tasks:**
+  1. Verify codebase with `flutter analyze`: achieved **0 errors, 0 warnings**.
+  2. Verify all animation controllers and input controllers are disposed cleanly.
+  3. Compile release APK for direct testing without remote push (`git push` strictly omitted).
+
