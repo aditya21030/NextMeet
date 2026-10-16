@@ -95,7 +95,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final myName = rel.getMyRealName(currentUid);
         final partnerName = rel.getDisplayPartnerName(currentUid);
         final myLoc = isMe1 ? (rel.userLocation1 ?? '') : (rel.userLocation2 ?? '');
-        final partnerLoc = isMe1 ? (rel.userLocation2 ?? '') : (rel.userLocation1 ?? '');
+        final partnerLoc = rel.getPartnerLocation(currentUid);
+        final myPhoto = rel.getMyPhoto(currentUid);
+        final partnerPhoto = rel.getPartnerPhoto(currentUid);
+        final partnerUid = rel.getPartnerUid(currentUid);
         final togetherDays = _calculateTogetherDays(rel.createdAt);
 
         // Map preferences from RelationshipModel
@@ -154,9 +157,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   child: CircleAvatar(
                                     radius: 40,
                                     backgroundColor: Colors.white,
-                                    backgroundImage: rel.userPhoto1 != null 
-                                        ? CachedNetworkImageProvider(rel.userPhoto1!)
-                                        : NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=${rel.uid1}') as ImageProvider,
+                                    backgroundImage: myPhoto.isNotEmpty 
+                                        ? CachedNetworkImageProvider(myPhoto)
+                                        : NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=$currentUid') as ImageProvider,
                                   ),
                                 ),
                               ),
@@ -177,9 +180,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   child: CircleAvatar(
                                     radius: 40,
                                     backgroundColor: Colors.white,
-                                    backgroundImage: rel.userPhoto2 != null 
-                                        ? CachedNetworkImageProvider(rel.userPhoto2!)
-                                        : NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=${rel.uid2}') as ImageProvider,
+                                    backgroundImage: partnerPhoto.isNotEmpty 
+                                        ? CachedNetworkImageProvider(partnerPhoto)
+                                        : NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=$partnerUid') as ImageProvider,
                                   ),
                                 ),
                               ),

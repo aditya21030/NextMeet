@@ -29,6 +29,7 @@ import '../private_space/love_letters_screen.dart';
 import 'dart:io';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool initialSynced;
@@ -932,7 +933,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         radius: 20,
                         backgroundColor: AppColors.background,
                         backgroundImage: data.getMyPhoto(_cloudService.currentUid).isNotEmpty 
-                            ? NetworkImage(data.getMyPhoto(_cloudService.currentUid)) 
+                            ? CachedNetworkImageProvider(data.getMyPhoto(_cloudService.currentUid)) 
                             : null,
                         child: data.getMyPhoto(_cloudService.currentUid).isEmpty 
                             ? const Icon(Icons.person_rounded, color: AppColors.primary, size: 22) 
@@ -1526,7 +1527,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(28),
                                 image: DecorationImage(
-                                  image: NetworkImage(memory.imageUrl),
+                                  image: CachedNetworkImageProvider(memory.imageUrl),
                                   fit: BoxFit.cover,
                                 ),
                                 boxShadow: [

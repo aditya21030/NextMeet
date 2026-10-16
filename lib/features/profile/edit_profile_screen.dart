@@ -192,6 +192,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String currentUid = AuthService().currentUid ?? '';
+    final String currentPhoto = widget.isPartner 
+        ? widget.relationship.getPartnerPhoto(currentUid)
+        : widget.relationship.getMyPhoto(currentUid);
+    final String targetUid = (widget.isPartner 
+        ? widget.relationship.getPartnerUid(currentUid) 
+        : currentUid) ?? '';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -225,9 +233,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         backgroundColor: Colors.white,
                         backgroundImage: _imageBytes != null 
                             ? MemoryImage(_imageBytes!) as ImageProvider
-                            : (widget.isPartner ? widget.relationship.userPhoto2 : widget.relationship.userPhoto1) != null
-                                ? CachedNetworkImageProvider((widget.isPartner ? widget.relationship.userPhoto2! : widget.relationship.userPhoto1!))
-                                : NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=${widget.isPartner ? widget.relationship.uid2 : widget.relationship.uid1}') as ImageProvider,
+                            : currentPhoto.isNotEmpty
+                                ? CachedNetworkImageProvider(currentPhoto)
+                                : NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=$targetUid') as ImageProvider,
                       ),
                     ),
                     Positioned(

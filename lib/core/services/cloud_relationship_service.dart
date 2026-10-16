@@ -30,6 +30,24 @@ class CloudRelationshipService {
   String? get currentUid => _auth.currentUid;
   String? get _currentUid => _auth.currentUid;
 
+  // Reactive Single-Source-of-Truth in-memory state for instant UI updates
+  static final StreamController<RelationshipModel?> _relationshipStreamController =
+      StreamController<RelationshipModel?>.broadcast();
+  static RelationshipModel? _cachedRelationship;
+  static RealtimeChannel? _relationshipChannel;
+  static String? _subscribedRelUid;
+
+  static final Map<String, StreamController<List<MemoryModel>>> _memoriesStreamControllers = {};
+  static final Map<String, List<MemoryModel>> _cachedMemoriesMap = {};
+  static final Map<String, RealtimeChannel> _memoriesChannels = {};
+
+  static StreamController<List<MemoryModel>> _getMemoriesController(String relId) {
+    return _memoriesStreamControllers.putIfAbsent(
+      relId,
+      () => StreamController<List<MemoryModel>>.broadcast(),
+    );
+  }
+
   // Upload a memory with image
   Future<void> addMemory(String relId, File image, String caption, String location, {bool isStory = false, double? lat, double? lng}) async {
     if (_currentUid == null) throw Exception('User not authenticated');
@@ -78,19 +96,50 @@ class CloudRelationshipService {
     }
 
     final nowIso = DateTime.now().toIso8601String();
+    final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
+    final optimisticMemory = MemoryModel(
+      id: tempId,
+      imageUrl: imageUrl,
+      caption: caption,
+      location: location,
+      date: DateTime.now(),
+      isStory: isStory,
+      lat: lat,
+      lng: lng,
+    );
+
+    // 0ms INSTANT OPTIMISTIC EMISSION
+    final currentList = _cachedMemoriesMap[relId] ?? [];
+    final updatedList = [optimisticMemory, ...currentList.where((m) => m.id != tempId)];
+    _cachedMemoriesMap[relId] = updatedList;
+    _getMemoriesController(relId).add(List.from(updatedList));
+
     try {
-      await _supabase.from('memories').insert({
+      final insertRes = await _supabase.from('memories').insert({
         'relationship_id': relId,
+        'uploader_id': _currentUid,
         'image_url': imageUrl,
         'caption': caption,
         'location': location,
-        'added_by': _currentUid,
         'is_story': isStory,
         'lat': lat,
         'lng': lng,
         'date': nowIso,
         'created_at': nowIso,
-      });
+      }).select().maybeSingle();
+
+      if (insertRes != null && insertRes['id'] != null) {
+        final serverMemory = MemoryModel.fromFirestore(insertRes, id: insertRes['id']?.toString());
+        final list = _cachedMemoriesMap[relId] ?? [];
+        final idx = list.indexWhere((m) => m.id == tempId);
+        if (idx != -1) {
+          list[idx] = serverMemory;
+        } else {
+          list.insert(0, serverMemory);
+        }
+        _cachedMemoriesMap[relId] = list;
+        _getMemoriesController(relId).add(List.from(list));
+      }
     } catch (e) {
       debugPrint('Supabase insert memory warning: $e');
     }
@@ -137,10 +186,15 @@ class CloudRelationshipService {
     } catch (_) {}
   }
 
-  Stream<List<MemoryModel>> streamMemories(String relId) {
-    late StreamController<List<MemoryModel>> controller;
-    RealtimeChannel? channel;
+  Stream<List<MemoryModel>> streamMemories(String relId) async* {
+    if (_cachedMemoriesMap.containsKey(relId)) {
+      yield _cachedMemoriesMap[relId]!;
+    }
+    _setupMemoriesListener(relId);
+    yield* _getMemoriesController(relId).stream;
+  }
 
+  void _setupMemoriesListener(String relId) {
     Future<void> fetchAndEmit() async {
       try {
         final res = await _supabase
@@ -152,48 +206,55 @@ class CloudRelationshipService {
         final memories = (res as List)
             .map((m) => MemoryModel.fromFirestore(m as Map<String, dynamic>, id: m['id']?.toString()))
             .toList();
-        if (!controller.isClosed) controller.add(memories);
+        _cachedMemoriesMap[relId] = memories;
+        _getMemoriesController(relId).add(memories);
       } catch (e) {
         debugPrint('Supabase streamMemories fetch warning: $e');
         try {
           final snap = await _firestore.collection('relationships').doc(relId).collection('memories').orderBy('date', descending: true).get();
           final memories = snap.docs.map((doc) => MemoryModel.fromFirestore(doc.data(), id: doc.id)).toList();
-          if (!controller.isClosed) controller.add(memories);
+          _cachedMemoriesMap[relId] = memories;
+          _getMemoriesController(relId).add(memories);
           return;
         } catch (_) {}
-        if (!controller.isClosed) controller.add([]);
+        if (!_cachedMemoriesMap.containsKey(relId)) {
+          _cachedMemoriesMap[relId] = [];
+          _getMemoriesController(relId).add([]);
+        }
       }
     }
 
-    controller = StreamController<List<MemoryModel>>(
-      onListen: () {
-        fetchAndEmit();
-        try {
-          channel = _supabase
-              .channel('memories_stream_$relId')
-              .onPostgresChanges(
-                event: PostgresChangeEvent.all,
-                schema: 'public',
-                table: 'memories',
-                callback: (payload) {
-                  fetchAndEmit();
-                },
-              )
-              .subscribe();
-        } catch (e) {
-          debugPrint('Realtime channel memories subscription warning: $e');
-        }
-      },
-      onCancel: () {
-        channel?.unsubscribe();
-      },
-    );
+    fetchAndEmit();
 
-    return controller.stream;
+    if (!_memoriesChannels.containsKey(relId)) {
+      try {
+        final channel = _supabase
+            .channel('memories_stream_$relId')
+            .onPostgresChanges(
+              event: PostgresChangeEvent.all,
+              schema: 'public',
+              table: 'memories',
+              callback: (payload) {
+                fetchAndEmit();
+              },
+            )
+            .subscribe();
+        _memoriesChannels[relId] = channel;
+      } catch (e) {
+        debugPrint('Realtime channel memories subscription warning: $e');
+      }
+    }
   }
 
   Future<void> deleteMemory(String relId, String memoryId, String imageUrl) async {
     if (_currentUid == null) return;
+
+    // 0ms INSTANT OPTIMISTIC REMOVAL
+    final currentList = _cachedMemoriesMap[relId] ?? [];
+    final updatedList = currentList.where((m) => m.id != memoryId).toList();
+    _cachedMemoriesMap[relId] = updatedList;
+    _getMemoriesController(relId).add(List.from(updatedList));
+
     try {
       await _supabase.from('memories').delete().eq('id', memoryId);
     } catch (e) {
@@ -213,6 +274,18 @@ class CloudRelationshipService {
     if (p1Caption != null) updates['partner1Caption'] = p1Caption;
     if (p2Caption != null) updates['partner2Caption'] = p2Caption;
     if (updates.isNotEmpty) {
+      final currentList = _cachedMemoriesMap[relId] ?? [];
+      final idx = currentList.indexWhere((m) => m.id == memoryId);
+      if (idx != -1) {
+        final m = currentList[idx];
+        currentList[idx] = m.copyWith(
+          caption: caption ?? m.caption,
+          partner1Caption: p1Caption ?? m.partner1Caption,
+          partner2Caption: p2Caption ?? m.partner2Caption,
+        );
+        _cachedMemoriesMap[relId] = currentList;
+        _getMemoriesController(relId).add(List.from(currentList));
+      }
       try {
         await _supabase.from('memories').update(updates).eq('id', memoryId);
       } catch (e) {
@@ -427,13 +500,22 @@ class CloudRelationshipService {
     return null;
   }
 
-  Stream<RelationshipModel?> streamRelationship() {
+  Stream<RelationshipModel?> streamRelationship() async* {
     final uid = _currentUid;
-    if (uid == null) return Stream.value(null);
+    if (uid == null) {
+      yield null;
+      return;
+    }
 
-    late StreamController<RelationshipModel?> controller;
-    RealtimeChannel? channel;
+    if (_cachedRelationship != null) {
+      yield _cachedRelationship;
+    }
 
+    _setupRelationshipListener(uid);
+    yield* _relationshipStreamController.stream;
+  }
+
+  void _setupRelationshipListener(String uid) {
     Future<void> fetchAndEmit() async {
       try {
         final res = await _supabase
@@ -442,7 +524,8 @@ class CloudRelationshipService {
             .or('uid1.eq.$uid,uid2.eq.$uid,uids.cs.{$uid}');
 
         if (res.isEmpty) {
-          if (!controller.isClosed) controller.add(null);
+          _cachedRelationship = null;
+          _relationshipStreamController.add(null);
           return;
         }
 
@@ -461,7 +544,8 @@ class CloudRelationshipService {
         dataMap['inviteCode'] = activeRel['invite_code'];
 
         final model = RelationshipModel.fromFirestoreMap(dataMap, id: activeRel['id']?.toString());
-        if (!controller.isClosed) controller.add(model);
+        _cachedRelationship = model;
+        _relationshipStreamController.add(model);
       } catch (e) {
         debugPrint('Supabase streamRelationship fetch warning: $e');
         try {
@@ -473,39 +557,38 @@ class CloudRelationshipService {
             );
             final target = activeDoc ?? snap.docs.first;
             final model = RelationshipModel.fromFirestore(target.data() as Map<String, dynamic>, id: target.id);
-            if (!controller.isClosed) controller.add(model);
+            _cachedRelationship = model;
+            _relationshipStreamController.add(model);
             return;
           }
         } catch (_) {}
-        if (!controller.isClosed) controller.add(null);
+        if (_cachedRelationship == null) {
+          _relationshipStreamController.add(null);
+        }
       }
     }
 
-    controller = StreamController<RelationshipModel?>(
-      onListen: () {
-        fetchAndEmit();
-        try {
-          channel = _supabase
-              .channel('rel_stream_$uid')
-              .onPostgresChanges(
-                event: PostgresChangeEvent.all,
-                schema: 'public',
-                table: 'relationships',
-                callback: (payload) {
-                  fetchAndEmit();
-                },
-              )
-              .subscribe();
-        } catch (e) {
-          debugPrint('Realtime channel subscription warning: $e');
-        }
-      },
-      onCancel: () {
-        channel?.unsubscribe();
-      },
-    );
+    fetchAndEmit();
 
-    return controller.stream;
+    if (_subscribedRelUid != uid) {
+      _subscribedRelUid = uid;
+      _relationshipChannel?.unsubscribe();
+      try {
+        _relationshipChannel = _supabase
+            .channel('rel_stream_$uid')
+            .onPostgresChanges(
+              event: PostgresChangeEvent.all,
+              schema: 'public',
+              table: 'relationships',
+              callback: (payload) {
+                fetchAndEmit();
+              },
+            )
+            .subscribe();
+      } catch (e) {
+        debugPrint('Realtime channel subscription warning: $e');
+      }
+    }
   }
 
   // --- TEMP SCRIPT FOR ADMIN / MIGRATION ---
@@ -566,6 +649,28 @@ class CloudRelationshipService {
   }
 
   Future<void> _updateRelationshipData(String relId, Map<String, dynamic> updates) async {
+    // 0. INSTANT OPTIMISTIC LOCAL EMISSION (0ms UI Update)
+    if (_cachedRelationship == null || _cachedRelationship!.id != relId) {
+      try {
+        _cachedRelationship = await getRelationshipById(relId);
+      } catch (_) {}
+    }
+
+    if (_cachedRelationship != null && _cachedRelationship!.id == relId) {
+      final currentMap = _cachedRelationship!.toFirestoreMap();
+      updates.forEach((k, v) {
+        if (v is DateTime) {
+          currentMap[k] = v;
+        } else if (v is Timestamp) {
+          currentMap[k] = v.toDate();
+        } else {
+          currentMap[k] = v;
+        }
+      });
+      _cachedRelationship = RelationshipModel.fromFirestoreMap(currentMap, id: relId);
+      _relationshipStreamController.add(_cachedRelationship);
+    }
+
     // 1. Update Supabase
     try {
       final res = await _supabase.from('relationships').select('data').eq('id', relId).maybeSingle();

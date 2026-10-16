@@ -12,6 +12,7 @@ import '../../core/cities.dart';
 import '../../widgets/sync_error_widget.dart';
 import '../onboarding/setup_couple_screen.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class MemoriesScreen extends StatefulWidget {
   const MemoriesScreen({super.key});
@@ -480,7 +481,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.xxl),
           boxShadow: AppColors.premiumShadow,
-          image: DecorationImage(image: NetworkImage(featured.imageUrl), fit: BoxFit.cover),
+          image: DecorationImage(image: CachedNetworkImageProvider(featured.imageUrl), fit: BoxFit.cover),
         ),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.xl),
@@ -666,7 +667,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                   child: Stack(
                     children: [
                       Positioned.fill(
-                        child: Image.network(moment.imageUrl, fit: BoxFit.cover),
+                        child: CachedNetworkImage(imageUrl: moment.imageUrl, fit: BoxFit.cover),
                       ),
                       if (isPlus)
                         Positioned(
@@ -734,7 +735,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadius.xl),
               boxShadow: AppColors.softShadow,
-              image: DecorationImage(image: NetworkImage(moment.imageUrl), fit: BoxFit.cover),
+              image: DecorationImage(image: CachedNetworkImageProvider(moment.imageUrl), fit: BoxFit.cover),
             ),
             child: Container(
               decoration: BoxDecoration(
