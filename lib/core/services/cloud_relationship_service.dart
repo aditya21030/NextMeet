@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
@@ -324,23 +325,107 @@ class CloudRelationshipService {
   }
 
   Future<RelationshipModel?> getRelationshipById(String relId) async {
-    final doc = await _relationships.doc(relId).get();
-    if (!doc.exists) return null;
-    return RelationshipModel.fromFirestore(doc.data() as Map<String, dynamic>, id: doc.id);
+    try {
+      final res = await _supabase.from('relationships').select().eq('id', relId).maybeSingle();
+      if (res != null) {
+        final dataMap = res['data'] is Map ? Map<String, dynamic>.from(res['data'] as Map) : <String, dynamic>{};
+        dataMap['id'] = res['id'];
+        dataMap['uid1'] = res['uid1'];
+        dataMap['uid2'] = res['uid2'];
+        dataMap['status'] = res['status'];
+        dataMap['inviteCode'] = res['invite_code'];
+        return RelationshipModel.fromFirestoreMap(dataMap, id: res['id']?.toString());
+      }
+    } catch (_) {}
+
+    try {
+      final doc = await _relationships.doc(relId).get();
+      if (doc.exists) {
+        return RelationshipModel.fromFirestore(doc.data() as Map<String, dynamic>, id: doc.id);
+      }
+    } catch (_) {}
+    return null;
   }
 
   Stream<RelationshipModel?> streamRelationship() {
-    if (_currentUid == null) return Stream.value(null);
-    return _relationships.where('uids', arrayContains: _currentUid).snapshots().map((snapshot) {
-      if (snapshot.docs.isEmpty) return null;
-      // Deterministically prioritize an active relationship over an orphaned waiting document
-      final activeDoc = snapshot.docs.cast<QueryDocumentSnapshot?>().firstWhere(
-        (doc) => (doc?.data() as Map<String, dynamic>?)?['status'] == 'active',
-        orElse: () => null,
-      );
-      final target = activeDoc ?? snapshot.docs.first;
-      return RelationshipModel.fromFirestore(target.data() as Map<String, dynamic>, id: target.id);
-    });
+    final uid = _currentUid;
+    if (uid == null) return Stream.value(null);
+
+    late StreamController<RelationshipModel?> controller;
+    RealtimeChannel? channel;
+
+    Future<void> fetchAndEmit() async {
+      try {
+        final res = await _supabase
+            .from('relationships')
+            .select()
+            .or('uid1.eq.$uid,uid2.eq.$uid,uids.cs.{$uid}');
+
+        if (res.isEmpty) {
+          if (!controller.isClosed) controller.add(null);
+          return;
+        }
+
+        final activeRel = res.firstWhere(
+          (r) => r['status'] == 'active',
+          orElse: () => res.first,
+        );
+
+        final dataMap = activeRel['data'] is Map
+            ? Map<String, dynamic>.from(activeRel['data'] as Map)
+            : <String, dynamic>{};
+        dataMap['id'] = activeRel['id'];
+        dataMap['uid1'] = activeRel['uid1'];
+        dataMap['uid2'] = activeRel['uid2'];
+        dataMap['status'] = activeRel['status'];
+        dataMap['inviteCode'] = activeRel['invite_code'];
+
+        final model = RelationshipModel.fromFirestoreMap(dataMap, id: activeRel['id']?.toString());
+        if (!controller.isClosed) controller.add(model);
+      } catch (e) {
+        debugPrint('Supabase streamRelationship fetch warning: $e');
+        try {
+          final snap = await _relationships.where('uids', arrayContains: uid).get();
+          if (snap.docs.isNotEmpty) {
+            final activeDoc = snap.docs.cast<QueryDocumentSnapshot?>().firstWhere(
+              (doc) => (doc?.data() as Map<String, dynamic>?)?['status'] == 'active',
+              orElse: () => null,
+            );
+            final target = activeDoc ?? snap.docs.first;
+            final model = RelationshipModel.fromFirestore(target.data() as Map<String, dynamic>, id: target.id);
+            if (!controller.isClosed) controller.add(model);
+            return;
+          }
+        } catch (_) {}
+        if (!controller.isClosed) controller.add(null);
+      }
+    }
+
+    controller = StreamController<RelationshipModel?>(
+      onListen: () {
+        fetchAndEmit();
+        try {
+          channel = _supabase
+              .channel('rel_stream_$uid')
+              .onPostgresChanges(
+                event: PostgresChangeEvent.all,
+                schema: 'public',
+                table: 'relationships',
+                callback: (payload) {
+                  fetchAndEmit();
+                },
+              )
+              .subscribe();
+        } catch (e) {
+          debugPrint('Realtime channel subscription warning: $e');
+        }
+      },
+      onCancel: () {
+        channel?.unsubscribe();
+      },
+    );
+
+    return controller.stream;
   }
 
   // --- TEMP SCRIPT FOR ADMIN / MIGRATION ---
@@ -400,9 +485,55 @@ class CloudRelationshipService {
     }
   }
 
+  Future<void> _updateRelationshipData(String relId, Map<String, dynamic> updates) async {
+    // 1. Update Supabase
+    try {
+      final res = await _supabase.from('relationships').select('data').eq('id', relId).maybeSingle();
+      if (res != null) {
+        final currentData = res['data'] is Map ? Map<String, dynamic>.from(res['data'] as Map) : <String, dynamic>{};
+        updates.forEach((k, v) {
+          if (v is DateTime) {
+            currentData[k] = v.toIso8601String();
+          } else if (v is Timestamp) {
+            currentData[k] = v.toDate().toIso8601String();
+          } else if (v is FieldValue) {
+            currentData[k] = DateTime.now().toIso8601String();
+          } else {
+            currentData[k] = v;
+          }
+        });
+
+        final rowUpdates = <String, dynamic>{
+          'data': currentData,
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+
+        if (updates.containsKey('status')) rowUpdates['status'] = updates['status'];
+        if (updates.containsKey('distanceKm')) rowUpdates['distance_km'] = updates['distanceKm'];
+        if (updates.containsKey('streakCount')) rowUpdates['streak_count'] = updates['streakCount'];
+        if (updates.containsKey('isPlus')) rowUpdates['is_plus'] = updates['isPlus'];
+
+        await _supabase.from('relationships').update(rowUpdates).eq('id', relId);
+      }
+    } catch (e) {
+      debugPrint('Supabase _updateRelationshipData warning: $e');
+    }
+
+    // 2. Best-effort Firestore update
+    try {
+      await _relationships.doc(relId).update(updates);
+    } catch (e) {
+      debugPrint('Firestore update warning: $e');
+    }
+  }
+
   Future<void> sendTouch(String relId, String type) async {
     if (_currentUid == null) return;
-    await _relationships.doc(relId).update({'lastTouchType': type, 'lastTouchFrom': _currentUid, 'lastTouchTime': FieldValue.serverTimestamp()});
+    await _updateRelationshipData(relId, {
+      'lastTouchType': type,
+      'lastTouchFrom': _currentUid,
+      'lastTouchTime': DateTime.now(),
+    });
     String logTitle = 'Sent a "Touch" ❤️';
     if (type == 'miss') {
       logTitle = 'Sent a "Miss You" 🥺';
@@ -454,12 +585,12 @@ class CloudRelationshipService {
       if (distance > 0 && finalDist == 0) finalDist = 0.1;
       updates['distanceKm'] = finalDist;
     }
-    if (updates.isNotEmpty) await _relationships.doc(relId).update(updates);
+    if (updates.isNotEmpty) await _updateRelationshipData(relId, updates);
   }
 
   Future<void> updateRelationshipDetails(String relId, Map<String, dynamic> updates) async {
     if (updates.isNotEmpty) {
-      await _relationships.doc(relId).update(updates);
+      await _updateRelationshipData(relId, updates);
       await logActivity(relId, 'update', 'Journey details updated ✨');
     }
   }
@@ -838,8 +969,8 @@ class CloudRelationshipService {
 
   Future<void> setHeartSync(String relId, bool isUser1, bool isPressing) async {
     final field = isUser1 ? 'user1SyncPress' : 'user2SyncPress';
-    await _relationships.doc(relId).update({
-      field: isPressing ? FieldValue.serverTimestamp() : null,
+    await _updateRelationshipData(relId, {
+      field: isPressing ? DateTime.now() : null,
     });
   }
 
