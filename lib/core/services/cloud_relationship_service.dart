@@ -35,12 +35,21 @@ class CloudRelationshipService {
     if (_currentUid == null) throw Exception('User not authenticated');
     
     // SECURITY: Enforce Memory limits
-    final relDoc = await _relationships.doc(relId).get();
-    if (!relDoc.exists) return;
-    final isPlus = relDoc.get('isPlus') ?? false;
+    final rel = await getRelationshipById(relId);
+    if (rel == null) return;
+    final isPlus = rel.isPlus;
     final maxMemories = isPlus ? AppSubscription.plusMaxMemories : AppSubscription.freeMaxMemories;
     
-    final memoriesCount = (await _relationships.doc(relId).collection('memories').count().get()).count ?? 0;
+    int memoriesCount = 0;
+    try {
+      final res = await _supabase.from('memories').select('id').eq('relationship_id', relId);
+      memoriesCount = (res as List).length;
+    } catch (_) {
+      try {
+        final countRes = (await _relationships.doc(relId).collection('memories').count().get()).count;
+        memoriesCount = countRes ?? 0;
+      } catch (_) {}
+    }
     if (memoriesCount >= maxMemories) {
       throw Exception('Memory limit reached. Upgrade to NextMeet+ for more space! ✨');
     }
@@ -68,6 +77,7 @@ class CloudRelationshipService {
       imageUrl = await uploadTask.ref.getDownloadURL();
     }
 
+    final nowIso = DateTime.now().toIso8601String();
     try {
       await _supabase.from('memories').insert({
         'relationship_id': relId,
@@ -78,22 +88,25 @@ class CloudRelationshipService {
         'is_story': isStory,
         'lat': lat,
         'lng': lng,
-        'created_at': DateTime.now().toIso8601String(),
+        'date': nowIso,
+        'created_at': nowIso,
       });
     } catch (e) {
       debugPrint('Supabase insert memory warning: $e');
     }
 
-    await _firestore.collection('relationships').doc(relId).collection('memories').add({
-      'imageUrl': imageUrl,
-      'caption': caption,
-      'location': location,
-      'date': FieldValue.serverTimestamp(),
-      'addedBy': _currentUid,
-      'isStory': isStory,
-      'lat': lat,
-      'lng': lng,
-    });
+    try {
+      await _firestore.collection('relationships').doc(relId).collection('memories').add({
+        'imageUrl': imageUrl,
+        'caption': caption,
+        'location': location,
+        'date': FieldValue.serverTimestamp(),
+        'addedBy': _currentUid,
+        'isStory': isStory,
+        'lat': lat,
+        'lng': lng,
+      });
+    } catch (_) {}
 
     await logActivity(relId, 'memory', 'New ${isStory ? "Story" : "Moment"}: $location 📸');
     await incrementStat(relId, 'memories');
@@ -101,12 +114,14 @@ class CloudRelationshipService {
 
   Future<void> updateActivity(String relId) async {
     if (_currentUid == null) return;
-    final relationship = await _relationships.doc(relId).get();
-    if (!relationship.exists) return;
-    final isUser1 = _currentUid == relationship.get('uid1');
-    await _relationships.doc(relId).update({
-      isUser1 ? 'user1LastActive' : 'user2LastActive': FieldValue.serverTimestamp(),
-    });
+    try {
+      final relationship = await getRelationshipById(relId);
+      if (relationship == null) return;
+      final isUser1 = _currentUid == relationship.uid1;
+      await _updateRelationshipData(relId, {
+        isUser1 ? 'user1LastActive' : 'user2LastActive': DateTime.now(),
+      });
+    } catch (_) {}
   }
 
   Future<void> initNotifications(String relId) async {
@@ -117,21 +132,77 @@ class CloudRelationshipService {
 
   Future<void> updateFcmToken(String relId, String token) async {
     if (_currentUid == null) return;
-    await _relationships.doc(relId).update({'userTokens.$_currentUid': token});
+    try {
+      await _updateRelationshipData(relId, {'userTokens.$_currentUid': token});
+    } catch (_) {}
   }
 
   Stream<List<MemoryModel>> streamMemories(String relId) {
-    return _firestore.collection('relationships').doc(relId).collection('memories').orderBy('date', descending: true).snapshots().map((snapshot) => snapshot.docs.map((doc) {
-      final data = doc.data();
-      if (data['date'] == null) data['date'] = Timestamp.now();
-      return MemoryModel.fromFirestore(data, id: doc.id);
-    }).toList());
+    late StreamController<List<MemoryModel>> controller;
+    RealtimeChannel? channel;
+
+    Future<void> fetchAndEmit() async {
+      try {
+        final res = await _supabase
+            .from('memories')
+            .select()
+            .eq('relationship_id', relId)
+            .order('date', ascending: false);
+
+        final memories = (res as List)
+            .map((m) => MemoryModel.fromFirestore(m as Map<String, dynamic>, id: m['id']?.toString()))
+            .toList();
+        if (!controller.isClosed) controller.add(memories);
+      } catch (e) {
+        debugPrint('Supabase streamMemories fetch warning: $e');
+        try {
+          final snap = await _firestore.collection('relationships').doc(relId).collection('memories').orderBy('date', descending: true).get();
+          final memories = snap.docs.map((doc) => MemoryModel.fromFirestore(doc.data(), id: doc.id)).toList();
+          if (!controller.isClosed) controller.add(memories);
+          return;
+        } catch (_) {}
+        if (!controller.isClosed) controller.add([]);
+      }
+    }
+
+    controller = StreamController<List<MemoryModel>>(
+      onListen: () {
+        fetchAndEmit();
+        try {
+          channel = _supabase
+              .channel('memories_stream_$relId')
+              .onPostgresChanges(
+                event: PostgresChangeEvent.all,
+                schema: 'public',
+                table: 'memories',
+                callback: (payload) {
+                  fetchAndEmit();
+                },
+              )
+              .subscribe();
+        } catch (e) {
+          debugPrint('Realtime channel memories subscription warning: $e');
+        }
+      },
+      onCancel: () {
+        channel?.unsubscribe();
+      },
+    );
+
+    return controller.stream;
   }
 
   Future<void> deleteMemory(String relId, String memoryId, String imageUrl) async {
     if (_currentUid == null) return;
-    await _firestore.collection('relationships').doc(relId).collection('memories').doc(memoryId).delete();
-    try { await _storage.refFromURL(imageUrl).delete(); } catch (_) {}
+    try {
+      await _supabase.from('memories').delete().eq('id', memoryId);
+    } catch (e) {
+      debugPrint('Supabase deleteMemory error: $e');
+    }
+    try {
+      await _firestore.collection('relationships').doc(relId).collection('memories').doc(memoryId).delete();
+      await _storage.refFromURL(imageUrl).delete();
+    } catch (_) {}
     await logActivity(relId, 'delete', 'A memory was removed 🗑️');
   }
 
@@ -141,7 +212,16 @@ class CloudRelationshipService {
     if (caption != null) updates['caption'] = caption;
     if (p1Caption != null) updates['partner1Caption'] = p1Caption;
     if (p2Caption != null) updates['partner2Caption'] = p2Caption;
-    if (updates.isNotEmpty) await _firestore.collection('relationships').doc(relId).collection('memories').doc(memoryId).update(updates);
+    if (updates.isNotEmpty) {
+      try {
+        await _supabase.from('memories').update(updates).eq('id', memoryId);
+      } catch (e) {
+        debugPrint('Supabase updateMemoryCaptions error: $e');
+      }
+      try {
+        await _firestore.collection('relationships').doc(relId).collection('memories').doc(memoryId).update(updates);
+      } catch (_) {}
+    }
   }
 
   Future<String> createJourney(RelationshipModel localData) async {
@@ -643,7 +723,9 @@ class CloudRelationshipService {
 
   Future<void> logActivity(String relId, String type, String title, {String? detail}) async {
     if (_currentUid == null) return;
-    await _relationships.doc(relId).collection('activities').add({'type': type, 'title': title, 'detail': detail, 'timestamp': FieldValue.serverTimestamp(), 'fromUid': _currentUid});
+    try {
+      await _relationships.doc(relId).collection('activities').add({'type': type, 'title': title, 'detail': detail, 'timestamp': FieldValue.serverTimestamp(), 'fromUid': _currentUid});
+    } catch (_) {}
   }
 
   Stream<QuerySnapshot> streamActivities(String relId) {
@@ -965,7 +1047,11 @@ class CloudRelationshipService {
   Future<void> deleteCalendarEvent(String relId, String eventId) async => await _relationships.doc(relId).collection('calendar_events').doc(eventId).delete();
 
   // --- STATS ---
-  Future<void> incrementStat(String relId, String statKey) async => await _relationships.doc(relId).update({'stats.$statKey': FieldValue.increment(1)});
+  Future<void> incrementStat(String relId, String statKey) async {
+    try {
+      await _relationships.doc(relId).update({'stats.$statKey': FieldValue.increment(1)});
+    } catch (_) {}
+  }
 
   Future<void> setHeartSync(String relId, bool isUser1, bool isPressing) async {
     final field = isUser1 ? 'user1SyncPress' : 'user2SyncPress';
@@ -1106,20 +1192,21 @@ class CloudRelationshipService {
     if (color != null) updates['mapLineColor'] = color;
     if (style != null) updates['mapLineStyle'] = style;
     if (updates.isNotEmpty) {
-      await _relationships.doc(relId).update(updates);
+      await _updateRelationshipData(relId, updates);
     }
   }
 
   // --- BATTERY STATUS ---
   Future<void> updateBatteryStatus(String relId, int level, bool isCharging) async {
-    final relDoc = await _relationships.doc(relId).get();
-    if (!relDoc.exists) return;
-    
-    final isUser1 = _currentUid == relDoc.get('uid1');
-    await _relationships.doc(relId).update({
-      isUser1 ? 'user1Battery' : 'user2Battery': level,
-      isUser1 ? 'user1IsCharging' : 'user2IsCharging': isCharging,
-    });
+    try {
+      final rel = await getRelationshipById(relId);
+      if (rel == null) return;
+      final isUser1 = _currentUid == rel.uid1;
+      await _updateRelationshipData(relId, {
+        isUser1 ? 'user1Battery' : 'user2Battery': level,
+        isUser1 ? 'user1IsCharging' : 'user2IsCharging': isCharging,
+      });
+    } catch (_) {}
   }
 
   // --- PASSWORD ---
