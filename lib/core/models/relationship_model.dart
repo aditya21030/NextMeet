@@ -259,6 +259,15 @@ class RelationshipModel {
     return "${dist.toStringAsFixed(1)} KM Away";
   }
 
+  static DateTime? _parseDate(dynamic val) {
+    if (val == null) return null;
+    if (val is Timestamp) return val.toDate();
+    if (val is DateTime) return val;
+    if (val is String) return DateTime.tryParse(val);
+    if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+    return null;
+  }
+
   factory RelationshipModel.fromFirestore(Map<String, dynamic> map, {String? id}) {
     return RelationshipModel(
       id: id,
@@ -266,7 +275,7 @@ class RelationshipModel {
       uid2: map['uid2'],
       uids: map['uids'] != null ? List<String>.from(map['uids']) : [],
       inviteCode: map['inviteCode'],
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
+      createdAt: _parseDate(map['createdAt']),
       userName1: map['userName1'],
       userName2: map['userName2'],
       userLocation1: map['userLocation1'],
@@ -280,16 +289,16 @@ class RelationshipModel {
       partnerFcmToken: map['partnerFcmToken'],
       lastTouchType: map['lastTouchType'],
       lastTouchFrom: map['lastTouchFrom'],
-      lastTouchTime: (map['lastTouchTime'] as Timestamp?)?.toDate(),
+      lastTouchTime: _parseDate(map['lastTouchTime']),
       userTokens: map['userTokens'] != null ? Map<String, String>.from(map['userTokens']) : null,
-      anniversaryDate: (map['anniversaryDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      nextMeetingDate: (map['nextMeetingDate'] as Timestamp?)?.toDate() ?? DateTime.now().add(const Duration(days: 30)),
-      lastMeetingDate: (map['lastMeetingDate'] as Timestamp?)?.toDate() ?? DateTime.now().subtract(const Duration(days: 7)),
+      anniversaryDate: _parseDate(map['anniversaryDate']) ?? DateTime.now(),
+      nextMeetingDate: _parseDate(map['nextMeetingDate']) ?? DateTime.now().add(const Duration(days: 30)),
+      lastMeetingDate: _parseDate(map['lastMeetingDate']) ?? DateTime.now().subtract(const Duration(days: 7)),
       distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 0.0,
       loveQuote: map['loveQuote'] ?? 'Every day apart is one day closer ❤️',
       tripDestination: map['tripDestination'],
-      tripDate: (map['tripDate'] as Timestamp?)?.toDate(),
-      tripEndDate: (map['tripEndDate'] as Timestamp?)?.toDate(),
+      tripDate: _parseDate(map['tripDate']),
+      tripEndDate: _parseDate(map['tripEndDate']),
       tripBudget: (map['tripBudget'] as num?)?.toDouble(),
       tripNotes: map['tripNotes'],
       tripAccommodation: map['tripAccommodation'],
@@ -301,14 +310,14 @@ class RelationshipModel {
       privateSpacePin: map['privateSpacePin'],
       privateSpaceTimeout: map['privateSpaceTimeout'] ?? 'After 5 Minutes',
       privateSpaceStorageBytes: map['privateSpaceStorageBytes'] ?? 0,
-      user1LastActive: (map['user1LastActive'] as Timestamp?)?.toDate(),
-      user2LastActive: (map['user2LastActive'] as Timestamp?)?.toDate(),
+      user1LastActive: _parseDate(map['user1LastActive']),
+      user2LastActive: _parseDate(map['user2LastActive']),
       streakCount: map['streakCount'] ?? 0,
       streakShields: map['streakShields'] ?? 0,
-      lastStreakIncrement: (map['lastStreakIncrement'] as Timestamp?)?.toDate(),
+      lastStreakIncrement: _parseDate(map['lastStreakIncrement']),
       isPlus: map['isPlus'] ?? false,
-      user1SyncPress: (map['user1SyncPress'] as Timestamp?)?.toDate(),
-      user2SyncPress: (map['user2SyncPress'] as Timestamp?)?.toDate(),
+      user1SyncPress: _parseDate(map['user1SyncPress']),
+      user2SyncPress: _parseDate(map['user2SyncPress']),
       user1Lat: (map['user1Lat'] as num?)?.toDouble(),
       user1Lng: (map['user1Lng'] as num?)?.toDouble(),
       user2Lat: (map['user2Lat'] as num?)?.toDouble(),
@@ -320,14 +329,14 @@ class RelationshipModel {
       user1IsCharging: map['user1IsCharging'] as bool?,
       user2IsCharging: map['user2IsCharging'] as bool?,
       pinResetRequestBy: map['pinResetRequestBy'],
-      pinResetRequestAt: (map['pinResetRequestAt'] as Timestamp?)?.toDate(),
+      pinResetRequestAt: _parseDate(map['pinResetRequestAt']),
       pinResetApproved: map['pinResetApproved'] ?? false,
       pinResetOtp1: map['pinResetOtp1'],
       pinResetOtp2: map['pinResetOtp2'],
-      pinResetOtpExpiry: (map['pinResetOtpExpiry'] as Timestamp?)?.toDate(),
+      pinResetOtpExpiry: _parseDate(map['pinResetOtpExpiry']),
       chatBackgroundIndex: map['chatBackgroundIndex'] ?? 0,
       premiumTransactionId: map['premiumTransactionId'],
-      premiumRenewalDate: (map['premiumRenewalDate'] as Timestamp?)?.toDate(),
+      premiumRenewalDate: _parseDate(map['premiumRenewalDate']),
       premiumPlanType: map['premiumPlanType'],
       useBiometrics: map['useBiometrics'] ?? false,
       hapticPatternType: map['hapticPatternType'] ?? 'Standard',
@@ -336,8 +345,8 @@ class RelationshipModel {
       stats: map['stats'] != null ? Map<String, int>.from(map['stats']) : {},
       u1InSanctuary: map['u1InSanctuary'] ?? false,
       u2InSanctuary: map['u2InSanctuary'] ?? false,
-      u1SanctuaryLastSeen: (map['u1SanctuaryLastSeen'] as Timestamp?)?.toDate(),
-      u2SanctuaryLastSeen: (map['u2SanctuaryLastSeen'] as Timestamp?)?.toDate(),
+      u1SanctuaryLastSeen: _parseDate(map['u1SanctuaryLastSeen']),
+      u2SanctuaryLastSeen: _parseDate(map['u2SanctuaryLastSeen']),
       customChatBackgroundUrl: map['customChatBackgroundUrl'],
       status: map['status'] ?? 'active',
     );

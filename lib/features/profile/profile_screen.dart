@@ -1,12 +1,11 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/auth_service.dart';
 import 'edit_profile_screen.dart';
 import 'help_support_screen.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
-import '../../core/services/firebase_auth_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/models/relationship_model.dart';
 import '../../widgets/glass_card.dart';
@@ -29,7 +28,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
-  final FirebaseAuthService _authService = FirebaseAuthService();
+  final AuthService _authService = AuthService();
 
   bool _notificationsEnabled = true;
 
@@ -90,10 +89,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         final rel = snapshot.data!;
         final relId = rel.id!;
-        final bool isMe1 = FirebaseAuth.instance.currentUser?.uid == rel.uid1;
+        final currentUid = _authService.currentUid;
+        final bool isMe1 = currentUid == rel.uid1;
         
-        final myName = rel.getMyRealName(FirebaseAuth.instance.currentUser?.uid);
-        final partnerName = rel.getDisplayPartnerName(FirebaseAuth.instance.currentUser?.uid);
+        final myName = rel.getMyRealName(currentUid);
+        final partnerName = rel.getDisplayPartnerName(currentUid);
         final myLoc = isMe1 ? (rel.userLocation1 ?? '') : (rel.userLocation2 ?? '');
         final partnerLoc = isMe1 ? (rel.userLocation2 ?? '') : (rel.userLocation1 ?? '');
         final togetherDays = _calculateTogetherDays(rel.createdAt);
@@ -1082,7 +1082,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildUnpairedProfile(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = _authService.currentUser;
     final displayName = (user?.displayName != null && user!.displayName!.isNotEmpty)
         ? user.displayName!
         : 'NextMeet User';

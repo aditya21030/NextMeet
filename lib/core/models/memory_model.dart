@@ -42,17 +42,26 @@ class MemoryModel {
     };
   }
 
+  static DateTime _parseDate(dynamic val) {
+    if (val == null) return DateTime.now();
+    if (val is Timestamp) return val.toDate();
+    if (val is DateTime) return val;
+    if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
+    if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+    return DateTime.now();
+  }
+
   factory MemoryModel.fromFirestore(Map<String, dynamic> map, {String? id}) {
     return MemoryModel(
       id: id,
-      imageUrl: map['imageUrl'] ?? '',
+      imageUrl: map['imageUrl'] ?? map['image_url'] ?? '',
       caption: map['caption'] ?? '',
       partner1Caption: map['partner1Caption'],
       partner2Caption: map['partner2Caption'],
-      date: (map['date'] as Timestamp).toDate(),
+      date: _parseDate(map['date'] ?? map['created_at']),
       location: map['location'] ?? '',
       moodEmoji: map['moodEmoji'],
-      isStory: map['isStory'] ?? false,
+      isStory: map['isStory'] ?? map['is_story'] ?? false,
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
     );

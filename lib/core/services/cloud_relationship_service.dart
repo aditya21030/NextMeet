@@ -10,12 +10,14 @@ import 'notification_service.dart';
 import 'vibration_service.dart';
 import '../cities.dart';
 import '../constants.dart';
-import 'dart:convert';
 import 'image_compression_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'auth_service.dart';
 
 class CloudRelationshipService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _auth = AuthService();
+  final SupabaseClient _supabase = Supabase.instance.client;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final NotificationService _notifications = NotificationService();
 
@@ -24,8 +26,8 @@ class CloudRelationshipService {
   CollectionReference get _invites => _firestore.collection('invites');
   CollectionReference get _users => _firestore.collection('users');
 
-  String? get currentUid => _auth.currentUser?.uid;
-  String? get _currentUid => _auth.currentUser?.uid;
+  String? get currentUid => _auth.currentUid;
+  String? get _currentUid => _auth.currentUid;
 
   // Upload a memory with image
   Future<void> addMemory(String relId, File image, String caption, String location, {bool isStory = false, double? lat, double? lng}) async {
@@ -45,13 +47,41 @@ class CloudRelationshipService {
     // Compress photo to lightweight WebP format (~60-90KB)
     final compressedImage = await ImageCompressionService.compressToWebp(image);
     final String fileName = '${DateTime.now().millisecondsSinceEpoch}.webp';
-    final ref = _storage.ref().child('relationships/$relId/memories/$fileName');
+    String imageUrl;
     
-    final uploadTask = await ref.putFile(
-      compressedImage,
-      SettableMetadata(contentType: 'image/webp'),
-    );
-    final String imageUrl = await uploadTask.ref.getDownloadURL();
+    try {
+      final bytes = await compressedImage.readAsBytes();
+      await _supabase.storage.from('memories').uploadBinary(
+        '$relId/memories/$fileName',
+        bytes,
+        fileOptions: const FileOptions(contentType: 'image/webp', upsert: true),
+      );
+      imageUrl = _supabase.storage.from('memories').getPublicUrl('$relId/memories/$fileName');
+    } catch (e) {
+      debugPrint('Supabase storage memory upload fallback to Firebase: $e');
+      final ref = _storage.ref().child('relationships/$relId/memories/$fileName');
+      final uploadTask = await ref.putFile(
+        compressedImage,
+        SettableMetadata(contentType: 'image/webp'),
+      );
+      imageUrl = await uploadTask.ref.getDownloadURL();
+    }
+
+    try {
+      await _supabase.from('memories').insert({
+        'relationship_id': relId,
+        'image_url': imageUrl,
+        'caption': caption,
+        'location': location,
+        'added_by': _currentUid,
+        'is_story': isStory,
+        'lat': lat,
+        'lng': lng,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase insert memory warning: $e');
+    }
 
     await _firestore.collection('relationships').doc(relId).collection('memories').add({
       'imageUrl': imageUrl,
@@ -146,6 +176,21 @@ class CloudRelationshipService {
       }, SetOptions(merge: true));
     } catch (e) {
       print('Error syncing createJourney to admin dashboard: $e');
+    }
+
+    // Supabase Sync
+    try {
+      await _supabase.from('relationships').upsert({
+        'id': relDocRef.id,
+        'uid1': _currentUid,
+        'uids': [_currentUid!],
+        'invite_code': code,
+        'status': 'waiting',
+        'data': relationship.toFirestoreMap(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase createJourney sync warning: $e');
     }
     
     return code;
@@ -256,6 +301,22 @@ class CloudRelationshipService {
         }, SetOptions(merge: true));
       } catch (e) {
         debugPrint('Non-critical admin sync warning in joinJourney: $e');
+      }
+
+      // Supabase sync
+      try {
+        await _supabase.from('relationships').upsert({
+          'id': relId,
+          'uid1': creatorUid,
+          'uid2': _currentUid,
+          'uids': [creatorUid, _currentUid],
+          'status': 'active',
+          'invite_code': code,
+          'data': joinedRelationship.toFirestoreMap(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        debugPrint('Supabase joinJourney sync warning: $e');
       }
     }
 
@@ -595,12 +656,18 @@ class CloudRelationshipService {
     final String fileName = 'profile_${_currentUid}_${DateTime.now().millisecondsSinceEpoch}.webp';
     
     try {
+      await _supabase.storage.from('memories').uploadBinary(
+        '$relId/profiles/$fileName',
+        compressedBytes,
+        fileOptions: const FileOptions(contentType: 'image/webp', upsert: true),
+      );
+      return _supabase.storage.from('memories').getPublicUrl('$relId/profiles/$fileName');
+    } catch (e) {
+      debugPrint('Supabase uploadProfilePhoto fallback to Firebase: $e');
       final ref = _storage.ref().child('relationships/$relId/profiles/$fileName');
       final metadata = SettableMetadata(contentType: 'image/webp');
       final uploadTask = await ref.putData(compressedBytes, metadata);
       return await uploadTask.ref.getDownloadURL();
-    } catch (e) {
-      throw Exception('Storage Error: $e');
     }
   }
 
@@ -926,10 +993,6 @@ class CloudRelationshipService {
 
   // --- PASSWORD ---
   Future<void> updateUserPassword(String oldPassword, String newPassword) async {
-    final user = _auth.currentUser;
-    if (user == null || user.email == null) throw Exception('User not authenticated');
-    AuthCredential credential = EmailAuthProvider.credential(email: user.email!, password: oldPassword);
-    await user.reauthenticateWithCredential(credential);
-    await user.updatePassword(newPassword);
+    await _auth.updateUserPassword(oldPassword, newPassword);
   }
 }

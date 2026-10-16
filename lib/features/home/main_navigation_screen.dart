@@ -1,7 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
+import '../../core/services/auth_service.dart';
 import 'home_screen.dart';
 import 'memories_screen.dart';
 import 'sanctuary_tab.dart';
@@ -21,12 +21,12 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
-  late StreamSubscription<User?> _authSubscription;
+  late StreamSubscription<AppUser?> _authSubscription;
 
   @override
   void initState() {
     super.initState();
-    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+    _authSubscription = AuthService().authStateChanges.listen((user) {
       if (user == null && mounted) {
         Navigator.pushAndRemoveUntil(
           context,

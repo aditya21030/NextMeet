@@ -1,7 +1,7 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
@@ -19,7 +19,7 @@ class LoveLettersScreen extends StatefulWidget {
 
 class _LoveLettersScreenState extends State<LoveLettersScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
-  final String? _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  final String? _currentUserId = AuthService().currentUid;
 
   void _addLetter(String relId) {
     final titleController = TextEditingController();
@@ -144,7 +144,7 @@ class _LoveLettersScreenState extends State<LoveLettersScreen> {
                                 child: GestureDetector(
                                   onTap: () {
                                     final data = doc.data() as Map<String, dynamic>;
-                                    final bool isMine = data['senderId'] == FirebaseAuth.instance.currentUser?.uid;
+                                    final bool isMine = data['senderId'] == _currentUserId;
                                     final timestamp = data['timestamp'] as Timestamp?;
                                     String dateStr = timestamp != null ? '${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year}' : 'Recently';
                                     

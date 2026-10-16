@@ -1,7 +1,7 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import 'create_couple_screen.dart';
@@ -43,8 +43,8 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Fallback to Firebase Auth display name if not passed from registration
-    final String? resolvedName = widget.creatorName ?? FirebaseAuth.instance.currentUser?.displayName;
+    // Fallback to Auth display name if not passed from registration
+    final String? resolvedName = widget.creatorName ?? AuthService().currentUser?.displayName;
 
     return Scaffold(
       backgroundColor: AppColors.background,

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/constants.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/models/relationship_model.dart';
@@ -32,14 +32,14 @@ class _SplashScreenState extends State<SplashScreen> {
       // 1. Min splash animation time (reduced from 2500ms to 1200ms for fast launch)
       final animationFuture = Future.delayed(const Duration(milliseconds: 1200));
       
-      // 2. Wait for Firebase to determine auth state with timeout
-      final authFuture = FirebaseAuth.instance
-          .authStateChanges()
+      // 2. Wait for auth service to determine auth state with timeout
+      final authFuture = AuthService()
+          .authStateChanges
           .first
           .timeout(const Duration(seconds: 4), onTimeout: () => null);
       
       final result = await Future.wait([animationFuture, authFuture]);
-      final User? user = result[1] as User?;
+      final AppUser? user = result[1] as AppUser?;
 
       if (!mounted) return;
 

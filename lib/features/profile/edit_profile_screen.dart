@@ -12,7 +12,7 @@ import '../../widgets/app_inputs.dart';
 import '../../widgets/primary_button.dart';
 import '../../core/services/location_search_service.dart';
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/auth_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String relationshipId;
@@ -51,7 +51,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     
-    final String currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final String currentUid = AuthService().currentUid ?? '';
     
     final String currentName = widget.isPartner 
         ? widget.relationship.getPartnerPetName(currentUid)
@@ -124,7 +124,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final lat = _selectedResult?.lat;
       final lng = _selectedResult?.lng;
 
-      final String currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final String currentUid = AuthService().currentUid ?? '';
       final bool isMe1 = currentUid == widget.relationship.uid1;
 
       if (widget.isPartner) {

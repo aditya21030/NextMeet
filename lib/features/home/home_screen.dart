@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../../core/constants.dart';
 import 'package:share_plus/share_plus.dart';
@@ -307,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     TextButton(
                       onPressed: () async {
-                        await FirebaseAuth.instance.signOut();
+                        await AuthService().signOut();
                         if (mounted) {
                           Navigator.pushAndRemoveUntil(
       // ignore: use_build_context_synchronously
@@ -783,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
+                  await AuthService().signOut();
                   if (mounted) {
                     Navigator.pushAndRemoveUntil(
                       context,
