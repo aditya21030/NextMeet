@@ -258,3 +258,70 @@ flowchart TD
 | **Phase 2** | 2.1 - 2.4 | Fix atomic transaction crash, stream orphan trap, and live pairing listener | `[x]` Completed |
 | **Phase 3** | 3.1 - 3.5 | UI/UX delight, floating particles, Heart Sync ergonomics, WCAG contrast | `[x]` Completed |
 | **Phase 4** | 4.1 - 4.3 | Clipboard auto-detection, FTUE hierarchy, and flutter analyze verification | `[x]` Completed |
+| **Phase 5** | 5.1 - 5.5 | LDR Purge of 5,000+ lines of dead bloat & Luxury UI/UX Overhaul (Rose Champagne & Cashmere) | `[ ]` In Progress |
+| **Phase 6** | 6.1 - 6.3 | NextMeet Hero Boarding Pass Countdown, Live Locket Bezel, and Local APK Build for Testing | `[ ]` In Progress |
+
+---
+
+## 💎 PHASE 5: THE LDR PURGE & LUXURY UI/UX OVERHAUL
+*Goal: Rebuild NextMeet into an ultra-focused, luxury sanctuary for Long-Distance couples ("The app until next meeting the couples") by eliminating ~5,000 lines of disjointed bloat and establishing a mature, tactile Rose Champagne & Cashmere design system.*
+
+### Step 5.1: Purge Orphaned & Bloated Feature Code
+* **Target Files to Delete:**
+  * `lib/features/home/planner_screen.dart` (1,231 lines of trip planning/tasks)
+  * `lib/features/home/achievements_screen.dart` (1,154 lines of gamified points/badges)
+  * `lib/features/home/couple_quiz_screen.dart` (134 lines of trivia)
+  * `lib/features/home/date_discovery_screen.dart` (170 lines of date generator)
+  * `lib/features/home/activity_screen.dart` (483 lines of activity logging)
+  * `lib/features/home/bucket_list_screen.dart` (201 lines of checklists)
+  * `lib/features/private_space/sanctum_rituals_screen.dart` (213 lines)
+  * `lib/features/private_space/shared_sketchpad_screen.dart` (262 lines)
+  * `lib/features/private_space/surprise_messages_screen.dart` (401 lines)
+  * `lib/features/private_space/whisper_notes_screen.dart` (212 lines)
+  * `lib/features/private_space/voice_memos_screen.dart` (334 lines)
+  * `lib/features/private_space/private_notes_screen.dart` & `note_detail_screen.dart` (482 lines)
+* **Actions:**
+  1. Delete unreferenced, orphaned screen files.
+  2. Clean any orphaned imports across the codebase.
+* **Acceptance Criteria:**
+  * Clean repository structure with zero dead weight.
+
+### Step 5.2: Luxury Color System & Typography Overhaul
+* **Target File:**
+  * [`lib/core/constants.dart`](file:///d:/Flutter/NextMeet/lib/core/constants.dart)
+* **Actions:**
+  1. Implement **Velvet Rose** (`#E11D48` ➔ `#BE123C`) replacing old neon bubblegum pink.
+  2. Implement **Cashmere Milk** (`#FAFAF9`) warm organic canvas base.
+  3. Implement **Champagne Amber** (`#F59E0B` ➔ `#D97706`) for the NextMeet countdown timer and reunion ticket.
+  4. Implement **Espresso Noir** (`#18181B`) for ultra-crisp editorial typography.
+  5. Add spring curve tokens (`Curves.easeOutBack`) and physical haptic helpers.
+
+### Step 5.3: Streamline Core Navigation (The 3 Pillars of LDR)
+* **Target File:**
+  * [`lib/features/home/main_navigation_screen.dart`](file:///d:/Flutter/NextMeet/lib/features/home/main_navigation_screen.dart)
+* **Actions:**
+  1. Refactor navigation into 3 primary destinations:
+     * **1. US** (`HomeScreen`): Real-time distance, dual clock & battery, Heart Sync, quick touch pulses.
+     * **2. NEXT MEET** (`NextMeetScreen` / `CalendarScreen`): Hero Boarding Pass countdown, reunion ticket, and visit milestones.
+     * **3. SANCTUARY** (`PrivateHomeScreen`): Secret photo vault, Love Letters, and Couple Settings.
+
+---
+
+## ✈️ PHASE 6: NEXTMEET HERO BOARDING PASS, LIVE LOCKET & APK BUILD
+*Goal: Implement the emotional daily hooks, verify code health, and build the test APK for user device testing without pushing to GitHub.*
+
+### Step 6.1: NextMeet "Reunion Boarding Pass" Hero Countdown
+* **Actions:**
+  1. Build the luxury boarding pass countdown card with airport/city codes (`DEL ➔ BOM`), live distance remaining, and prominent `DAYS • HOURS • MINS` counter.
+  2. Add countdown milestones (Anniversaries, next confirmed visit date).
+
+### Step 6.2: Code Health & Zero-Defect Analysis
+* **Actions:**
+  1. Run `flutter analyze` to guarantee 0 errors and 0 warnings.
+  2. Verify all animations and controllers are cleanly disposed.
+
+### Step 6.3: Local APK Build for User Device Testing
+* **Actions:**
+  1. Explicit user request verified: *"first build apk i will test"*.
+  2. Execute `flutter build apk --release` to generate the standalone installable APK.
+  3. Keep all changes local without pushing to GitHub (`git push` withheld as instructed).

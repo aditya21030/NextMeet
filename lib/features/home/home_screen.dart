@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../../core/constants.dart';
@@ -1037,68 +1038,198 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 32),
             
-            // Next Meeting Card
+            // Hero Reunion Boarding Pass Countdown
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
               child: FadeInUp(
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(color: Colors.pinkAccent.withValues(alpha: 0.05), blurRadius: 40, offset: const Offset(0, 20)),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                child: GestureDetector(
+                  onTap: () {
+                    VibrationService.medium();
+                    if (data.id != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CalendarScreen(relationshipId: data.id!),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.l),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF18181B), Color(0xFF27272A)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFE11D48).withValues(alpha: 0.2),
+                          blurRadius: 30,
+                          offset: const Offset(0, 15),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: const Color(0xFFE11D48).withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Flight Header: Route + Distance Pill
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('NEXT MEETING', style: AppTextStyles.bodyS.copyWith(color: Colors.redAccent, fontWeight: FontWeight.w900, letterSpacing: 1.5, fontSize: 10)),
-                            const SizedBox(height: 12),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                DateFormat.yMMMMd().format(data.nextMeetingDate),
-                                style: AppTextStyles.h2.copyWith(fontSize: 22, fontWeight: FontWeight.w900),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE11D48).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.flight_takeoff_rounded, color: Color(0xFFFB7185), size: 14),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'NEXT MEETUP',
+                                    style: AppTextStyles.bodyS.copyWith(
+                                      color: const Color(0xFFFB7185),
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.5,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              isPast ? 'Hope it was a beautiful meet! ❤️' : '$daysLeft Days Until You Meet ❤️',
-                              style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                data.formattedDistance,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Circular Progress
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox(
-                            width: 80,
-                            height: 80,
-                            child: CircularProgressIndicator(
-                              value: isPast ? 1.0 : progress, 
-                              strokeWidth: 8,
-                              color: Colors.redAccent.withValues(alpha: 0.6),
-                              backgroundColor: Colors.redAccent.withValues(alpha: 0.05),
-                              strokeCap: StrokeCap.round,
+                        const SizedBox(height: 18),
+                        
+                        // Cities Route Line
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                data.getMyLocation(_cloudService.currentUid).isNotEmpty
+                                    ? data.getMyLocation(_cloudService.currentUid)
+                                    : 'Your City',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Row(
+                                children: [
+                                  Container(width: 20, height: 1.5, color: const Color(0xFFF59E0B)),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 4),
+                                    child: Icon(Icons.flight_rounded, color: Color(0xFFF59E0B), size: 18),
+                                  ),
+                                  Container(width: 20, height: 1.5, color: const Color(0xFFF59E0B)),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                data.getPartnerLocation(_cloudService.currentUid).isNotEmpty
+                                    ? data.getPartnerLocation(_cloudService.currentUid)
+                                    : 'Partner City',
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        
+                        // Countdown Blocks: DAYS • HOURS • MINS
+                        if (isPast)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                'Together Again 🎉 Tap to schedule Next Meet!',
+                                style: AppTextStyles.bodyL.copyWith(
+                                  color: const Color(0xFFF59E0B),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildCountdownBlock('$daysLeft', 'DAYS'),
+                              _buildCountdownColon(),
+                              _buildCountdownBlock('${timeLeft.inHours % 24}'.padLeft(2, '0'), 'HOURS'),
+                              _buildCountdownColon(),
+                              _buildCountdownBlock('${timeLeft.inMinutes % 60}'.padLeft(2, '0'), 'MINS'),
+                            ],
                           ),
-                          Text(
-                            isPast ? '🎉' : '$daysLeft',
-                            style: AppTextStyles.h2.copyWith(color: Colors.redAccent.withValues(alpha: 0.8), fontSize: isPast ? 32 : 24),
-                          ),
-                        ],
-                      ),
-                    ],
+                        const SizedBox(height: 14),
+                        
+                        // Footer Date & Tap Call to Action
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              DateFormat.yMMMMd().format(data.nextMeetingDate),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  'Tap to view schedule',
+                                  style: TextStyle(
+                                    color: const Color(0xFFFB7185).withValues(alpha: 0.9),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFFB7185), size: 10),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1801,6 +1932,54 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCountdownBlock(String val, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            val,
+            style: GoogleFonts.outfit(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFFF59E0B),
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              color: Colors.white60,
+              letterSpacing: 1.0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCountdownColon() {
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 12),
+      child: Text(
+        ':',
+        style: TextStyle(
+          color: Color(0xFFF59E0B),
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

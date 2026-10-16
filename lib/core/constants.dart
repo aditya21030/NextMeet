@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  // Primary palette (Lume Pink/Red)
-  static const Color primary = Color(0xFFFF5E7D);
-  static const Color primaryLight = Color(0xFFFF859B);
-  static const Color primaryDark = Color(0xFFE04362);
+  // Primary luxury palette (Velvet Rose & Deep Wine)
+  static const Color primary = Color(0xFFE11D48); // Velvet Rose
+  static const Color primaryLight = Color(0xFFFB7185); // Rose Petal Glow
+  static const Color primaryDark = Color(0xFF9F1239); // Deep Wine
   
-  // Secondary / Accent
+  // Secondary / Milestones & Champagne Gold
   static const Color accent = Color(0xFF6366F1); // Modern Indigo
+  static const Color gold = Color(0xFFF59E0B); // Champagne Gold / Candlelight Amber
+  static const Color goldDark = Color(0xFFD97706);
   static const Color success = Color(0xFF10B981); // Emerald
   static const Color error = Color(0xFFEF4444); // Rose
   
@@ -18,21 +20,27 @@ class AppColors {
   static const Color instagram = Color(0xFFE4405F);
   static const Color facebook = Color(0xFF1877F2);
   
-  // Neutral / Background
-  static const Color background = Color(0xFFF8FAFC);
+  // Neutral / Luxury Canvas (Cashmere Milk & Espresso Noir)
+  static const Color background = Color(0xFFFAFAF9); // Cashmere Milk / Alabaster
   static const Color surface = Colors.white;
-  static const Color sanctumBackground = Color(0xFFFDEEF1);
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF64748B);
-  static const Color textMuted = Color(0xFF94A3B8);
-  static const Color divider = Color(0xFFE2E8F0);
+  static const Color sanctumBackground = Color(0xFFFFF1F2); // Rose Petal Tint
+  static const Color textPrimary = Color(0xFF18181B); // Espresso Noir
+  static const Color textSecondary = Color(0xFF71717A); // Mocha Slate
+  static const Color textMuted = Color(0xFFA1A1AA);
+  static const Color divider = Color(0xFFF4E8EA);
   
   // Premium Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFF5E7D), Color(0xFFFF3D68)],
+    colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
     stops: [0.0, 1.0],
+  );
+
+  static const LinearGradient goldGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
   );
 
   static const LinearGradient accentGradient = LinearGradient(
@@ -61,13 +69,13 @@ class AppColors {
 
   static const List<BoxShadow> premiumShadow = [
     BoxShadow(
-      color: Color(0x14FF5E7D),
+      color: Color(0x1CE11D48),
       blurRadius: 40,
       offset: Offset(0, 20),
       spreadRadius: -10,
     ),
     BoxShadow(
-      color: Color(0x050F172A),
+      color: Color(0x0518181B),
       blurRadius: 10,
       offset: Offset(0, 5),
     ),
@@ -75,7 +83,7 @@ class AppColors {
 
   static const List<BoxShadow> buttonShadow = [
     BoxShadow(
-      color: Color(0x59FF5E7D),
+      color: Color(0x40E11D48),
       blurRadius: 20,
       offset: Offset(0, 10),
       spreadRadius: -5,
