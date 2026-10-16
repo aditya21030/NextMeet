@@ -5,7 +5,6 @@ import '../../core/services/vibration_service.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/app_inputs.dart';
 import '../../core/services/firebase_auth_service.dart';
-import 'reset_password_screen.dart';
 
 class ForgotIdentityScreen extends StatefulWidget {
   const ForgotIdentityScreen({super.key});
@@ -16,17 +15,13 @@ class ForgotIdentityScreen extends StatefulWidget {
 
 class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
   final _emailController = TextEditingController();
-  final _otpController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isSent = false;
-  bool _showOtpInput = false;
-  bool _isVerifyingOtp = false;
 
   @override
   void dispose() {
     _emailController.dispose();
-    _otpController.dispose();
     super.dispose();
   }
 
@@ -55,46 +50,6 @@ class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
       }
     } else {
       VibrationService.error();
-    }
-  }
-
-  void _handleVerifyOtp() async {
-    final code = _otpController.text.trim();
-    if (code.isEmpty) {
-      VibrationService.error();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter the OTP code from your email'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isVerifyingOtp = true);
-    VibrationService.medium();
-
-    try {
-      await FirebaseAuthService().verifyRecoveryOtp(
-        email: _emailController.text.trim(),
-        token: code,
-      );
-      if (!mounted) return;
-      VibrationService.success();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isVerifyingOtp = false);
-      VibrationService.error();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Verification failed: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-        ),
-      );
     }
   }
 
@@ -244,7 +199,9 @@ class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
   }
 
   Widget _buildSuccessState() {
+    final email = _emailController.text.trim();
     return FadeInUp(
+      duration: const Duration(milliseconds: 600),
       child: Column(
         children: [
           Container(
@@ -256,70 +213,43 @@ class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
             ),
             child: const Icon(
               Icons.mark_email_read_rounded,
-              size: 60,
-              color: AppColors.success,
+              size: 64,
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
-          Text('Recovery Sent! ✨', style: AppTextStyles.h2.copyWith(fontSize: 26)),
-          const SizedBox(height: AppSpacing.s),
-          Text(
-            'Check your inbox for the recovery email.\nTap the link on your phone to open NextMeet directly.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
+          Text('Reset Link Sent! 💌', style: AppTextStyles.h2.copyWith(fontSize: 26)),
+          const SizedBox(height: AppSpacing.m),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'We sent a password reset link to:\n$email\n\nTap the link in your email on this phone to open NextMeet directly and set your new password.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyM.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
           ),
-          const SizedBox(height: 24),
-          if (!_showOtpInput) ...[
-            TextButton.icon(
-              onPressed: () {
-                VibrationService.light();
-                setState(() => _showOtpInput = true);
-              },
-              icon: const Icon(Icons.pin_rounded, color: AppColors.primary, size: 18),
-              label: Text(
-                'Have a recovery OTP code? Enter Code',
-                style: AppTextStyles.bodyM.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ] else ...[
-            FadeInDown(
-              child: Column(
-                children: [
-                  _buildInputWrapper(
-                    label: 'ENTER OTP CODE FROM EMAIL',
-                    child: TextFormField(
-                      controller: _otpController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.h3.copyWith(
-                        letterSpacing: 6,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                      decoration: AppInputs.premiumInput(
-                        'OTP Code',
-                        hint: '••••••••',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.m),
-                  PrimaryButton(
-                    text: 'Verify Code & Reset',
-                    isLoading: _isVerifyingOtp,
-                    onPressed: _handleVerifyOtp,
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 32),
+          const SizedBox(height: 36),
           PrimaryButton(
             text: 'Back to Login',
-            onPressed: () => Navigator.pop(context),
-            isSecondary: true,
+            onPressed: () {
+              VibrationService.light();
+              Navigator.pop(context);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _isLoading ? null : _handleReset,
+            icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.primary),
+            label: Text(
+              'Resend Reset Link',
+              style: AppTextStyles.bodyM.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
