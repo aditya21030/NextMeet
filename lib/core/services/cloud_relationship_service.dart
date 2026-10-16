@@ -717,7 +717,7 @@ class CloudRelationshipService {
         ];
         updates['loveQuote'] = quotes[math.Random().nextInt(quotes.length)];
       }
-      await _relationships.doc(relId).update(updates);
+      await _updateRelationshipData(relId, updates);
     }
   }
 
@@ -766,13 +766,13 @@ class CloudRelationshipService {
     if (mood != null) updates['tripMood'] = mood;
     if (story != null) updates['tripStory'] = story;
     if (updates.isNotEmpty) {
-      await _relationships.doc(relId).update(updates);
+      await _updateRelationshipData(relId, updates);
       await logActivity(relId, 'update', 'Trip Details Updated ✈️');
     }
   }
 
   Future<void> updateTripExcitement(String relId, String uid, bool excited) async {
-    await _relationships.doc(relId).update({'tripExcitement.$uid': excited});
+    await _updateRelationshipData(relId, {'tripExcitement.$uid': excited});
   }
 
   Future<void> addItineraryItem(String relId, String title, String description, DateTime date, {String category = 'Sightseeing', String? notes, String slot = 'Morning'}) async {
@@ -841,12 +841,25 @@ class CloudRelationshipService {
   Future<void> deleteItineraryItem(String relId, String itemId) async => _relationships.doc(relId).collection('itinerary').doc(itemId).delete();
 
   Future<void> resetTripData(String relId) async {
-    await _relationships.doc(relId).update({'tripDestination': FieldValue.delete(), 'tripDate': FieldValue.delete(), 'tripBudget': FieldValue.delete(), 'tripNotes': FieldValue.delete(), 'tripAccommodation': FieldValue.delete(), 'tripTransport': FieldValue.delete(), 'tripMustSee': FieldValue.delete(), 'tripMood': FieldValue.delete(), 'tripStory': FieldValue.delete(), 'tripExcitement': FieldValue.delete()});
+    await _updateRelationshipData(relId, {
+      'tripDestination': null,
+      'tripDate': null,
+      'tripBudget': null,
+      'tripNotes': null,
+      'tripAccommodation': null,
+      'tripTransport': null,
+      'tripMustSee': null,
+      'tripMood': null,
+      'tripStory': null,
+      'tripExcitement': null
+    });
     for (final coll in ['tasks', 'packing_list', 'expenses', 'itinerary']) {
-      final docs = await _relationships.doc(relId).collection(coll).get();
-      for (final doc in docs.docs) {
-        await doc.reference.delete();
-      }
+      try {
+        final docs = await _relationships.doc(relId).collection(coll).get();
+        for (final doc in docs.docs) {
+          await doc.reference.delete();
+        }
+      } catch (_) {}
     }
     await logActivity(relId, 'update', 'Trip Reset/Deleted 🗑️');
   }
@@ -856,7 +869,7 @@ class CloudRelationshipService {
     final updates = <String, dynamic>{};
     if (name1 != null) updates['userName1'] = name1; if (loc1 != null) updates['userLocation1'] = loc1; if (photo1 != null) updates['userPhoto1'] = photo1; if (nick1 != null) updates['user1PartnerNickname'] = nick1; if (lat1 != null) updates['user1Lat'] = lat1; if (lng1 != null) updates['user1Lng'] = lng1;
     if (name2 != null) updates['userName2'] = name2; if (loc2 != null) updates['userLocation2'] = loc2; if (photo2 != null) updates['userPhoto2'] = photo2; if (nick2 != null) updates['user2PartnerNickname'] = nick2; if (lat2 != null) updates['user2Lat'] = lat2; if (lng2 != null) updates['user2Lng'] = lng2;
-    if (updates.isNotEmpty) await _relationships.doc(relId).update(updates);
+    if (updates.isNotEmpty) await _updateRelationshipData(relId, updates);
   }
 
   Future<String> uploadProfilePhoto(String relId, Uint8List imageBytes) async {
@@ -885,48 +898,51 @@ class CloudRelationshipService {
   }
 
   // --- PRIVATE SPACE ---
-  Future<void> updatePrivateSpacePin(String relId, String? pin) async => await _relationships.doc(relId).update({'privateSpacePin': pin});
-  Future<void> updatePrivateSpaceTimeout(String relId, String timeout) async => await _relationships.doc(relId).update({'privateSpaceTimeout': timeout});
-  Future<void> requestPinReset(String relId) async => await _relationships.doc(relId).update({'pinResetRequestBy': _currentUid, 'pinResetRequestAt': FieldValue.serverTimestamp(), 'pinResetApproved': false});
-  Future<void> approvePinReset(String relId) async => await _relationships.doc(relId).update({'pinResetApproved': true});
-  Future<void> finalizePinReset(String relId, String newPin) async => await _relationships.doc(relId).update({'privateSpacePin': newPin, 'pinResetRequestBy': null, 'pinResetRequestAt': null, 'pinResetApproved': false});
-  Future<void> cancelPinReset(String relId) async => await _relationships.doc(relId).update({'pinResetRequestBy': null, 'pinResetRequestAt': null, 'pinResetApproved': false});
+  Future<void> updatePrivateSpacePin(String relId, String? pin) async => await _updateRelationshipData(relId, {'privateSpacePin': pin});
+  Future<void> updatePrivateSpaceTimeout(String relId, String timeout) async => await _updateRelationshipData(relId, {'privateSpaceTimeout': timeout});
+  Future<void> requestPinReset(String relId) async => await _updateRelationshipData(relId, {'pinResetRequestBy': _currentUid, 'pinResetRequestAt': DateTime.now(), 'pinResetApproved': false});
+  Future<void> approvePinReset(String relId) async => await _updateRelationshipData(relId, {'pinResetApproved': true});
+  Future<void> finalizePinReset(String relId, String newPin) async => await _updateRelationshipData(relId, {'privateSpacePin': newPin, 'pinResetRequestBy': null, 'pinResetRequestAt': null, 'pinResetApproved': false});
+  Future<void> cancelPinReset(String relId) async => await _updateRelationshipData(relId, {'pinResetRequestBy': null, 'pinResetRequestAt': null, 'pinResetApproved': false});
   Future<void> generatePinResetOtps(String relId) async {
     final otp1 = (100000 + math.Random().nextInt(900000)).toString();
     final otp2 = (100000 + math.Random().nextInt(900000)).toString();
-    await _relationships.doc(relId).update({'pinResetOtp1': otp1, 'pinResetOtp2': otp2, 'pinResetOtpExpiry': Timestamp.fromDate(DateTime.now().add(const Duration(minutes: 15)))});
+    await _updateRelationshipData(relId, {'pinResetOtp1': otp1, 'pinResetOtp2': otp2, 'pinResetOtpExpiry': DateTime.now().add(const Duration(minutes: 15))});
   }
   Future<bool> verifyPinResetOtps(String relId, String otp1, String otp2) async {
-    final doc = await _relationships.doc(relId).get();
-    final data = doc.data() as Map<String, dynamic>;
-    if (data['pinResetOtp1'] == otp1 && data['pinResetOtp2'] == otp2) { await approvePinReset(relId); return true; }
+    final rel = await getRelationshipById(relId);
+    if (rel != null && rel.pinResetOtp1 == otp1 && rel.pinResetOtp2 == otp2) {
+      await approvePinReset(relId);
+      return true;
+    }
     return false;
   }
 
   // --- PRIVATE SPACE / ELITE TOOLS ---
   Future<void> updateSanctuaryPresence(String relId, bool isIn) async {
     if (_currentUid == null) return;
-    final rel = await _relationships.doc(relId).get();
-    if (!rel.exists) return;
-    final isUser1 = _currentUid == rel.get('uid1');
-    await _relationships.doc(relId).update({
+    final rel = await getRelationshipById(relId);
+    if (rel == null) return;
+    final isUser1 = _currentUid == rel.uid1;
+    await _updateRelationshipData(relId, {
       isUser1 ? 'u1InSanctuary' : 'u2InSanctuary': isIn,
-      isUser1 ? 'u1SanctuaryLastSeen' : 'u2SanctuaryLastSeen': FieldValue.serverTimestamp(),
+      isUser1 ? 'u1SanctuaryLastSeen' : 'u2SanctuaryLastSeen': DateTime.now(),
     });
   }
   
   Future<void> updateSanctuaryStatus(bool isIn) async {
     if (_currentUid == null) return;
-    final rels = await _relationships.where('uids', arrayContains: _currentUid).limit(1).get();
-    if (rels.docs.isEmpty) return;
-    await updateSanctuaryPresence(rels.docs.first.id, isIn);
+    final rel = await streamRelationship().first;
+    if (rel?.id != null) {
+      await updateSanctuaryPresence(rel!.id!, isIn);
+    }
   }
 
   Future<void> updateSketchpadData(String relId, String? data) async {
     if (_currentUid == null) return;
-    await _relationships.doc(relId).update({
+    await _updateRelationshipData(relId, {
       'sketchpadData': data,
-      'sketchpadLastUpdate': FieldValue.serverTimestamp(),
+      'sketchpadLastUpdate': DateTime.now(),
       'sketchpadUpdatedBy': _currentUid,
     });
   }
@@ -1061,7 +1077,7 @@ class CloudRelationshipService {
   }
 
   Future<void> updateChatBackground(String relId, int index) async {
-    await _relationships.doc(relId).update({
+    await _updateRelationshipData(relId, {
       'chatBackgroundIndex': index,
       'customChatBackgroundUrl': null, // Reset custom when selecting a preset
     });
@@ -1071,18 +1087,28 @@ class CloudRelationshipService {
     if (_currentUid == null) return;
     
     // 1. Get current background to delete if exists
-    final doc = await _relationships.doc(relId).get();
-    final data = doc.data() as Map<String, dynamic>?;
-    final String? oldUrl = data?['customChatBackgroundUrl'];
+    final rel = await getRelationshipById(relId);
+    final String? oldUrl = rel?.customChatBackgroundUrl;
     
     // 2. Upload new image
     final String fileName = 'chat_bg_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final ref = _storage.ref().child('relationships/$relId/backgrounds/$fileName');
-    final uploadTask = await ref.putFile(imageFile);
-    final String newUrl = await uploadTask.ref.getDownloadURL();
+    String newUrl;
+    try {
+      final bytes = await imageFile.readAsBytes();
+      await _supabase.storage.from('memories').uploadBinary(
+        '$relId/backgrounds/$fileName',
+        bytes,
+        fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+      );
+      newUrl = _supabase.storage.from('memories').getPublicUrl('$relId/backgrounds/$fileName');
+    } catch (_) {
+      final ref = _storage.ref().child('relationships/$relId/backgrounds/$fileName');
+      final uploadTask = await ref.putFile(imageFile);
+      newUrl = await uploadTask.ref.getDownloadURL();
+    }
 
-    // 3. Update Firestore
-    await _relationships.doc(relId).update({
+    // 3. Update Firestore & Supabase
+    await _updateRelationshipData(relId, {
       'customChatBackgroundUrl': newUrl,
       'chatBackgroundIndex': -1, // Use -1 to indicate custom
     });
@@ -1098,11 +1124,10 @@ class CloudRelationshipService {
   }
 
   Future<void> clearCustomChatBackground(String relId) async {
-    final doc = await _relationships.doc(relId).get();
-    final data = doc.data() as Map<String, dynamic>?;
-    final String? oldUrl = data?['customChatBackgroundUrl'];
+    final rel = await getRelationshipById(relId);
+    final String? oldUrl = rel?.customChatBackgroundUrl;
     
-    await _relationships.doc(relId).update({
+    await _updateRelationshipData(relId, {
       'customChatBackgroundUrl': null,
       'chatBackgroundIndex': 0, // Reset to Minimal
     });
@@ -1117,7 +1142,7 @@ class CloudRelationshipService {
   }
 
   Future<void> updateBiometricPreference(String relId, bool enabled) async {
-    await _relationships.doc(relId).update({'useBiometrics': enabled});
+    await _updateRelationshipData(relId, {'useBiometrics': enabled});
   }
 
   // --- PREMIUM ACTIVATION (NEW REAL FLOW) ---
@@ -1130,27 +1155,29 @@ class CloudRelationshipService {
     if (_currentUid == null) return;
 
     // 1. Update the Relationship document
-    await _relationships.doc(relId).update({
+    await _updateRelationshipData(relId, {
       'isPlus': true,
       'premiumTransactionId': transactionId,
-      'premiumRenewalDate': Timestamp.fromDate(renewalDate),
+      'premiumRenewalDate': renewalDate,
       'premiumPlanType': planType,
-      'premiumActivatedAt': FieldValue.serverTimestamp(),
+      'premiumActivatedAt': DateTime.now(),
     });
 
-    // 2. Update both users in the relationship (Portability)
-    final relDoc = await _relationships.doc(relId).get();
-    final List<String> uids = List<String>.from(relDoc.get('uids') ?? []);
-    
-    final batch = _firestore.batch();
-    for (var uid in uids) {
-      batch.set(_users.doc(uid), {
-        'isPlus': true,
-        'premiumPlan': planType,
-        'premiumExpiry': Timestamp.fromDate(renewalDate),
-      }, SetOptions(merge: true));
-    }
-    await batch.commit();
+    // 2. Best-effort user updates in Firestore
+    try {
+      final relDoc = await _relationships.doc(relId).get();
+      final List<String> uids = List<String>.from(relDoc.get('uids') ?? []);
+      
+      final batch = _firestore.batch();
+      for (var uid in uids) {
+        batch.set(_users.doc(uid), {
+          'isPlus': true,
+          'premiumPlan': planType,
+          'premiumExpiry': Timestamp.fromDate(renewalDate),
+        }, SetOptions(merge: true));
+      }
+      await batch.commit();
+    } catch (_) {}
 
     await logActivity(relId, 'premium', 'NextMeet+ Sanctuary Activated! ✨ Welcome to Elite Love.');
     VibrationService.success();
@@ -1161,26 +1188,28 @@ class CloudRelationshipService {
     if (_currentUid == null) return;
 
     // 1. Reset the Relationship document
-    await _relationships.doc(relId).update({
+    await _updateRelationshipData(relId, {
       'isPlus': false,
       'premiumRenewalDate': null,
       'premiumPlanType': null,
       'premiumTransactionId': null,
     });
 
-    // 2. Reset the User documents (Portability)
-    final relDoc = await _relationships.doc(relId).get();
-    final List<String> uids = List<String>.from(relDoc.get('uids') ?? []);
-    
-    final batch = _firestore.batch();
-    for (var uid in uids) {
-      batch.update(_users.doc(uid), {
-        'isPlus': false,
-        'premiumPlan': null,
-        'premiumExpiry': null,
-      });
-    }
-    await batch.commit();
+    // 2. Best-effort user updates in Firestore
+    try {
+      final relDoc = await _relationships.doc(relId).get();
+      final List<String> uids = List<String>.from(relDoc.get('uids') ?? []);
+      
+      final batch = _firestore.batch();
+      for (var uid in uids) {
+        batch.update(_users.doc(uid), {
+          'isPlus': false,
+          'premiumPlan': null,
+          'premiumExpiry': null,
+        });
+      }
+      await batch.commit();
+    } catch (_) {}
 
     await logActivity(relId, 'premium', 'Sanctuary Subscription Expired. Status Reset to Free. 🛡️');
     print('Relationship $relId downgraded to free tier.');
