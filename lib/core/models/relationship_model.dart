@@ -110,6 +110,7 @@ class RelationshipModel {
   final Map<String, int> stats;
   final String? customChatBackgroundUrl; // Premium: Custom chat wallpaper
   final String status; // 'waiting' or 'active'
+  final Map<String, dynamic> dailyAnswers;
 
   RelationshipModel({
     this.id,
@@ -191,7 +192,44 @@ class RelationshipModel {
     this.u2SanctuaryLastSeen,
     this.customChatBackgroundUrl,
     this.status = 'active',
+    this.dailyAnswers = const {},
   });
+
+  // Daily Question Helpers
+  Map<String, dynamic>? getTodayQuestionEntry(String dateKey) {
+    final entry = dailyAnswers[dateKey];
+    if (entry is Map) return Map<String, dynamic>.from(entry);
+    return null;
+  }
+
+  String? getMyDailyAnswer(String? currentUid, String dateKey) {
+    if (currentUid == null) return null;
+    final entry = getTodayQuestionEntry(dateKey);
+    final answers = entry?['answers'];
+    if (answers is Map && answers[currentUid] is Map) {
+      return answers[currentUid]['text']?.toString();
+    }
+    return null;
+  }
+
+  String? getPartnerDailyAnswer(String? currentUid, String dateKey) {
+    final pUid = getPartnerUid(currentUid);
+    if (pUid == null) return null;
+    final entry = getTodayQuestionEntry(dateKey);
+    final answers = entry?['answers'];
+    if (answers is Map && answers[pUid] is Map) {
+      return answers[pUid]['text']?.toString();
+    }
+    return null;
+  }
+
+  bool hasPartnerAnsweredToday(String? currentUid, String dateKey) {
+    return getPartnerDailyAnswer(currentUid, dateKey) != null;
+  }
+
+  bool haveBothAnsweredToday(String? currentUid, String dateKey) {
+    return getMyDailyAnswer(currentUid, dateKey) != null && hasPartnerAnsweredToday(currentUid, dateKey);
+  }
 
   // User-aware helper methods
   String getMyName(String? currentUid) => currentUid == uid1 ? (userName1 ?? 'You') : (userName2 ?? 'You');
@@ -349,6 +387,7 @@ class RelationshipModel {
       u2SanctuaryLastSeen: _parseDate(map['u2SanctuaryLastSeen']),
       customChatBackgroundUrl: map['customChatBackgroundUrl'],
       status: map['status'] ?? 'active',
+      dailyAnswers: map['dailyAnswers'] is Map ? Map<String, dynamic>.from(map['dailyAnswers'] as Map) : const {},
     );
   }
 
@@ -432,6 +471,7 @@ class RelationshipModel {
       'u2SanctuaryLastSeen': u2SanctuaryLastSeen != null ? Timestamp.fromDate(u2SanctuaryLastSeen!) : null,
       'customChatBackgroundUrl': customChatBackgroundUrl,
       'status': status,
+      'dailyAnswers': dailyAnswers,
     };
   }
 
@@ -539,6 +579,7 @@ class RelationshipModel {
     DateTime? u2SanctuaryLastSeen,
     String? customChatBackgroundUrl,
     String? status,
+    Map<String, dynamic>? dailyAnswers,
   }) {
     return RelationshipModel(
       id: id ?? this.id,
@@ -620,6 +661,7 @@ class RelationshipModel {
       u2SanctuaryLastSeen: u2SanctuaryLastSeen ?? this.u2SanctuaryLastSeen,
       customChatBackgroundUrl: customChatBackgroundUrl ?? this.customChatBackgroundUrl,
       status: status ?? this.status,
+      dailyAnswers: dailyAnswers ?? this.dailyAnswers,
     );
   }
 }

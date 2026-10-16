@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/memory_model.dart';
 import '../models/relationship_model.dart';
+import '../models/calendar_event_model.dart';
 import 'notification_service.dart';
 import 'vibration_service.dart';
 import '../cities.dart';
@@ -45,6 +46,16 @@ class CloudRelationshipService {
     return _memoriesStreamControllers.putIfAbsent(
       relId,
       () => StreamController<List<MemoryModel>>.broadcast(),
+    );
+  }
+
+  static final Map<String, StreamController<List<CalendarEventModel>>> _eventsStreamControllers = {};
+  static final Map<String, List<CalendarEventModel>> _cachedEventsMap = {};
+
+  static StreamController<List<CalendarEventModel>> _getEventsController(String relId) {
+    return _eventsStreamControllers.putIfAbsent(
+      relId,
+      () => StreamController<List<CalendarEventModel>>.broadcast(),
     );
   }
 
@@ -1162,10 +1173,122 @@ class CloudRelationshipService {
   Future<void> toggleBucketItem(String relId, String itemId, bool completed) async => await _relationships.doc(relId).collection('bucket_list').doc(itemId).update({'isCompleted': completed});
   Future<void> deleteBucketItem(String relId, String itemId) async => await _relationships.doc(relId).collection('bucket_list').doc(itemId).delete();
 
-  // --- CALENDAR ---
-  Stream<QuerySnapshot> streamCalendarEvents(String relId) => _relationships.doc(relId).collection('calendar_events').orderBy('eventDate', descending: false).snapshots();
-  Future<void> addCalendarEvent(String relId, String title, DateTime date, String type) async => await _relationships.doc(relId).collection('calendar_events').add({'title': title, 'eventDate': Timestamp.fromDate(date), 'type': type, 'createdBy': _currentUid, 'timestamp': FieldValue.serverTimestamp()});
-  Future<void> deleteCalendarEvent(String relId, String eventId) async => await _relationships.doc(relId).collection('calendar_events').doc(eventId).delete();
+  // --- CALENDAR (0ms Reactive & Synced with Supabase) ---
+  Stream<List<CalendarEventModel>> streamCalendarEvents(String relId) async* {
+    if (_cachedEventsMap.containsKey(relId)) {
+      yield _cachedEventsMap[relId]!;
+    }
+    _setupEventsListener(relId);
+    yield* _getEventsController(relId).stream;
+  }
+
+  void _setupEventsListener(String relId) {
+    Future<void> fetchAndEmit() async {
+      try {
+        final res = await _supabase
+            .from('relationships')
+            .select('data')
+            .eq('id', relId)
+            .maybeSingle();
+
+        if (res != null && res['data'] is Map) {
+          final data = res['data'] as Map;
+          final rawEvents = data['calendarEvents'];
+          if (rawEvents is List && rawEvents.isNotEmpty) {
+            final events = rawEvents
+                .whereType<Map>()
+                .map((e) => CalendarEventModel.fromMap(Map<String, dynamic>.from(e)))
+                .toList();
+            events.sort((a, b) => a.date.compareTo(b.date));
+            _cachedEventsMap[relId] = events;
+            _getEventsController(relId).add(events);
+            return;
+          }
+        }
+
+        // Migration fallback: check Firestore calendar_events subcollection
+        try {
+          final snap = await _relationships
+              .doc(relId)
+              .collection('calendar_events')
+              .orderBy('eventDate', descending: false)
+              .get()
+              .timeout(const Duration(seconds: 4));
+          if (snap.docs.isNotEmpty) {
+            final events = snap.docs.map((doc) {
+              final d = doc.data();
+              return CalendarEventModel.fromMap(d, id: doc.id);
+            }).toList();
+            _cachedEventsMap[relId] = events;
+            _getEventsController(relId).add(events);
+
+            // Persist migrated events to Supabase
+            final eventsJson = events.map((e) => e.toMap()).toList();
+            await _updateRelationshipData(relId, {'calendarEvents': eventsJson});
+            return;
+          }
+        } catch (_) {}
+
+        if (!_cachedEventsMap.containsKey(relId)) {
+          _cachedEventsMap[relId] = [];
+          _getEventsController(relId).add([]);
+        }
+      } catch (e) {
+        debugPrint('fetch calendar events warning: $e');
+        if (!_cachedEventsMap.containsKey(relId)) {
+          _cachedEventsMap[relId] = [];
+          _getEventsController(relId).add([]);
+        }
+      }
+    }
+
+    fetchAndEmit();
+  }
+
+  Future<void> addCalendarEvent(String relId, String title, DateTime date, String type, {String? notes}) async {
+    final newEvent = CalendarEventModel(
+      id: 'evt_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      date: date,
+      type: type,
+      notes: notes,
+      createdBy: _currentUid,
+      createdAt: DateTime.now(),
+    );
+
+    // 0ms INSTANT OPTIMISTIC EMISSION
+    final currentList = List<CalendarEventModel>.from(_cachedEventsMap[relId] ?? []);
+    currentList.add(newEvent);
+    currentList.sort((a, b) => a.date.compareTo(b.date));
+    _cachedEventsMap[relId] = currentList;
+    _getEventsController(relId).add(currentList);
+
+    // Update Supabase
+    final eventsJson = currentList.map((e) => e.toMap()).toList();
+    final updates = <String, dynamic>{
+      'calendarEvents': eventsJson,
+    };
+    if (type == 'Reunion') {
+      updates['nextMeetingDate'] = date;
+    }
+    await _updateRelationshipData(relId, updates);
+  }
+
+  Future<void> deleteCalendarEvent(String relId, String eventId) async {
+    // 0ms INSTANT OPTIMISTIC REMOVAL
+    final currentList = List<CalendarEventModel>.from(_cachedEventsMap[relId] ?? []);
+    currentList.removeWhere((e) => e.id == eventId);
+    _cachedEventsMap[relId] = currentList;
+    _getEventsController(relId).add(currentList);
+
+    // Update Supabase
+    final eventsJson = currentList.map((e) => e.toMap()).toList();
+    await _updateRelationshipData(relId, {'calendarEvents': eventsJson});
+  }
+
+  Future<void> updateNextMeetingDate(String relId, DateTime date) async {
+    await _updateRelationshipData(relId, {'nextMeetingDate': date});
+  }
 
   // --- STATS ---
   Future<void> incrementStat(String relId, String statKey) async {
@@ -1346,5 +1469,30 @@ class CloudRelationshipService {
   // --- PASSWORD ---
   Future<void> updateUserPassword(String oldPassword, String newPassword) async {
     await _auth.updateUserPassword(oldPassword, newPassword);
+  }
+
+  // --- DAILY QUESTIONS FOR TWO ---
+  Future<void> submitDailyAnswer(String relId, String dateKey, String questionText, String answerText) async {
+    if (_currentUid == null) return;
+    final rel = _cachedRelationship ?? await getRelationshipById(relId);
+    if (rel == null) return;
+
+    final currentMap = rel.toFirestoreMap();
+    final rawDaily = currentMap['dailyAnswers'] is Map ? Map<String, dynamic>.from(currentMap['dailyAnswers'] as Map) : <String, dynamic>{};
+    final dayEntry = rawDaily[dateKey] is Map ? Map<String, dynamic>.from(rawDaily[dateKey] as Map) : <String, dynamic>{
+      'question': questionText,
+      'answers': <String, dynamic>{},
+    };
+    final answers = dayEntry['answers'] is Map ? Map<String, dynamic>.from(dayEntry['answers'] as Map) : <String, dynamic>{};
+    answers[_currentUid!] = {
+      'text': answerText.trim(),
+      'answeredAt': DateTime.now().toIso8601String(),
+    };
+    dayEntry['answers'] = answers;
+    rawDaily[dateKey] = dayEntry;
+
+    await _updateRelationshipData(relId, {
+      'dailyAnswers': rawDaily,
+    });
   }
 }

@@ -30,6 +30,7 @@ import 'dart:io';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/daily_questions.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool initialSynced;
@@ -1483,6 +1484,11 @@ class _HomeScreenState extends State<HomeScreen> {
             }),
             const SizedBox(height: 32),
             
+            // Daily Question for Two (Core Retention Hook)
+            _buildDailyQuestionCard(data, now),
+
+            const SizedBox(height: 32),
+            
             // Shared Map Feature (Premium)
             _buildSharedMapCard(data),
 
@@ -1621,6 +1627,328 @@ class _HomeScreenState extends State<HomeScreen> {
 ),
 );
 }
+
+  void _showAnswerQuestionSheet(RelationshipModel data, String dateKey, String question) {
+    final TextEditingController answerController = TextEditingController();
+    bool isSaving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: EdgeInsets.only(
+            left: AppSpacing.l,
+            right: AppSpacing.l,
+            top: AppSpacing.l,
+            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.l,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('DAILY QUESTION FOR TWO', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2, color: AppColors.primary)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                question,
+                style: AppTextStyles.h3.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your answer will be locked until ${data.getDisplayPartnerName(_cloudService.currentUid)} answers too! 💌',
+                style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: answerController,
+                autofocus: true,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Write your honest, sweet answer...',
+                  filled: true,
+                  fillColor: AppColors.background,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 24),
+              PrimaryButton(
+                text: 'LOCK IN MY ANSWER 💖',
+                isLoading: isSaving,
+                onPressed: () async {
+                  final text = answerController.text.trim();
+                  if (text.isEmpty) return;
+                  setModalState(() => isSaving = true);
+                  VibrationService.success();
+                  await _cloudService.submitDailyAnswer(data.id!, dateKey, question, text);
+                  if (mounted) Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).whenComplete(() => answerController.dispose());
+  }
+
+  Widget _buildDailyQuestionCard(RelationshipModel data, DateTime now) {
+    final todayKey = DailyQuestions.getTodayKey();
+    final question = DailyQuestions.getQuestionForDate(now);
+    final myAnswer = data.getMyDailyAnswer(_cloudService.currentUid, todayKey);
+    final partnerAnswer = data.getPartnerDailyAnswer(_cloudService.currentUid, todayKey);
+    final bool hasPartnerAnswered = partnerAnswer != null;
+    final bool haveBothAnswered = myAnswer != null && hasPartnerAnswered;
+    final partnerName = data.getDisplayPartnerName(_cloudService.currentUid);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+      child: FadeInUp(
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: (haveBothAnswered ? const Color(0xFF10B981) : AppColors.primary).withValues(alpha: 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(
+              color: haveBothAnswered 
+                  ? const Color(0xFF10B981).withValues(alpha: 0.3) 
+                  : AppColors.primary.withValues(alpha: 0.2),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Tag
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'DAILY QUESTION FOR TWO',
+                        style: AppTextStyles.bodyS.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primary,
+                          letterSpacing: 1.2,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: haveBothAnswered
+                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                          : (hasPartnerAnswered
+                              ? AppColors.primary.withValues(alpha: 0.12)
+                              : Colors.grey.withValues(alpha: 0.1)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      haveBothAnswered
+                          ? 'BOTH ANSWERED ✨'
+                          : (hasPartnerAnswered
+                              ? '$partnerName answered! 🔒'
+                              : (myAnswer != null ? 'Waiting for $partnerName ⏳' : 'New today 💌')),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: haveBothAnswered
+                            ? const Color(0xFF10B981)
+                            : (hasPartnerAnswered ? AppColors.primary : AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Question Text
+              Text(
+                question,
+                style: AppTextStyles.h3.copyWith(
+                  fontSize: 17,
+                  height: 1.35,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Interactive States
+              if (!haveBothAnswered) ...[
+                if (myAnswer == null) ...[
+                  // Not answered yet
+                  InkWell(
+                    onTap: () {
+                      VibrationService.light();
+                      _showAnswerQuestionSheet(data, todayKey, question);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: AppColors.buttonShadow,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.edit_note_rounded, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            hasPartnerAnswered
+                                ? 'ANSWER TO UNLOCK $partnerName\'S ANSWER ✨'
+                                : 'ANSWER TODAY\'S QUESTION 💌',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  // I answered, partner hasn't answered
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'YOUR ANSWER:',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.primary),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '"$myAnswer"',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.lock_rounded, size: 14, color: AppColors.textSecondary),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$partnerName\'s answer unlocks once they reply 🔒',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ] else ...[
+                // Both answered! Reveal side-by-side or stacked
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'YOU:',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.primary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '"$myAnswer"',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$partnerName:'.toUpperCase(),
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF6366F1)),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '"$partnerAnswer"',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildEmptyMemoryPrompt() {
     return Container(
