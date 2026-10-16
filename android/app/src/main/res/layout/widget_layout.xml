@@ -1,132 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="14dp"
     android:gravity="center_vertical">
 
-    <!-- Header: Partner Name -->
+    <!-- Header: Airlines Tag + Partner Battery Pill -->
     <LinearLayout
-        android:id="@+id/widget_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center"
+        android:gravity="center_vertical"
         android:layout_marginBottom="8dp">
 
         <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="✈️ BOARDING PASS"
+            android:textColor="#FB7185"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+
+        <!-- Live Battery Pill -->
+        <TextView
+            android:id="@+id/widget_battery"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="❤️"
-            android:textSize="10sp" />
+            android:text="⚡ 100%"
+            android:textColor="#10B981"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Flight Route Row: Origin ── ✈️ ── Destination -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:id="@+id/widget_origin_city"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="YOU"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" ──✈️── "
+            android:textColor="#F59E0B"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:layout_marginHorizontal="4dp" />
+
+        <TextView
+            android:id="@+id/widget_dest_city"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="LOVE"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:gravity="end"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <!-- Distance & Partner Pill -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="10dp">
 
         <TextView
             android:id="@+id/widget_partner_name"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:text="MY LOVE"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.1"
-            android:layout_marginStart="6dp" />
-    </LinearLayout>
-
-    <ImageView
-        android:layout_width="32dp"
-        android:layout_height="1dp"
-        android:background="#30FFFFFF"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="10dp" />
-
-    <!-- Center: Distance Hero (Compact) -->
-    <LinearLayout
-        android:id="@+id/widget_center"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center">
+            android:textColor="#E4E4E7"
+            android:textSize="10sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_distance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0.0"
-            android:textColor="#FFFFFF"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:includeFontPadding="false" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="KM APART"
-            android:textColor="#A0FFFFFF"
-            android:textSize="8sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.2" />
+            android:text="0 KM"
+            android:textColor="#A1A1AA"
+            android:textSize="10sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Footer: Shared Milestones -->
+    <!-- Dashed Perforated Divider -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#26FFFFFF"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Countdown Section (Hero) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginTop="10dp">
+        android:gravity="center_vertical">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_countdown_val"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Soon ❤️"
+                android:textColor="#F59E0B"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:id="@+id/widget_countdown_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NEXT REUNION"
+                android:textColor="#71717A"
+                android:textSize="7sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
+        </LinearLayout>
+
+        <!-- Right Side: Reunion Date & Seat -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="end">
+
+            <TextView
+                android:id="@+id/widget_reunion_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SOON"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
             <TextView
                 android:id="@+id/widget_days_together"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0 Days"
-                android:textColor="#FFFFFF"
-                android:textSize="10sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="TOGETHER"
-                android:textColor="#80FFFFFF"
-                android:textSize="7sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <ImageView
-            android:layout_width="1dp"
-            android:layout_height="16dp"
-            android:background="#20FFFFFF" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center">
-            <TextView
-                android:id="@+id/widget_next_meet"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Soon"
-                android:textColor="#FFFFFF"
-                android:textSize="10sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="NEXT MEET"
-                android:textColor="#80FFFFFF"
-                android:textSize="7sp"
+                android:text="SEAT: FOREVER ❤️"
+                android:textColor="#FB7185"
+                android:textSize="8sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
+
+    <!-- Hidden compatibility text views for legacy bindings -->
+    <TextView
+        android:id="@+id/widget_next_meet"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
 </LinearLayout>

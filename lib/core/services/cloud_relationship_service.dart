@@ -1490,9 +1490,49 @@ class CloudRelationshipService {
     };
     dayEntry['answers'] = answers;
     rawDaily[dateKey] = dayEntry;
+    currentMap['dailyAnswers'] = rawDaily;
+
+    // 0ms Optimistic local update
+    final updatedRel = RelationshipModel.fromFirestore(currentMap, id: relId);
+    _cachedRelationship = updatedRel;
+    _relationshipStreamController.add(updatedRel);
 
     await _updateRelationshipData(relId, {
       'dailyAnswers': rawDaily,
+    });
+  }
+
+  // --- DAILY SCRATCH LOVE NOTES ---
+  Future<void> submitCustomScratchNote(String relId, String dateKey, String noteText) async {
+    if (_currentUid == null) return;
+    final rel = _cachedRelationship ?? await getRelationshipById(relId);
+    if (rel == null) return;
+
+    final currentMap = rel.toFirestoreMap();
+    final scratchMap = currentMap['dailyScratchNotes'] is Map
+        ? Map<String, dynamic>.from(currentMap['dailyScratchNotes'] as Map)
+        : <String, dynamic>{};
+
+    final dateEntry = scratchMap[dateKey] is Map
+        ? Map<String, dynamic>.from(scratchMap[dateKey] as Map)
+        : <String, dynamic>{};
+
+    dateEntry[_currentUid!] = {
+      'text': noteText.trim(),
+      'authorName': rel.getMyName(_currentUid),
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+
+    scratchMap[dateKey] = dateEntry;
+    currentMap['dailyScratchNotes'] = scratchMap;
+
+    // 0ms Optimistic local update
+    final updatedRel = RelationshipModel.fromFirestore(currentMap, id: relId);
+    _cachedRelationship = updatedRel;
+    _relationshipStreamController.add(updatedRel);
+
+    await _updateRelationshipData(relId, {
+      'dailyScratchNotes': scratchMap,
     });
   }
 }

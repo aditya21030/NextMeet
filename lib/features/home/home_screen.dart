@@ -31,6 +31,7 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/daily_questions.dart';
+import '../../widgets/scratch_love_note_card.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool initialSynced;
@@ -95,9 +96,11 @@ class _HomeScreenState extends State<HomeScreen> {
       final relationship = await _cloudService.streamRelationship().first;
       if (relationship != null && relationship.id != null) {
         await _cloudService.updateBatteryStatus(relationship.id!, level, isCharging);
+        if (_cloudService.currentUid != null) {
+          WidgetService.updateWidgetData(relationship, _cloudService.currentUid!);
+        }
       }
-    } catch (e) {
-      print("Battery report failed: $e");
+    } catch (_) {
     }
   }
 
@@ -1482,6 +1485,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             }),
+            const SizedBox(height: 32),
+            
+            // Daily Scratch-off Love Note (Midnight Reset Hook)
+            ScratchLoveNoteCard(
+              relationship: data,
+              currentUid: _cloudService.currentUid!,
+            ),
+
             const SizedBox(height: 32),
             
             // Daily Question for Two (Core Retention Hook)

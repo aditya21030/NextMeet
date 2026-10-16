@@ -111,6 +111,7 @@ class RelationshipModel {
   final String? customChatBackgroundUrl; // Premium: Custom chat wallpaper
   final String status; // 'waiting' or 'active'
   final Map<String, dynamic> dailyAnswers;
+  final Map<String, dynamic> dailyScratchNotes;
 
   RelationshipModel({
     this.id,
@@ -193,7 +194,34 @@ class RelationshipModel {
     this.customChatBackgroundUrl,
     this.status = 'active',
     this.dailyAnswers = const {},
+    this.dailyScratchNotes = const {},
   });
+
+  // Battery Helpers
+  int? getPartnerBattery(String? currentUid) => currentUid == uid1 ? user2Battery : user1Battery;
+  bool isPartnerCharging(String? currentUid) => currentUid == uid1 ? (user2IsCharging ?? false) : (user1IsCharging ?? false);
+  int? getMyBattery(String? currentUid) => currentUid == uid1 ? user1Battery : user2Battery;
+  bool isMyCharging(String? currentUid) => currentUid == uid1 ? (user1IsCharging ?? false) : (user2IsCharging ?? false);
+
+  // Daily Scratch Notes Helpers
+  String? getPartnerCustomScratchNote(String? currentUid, String dateKey) {
+    final pUid = getPartnerUid(currentUid);
+    if (pUid == null) return null;
+    final entry = dailyScratchNotes[dateKey];
+    if (entry is Map && entry[pUid] is Map) {
+      return entry[pUid]['text']?.toString();
+    }
+    return null;
+  }
+
+  String? getMyCustomScratchNote(String? currentUid, String dateKey) {
+    if (currentUid == null) return null;
+    final entry = dailyScratchNotes[dateKey];
+    if (entry is Map && entry[currentUid] is Map) {
+      return entry[currentUid]['text']?.toString();
+    }
+    return null;
+  }
 
   // Daily Question Helpers
   Map<String, dynamic>? getTodayQuestionEntry(String dateKey) {
@@ -388,6 +416,7 @@ class RelationshipModel {
       customChatBackgroundUrl: map['customChatBackgroundUrl'],
       status: map['status'] ?? 'active',
       dailyAnswers: map['dailyAnswers'] is Map ? Map<String, dynamic>.from(map['dailyAnswers'] as Map) : const {},
+      dailyScratchNotes: map['dailyScratchNotes'] is Map ? Map<String, dynamic>.from(map['dailyScratchNotes'] as Map) : const {},
     );
   }
 
@@ -472,6 +501,7 @@ class RelationshipModel {
       'customChatBackgroundUrl': customChatBackgroundUrl,
       'status': status,
       'dailyAnswers': dailyAnswers,
+      'dailyScratchNotes': dailyScratchNotes,
     };
   }
 
@@ -580,6 +610,7 @@ class RelationshipModel {
     String? customChatBackgroundUrl,
     String? status,
     Map<String, dynamic>? dailyAnswers,
+    Map<String, dynamic>? dailyScratchNotes,
   }) {
     return RelationshipModel(
       id: id ?? this.id,
@@ -662,6 +693,7 @@ class RelationshipModel {
       customChatBackgroundUrl: customChatBackgroundUrl ?? this.customChatBackgroundUrl,
       status: status ?? this.status,
       dailyAnswers: dailyAnswers ?? this.dailyAnswers,
+      dailyScratchNotes: dailyScratchNotes ?? this.dailyScratchNotes,
     );
   }
 }

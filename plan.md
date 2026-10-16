@@ -261,6 +261,7 @@ flowchart TD
 | **Phase 5** | 5.1 - 5.5 | LDR Purge of 5,000+ lines of dead bloat & Luxury UI/UX Overhaul (Rose Champagne & Cashmere) | `[x]` Completed |
 | **Phase 6** | 6.1 - 6.3 | NextMeet Hero Boarding Pass Countdown, Live Locket Bezel, and Local APK Build for Testing | `[x]` Completed |
 | **Phase 7** | 7.1 - 7.3 | Shared Calendar 0ms Reactive Cache (infinite spinner fix) & Daily Question for Two Retention Engine | `[x]` Completed |
+| **Phase 8** | 8.1 - 8.3 | Daily Scratch-off Love Note (Midnight Reset) & Android Boarding Pass Widget with Battery | `[x]` Completed |
 
 ---
 
@@ -353,4 +354,36 @@ flowchart TD
   1. Verify codebase with `flutter analyze`: achieved **0 errors, 0 warnings**.
   2. Verify all animation controllers and input controllers are disposed cleanly.
   3. Compile release APK for direct testing without remote push (`git push` strictly omitted).
+
+---
+
+## 💌 PHASE 8: DAILY SCRATCH-OFF LOVE NOTE & ANDROID BOARDING PASS WIDGET
+*Goal: Integrate the tactile Scratch-off Love Note envelope with midnight reset and modernize the Android Home Screen Widget with Boarding Pass flight route, countdown, and real-time partner battery status.*
+
+### Step 8.1: Daily Scratch-off Love Note (Hardware-Accelerated Skia Envelope)
+* **Target Files:**
+  * [`lib/core/daily_love_notes.dart`](file:///d:/Flutter/NextMeet/lib/core/daily_love_notes.dart)
+  * [`lib/widgets/scratch_love_note_card.dart`](file:///d:/Flutter/NextMeet/lib/widgets/scratch_love_note_card.dart)
+  * [`lib/features/home/home_screen.dart`](file:///d:/Flutter/NextMeet/lib/features/home/home_screen.dart)
+* **Actions:**
+  1. Created deterministic 365 daily romantic love whispers library.
+  2. Engineered custom `_ScratchFoilPainter` using Skia `saveLayer` and `BlendMode.clear` for 60fps buttery-smooth touch scratching with haptic tick pulses.
+  3. Implemented midnight reset logic via `SharedPreferences` (`scratch_note_${todayKey}_${uid}`).
+  4. Built custom note composer sheet allowing either partner to seal a personal secret note for their love to scratch off.
+
+### Step 8.2: Android Home Screen Widget Overhaul (Boarding Pass & Battery)
+* **Target Files:**
+  * [`android/app/src/main/res/layout/widget_layout.xml`](file:///d:/Flutter/NextMeet/android/app/src/main/res/layout/widget_layout.xml)
+  * [`android/app/src/main/res/drawable/widget_background.xml`](file:///d:/Flutter/NextMeet/android/app/src/main/res/drawable/widget_background.xml)
+  * [`android/app/src/main/kotlin/com/yousful/nextmeet/OurPulseWidgetProvider.kt`](file:///d:/Flutter/NextMeet/android/app/src/main/kotlin/com/yousful/nextmeet/OurPulseWidgetProvider.kt)
+  * [`lib/core/services/widget_service.dart`](file:///d:/Flutter/NextMeet/lib/core/services/widget_service.dart)
+* **Actions:**
+  1. Redesigned Android widget XML into a luxury Boarding Pass ticket with route `[DEL] ──✈️── [BOM]`, distance apart, and hero countdown.
+  2. Integrated real-time partner battery level (`⚡ 85%`) with active charging detection into the widget header.
+  3. Added `PendingIntent` allowing users to tap anywhere on the home screen widget to launch the NextMeet app directly.
+
+### Step 8.3: Quality Audit & Static Analysis
+* **Actions:**
+  1. Ran `flutter analyze` achieving **0 errors, 0 warnings**.
+  2. Verified animation controller disposal in `ScratchLoveNoteCard`.
 
