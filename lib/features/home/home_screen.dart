@@ -18,7 +18,6 @@ import 'calendar_screen.dart';
 import 'shared_map_screen.dart';
 import '../../core/services/widget_service.dart';
 import 'package:intl/intl.dart';
-import '../../core/models/memory_model.dart';
 import '../onboarding/setup_couple_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -28,7 +27,6 @@ import 'package:image_picker/image_picker.dart';
 import '../private_space/love_letters_screen.dart';
 import 'dart:io';
 import 'package:battery_plus/battery_plus.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/daily_questions.dart';
 import '../../widgets/scratch_love_note_card.dart';
@@ -48,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late Timer _locationTimer;
   late ValueNotifier<DateTime> _nowNotifier;
   Stream<RelationshipModel?>? _relationshipStream;
-  Stream<List<MemoryModel>>? _memoryStream;
   String? _lastInitializedRelId;
   DateTime? _lastHandledTouchTime;
   bool _isPressingSync = false;
@@ -362,7 +359,6 @@ class _HomeScreenState extends State<HomeScreen> {
         // Initialize notifications and nested streams only once per relationship ID
         if (_lastInitializedRelId != data.id) {
           _lastInitializedRelId = data.id;
-          _memoryStream = _cloudService.streamMemories(data.id!);
           _cloudService.updateActivityAndStreak(data.id!, data); // Ensure streak updates on open
           _notificationService.syncRelationshipReminders(data); // Sync anniversary notifications
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1436,130 +1432,6 @@ class _HomeScreenState extends State<HomeScreen> {
             // Daily Question for Two (Core Retention Hook)
             _buildDailyQuestionCard(data, now),
 
-            const SizedBox(height: 32),
-            
-            // Shared Memories 📸 (Limited to 5 items)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('SHARED MEMORIES 📸', style: AppTextStyles.bodyS.copyWith(fontWeight: FontWeight.w900, letterSpacing: 1.2, color: AppColors.textSecondary.withValues(alpha: 0.8))),
-                      const Icon(Icons.auto_awesome_mosaic_rounded, color: Colors.pinkAccent, size: 20),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  StreamBuilder<List<MemoryModel>>(
-                    stream: _memoryStream,
-                    builder: (context, snapshot) {
-                      final memories = (snapshot.data ?? []).take(5).toList();
-                      if (memories.isEmpty) {
-                        return _buildEmptyMemoryPrompt();
-                      }
-                      return MasonryGridView.count(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: memories.length,
-                        itemBuilder: (context, index) {
-                          final memory = memories[index];
-                          final double height = (index % 3 == 0) ? 260 : 180;
-                          
-                          return FadeInUp(
-                            delay: Duration(milliseconds: index * 100),
-                            child: Container(
-                              height: height,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(28),
-                                image: DecorationImage(
-                                  image: CachedNetworkImageProvider(memory.imageUrl),
-                                  fit: BoxFit.cover,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 15, offset: const Offset(0, 8)),
-                                ],
-                              ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(28),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [Colors.black.withValues(alpha: 0.7), Colors.transparent],
-                                  ),
-                                ),
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      memory.caption,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.access_time_rounded, color: Colors.white70, size: 10),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          DateFormat.MMMd().format(memory.date),
-                                          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    }
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            
-            // Love Message Card (The Pink Box)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1F3),
-                  borderRadius: BorderRadius.circular(32),
-                  border: const Border(left: BorderSide(color: Colors.pinkAccent, width: 4)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.format_quote_rounded, color: Colors.redAccent, size: 24),
-                        const SizedBox(width: 8),
-                        Text('DAILY LOVE QUOTE ❤️', style: AppTextStyles.bodyS.copyWith(color: Colors.redAccent, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 10)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '"${data.loveQuote}"',
-                      style: AppTextStyles.h2.copyWith(fontSize: 20, fontStyle: FontStyle.italic, color: const Color(0xFF1E293B)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
             const SizedBox(height: 120), // Spacer for bottom Nav
           ],
         ),
@@ -1890,27 +1762,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyMemoryPrompt() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.pinkAccent.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.add_a_photo_rounded, color: Colors.pinkAccent.withValues(alpha: 0.3), size: 40),
-          const SizedBox(height: 12),
-          Text('No memories yet', style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary)),
-          Text('Capture your journey together', style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 10)),
-      // ignore: unused_element
-        ],
       ),
     );
   }
