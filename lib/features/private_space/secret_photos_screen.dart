@@ -382,18 +382,18 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
               Row(
                 children: [
                   Icon(
-                    rel.isPlus ? Icons.stars_rounded : Icons.shield_rounded,
+                    Icons.shield_rounded,
                     size: 16,
-                    color: rel.isPlus ? Colors.amber : AppColors.primary,
+                    color: AppColors.primary,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    rel.isPlus ? 'PLUS VAULT (150 MB)' : 'FREE VAULT (20 MB)',
-                    style: TextStyle(
+                    rel.isPlus ? 'Vault (150 MB)' : 'Vault (20 MB)',
+                    style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.2,
-                      color: rel.isPlus ? Colors.brown.shade800 : AppColors.textPrimary,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ],

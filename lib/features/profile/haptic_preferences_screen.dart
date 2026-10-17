@@ -275,7 +275,7 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> {
                             ),
                           ),
                         ),
-                        if (isPlusPattern) ...[
+                        if (isPlusPattern && !widget.rel.isPlus) ...[
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

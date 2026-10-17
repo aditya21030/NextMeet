@@ -28,8 +28,8 @@ class CloudRelationshipService {
   CollectionReference get _invites => _firestore.collection('invites');
   CollectionReference get _users => _firestore.collection('users');
 
-  String? get currentUid => _auth.currentUid;
-  String? get _currentUid => _auth.currentUid;
+  String? get currentUid => _auth.currentUid ?? _supabase.auth.currentUser?.id ?? FirebaseAuth.instance.currentUser?.uid;
+  String? get _currentUid => currentUid;
 
   // Reactive Single-Source-of-Truth in-memory state for instant UI updates
   static final StreamController<RelationshipModel?> _relationshipStreamController =
@@ -216,6 +216,8 @@ class CloudRelationshipService {
 
   void _setupMemoriesListener(String relId) {
     Future<void> fetchAndEmit() async {
+      List<MemoryModel> serverMemories = [];
+
       try {
         final res = await _supabase
             .from('memories')
@@ -223,25 +225,58 @@ class CloudRelationshipService {
             .eq('relationship_id', relId)
             .order('date', ascending: false);
 
-        final memories = (res as List)
+        serverMemories = (res as List)
             .map((m) => MemoryModel.fromFirestore(m as Map<String, dynamic>, id: m['id']?.toString()))
             .toList();
-        _cachedMemoriesMap[relId] = memories;
-        _getMemoriesController(relId).add(memories);
       } catch (e) {
         debugPrint('Supabase streamMemories fetch warning: $e');
+      }
+
+      // If Supabase returned empty, check Firestore fallback for existing or legacy memories
+      if (serverMemories.isEmpty) {
         try {
-          final snap = await _firestore.collection('relationships').doc(relId).collection('memories').orderBy('date', descending: true).get();
-          final memories = snap.docs.map((doc) => MemoryModel.fromFirestore(doc.data(), id: doc.id)).toList();
-          _cachedMemoriesMap[relId] = memories;
-          _getMemoriesController(relId).add(memories);
-          return;
-        } catch (_) {}
-        if (!_cachedMemoriesMap.containsKey(relId)) {
-          _cachedMemoriesMap[relId] = [];
-          _getMemoriesController(relId).add([]);
+          final snap = await _firestore
+              .collection('relationships')
+              .doc(relId)
+              .collection('memories')
+              .orderBy('date', descending: true)
+              .get();
+          final firestoreMemories = snap.docs
+              .map((doc) => MemoryModel.fromFirestore(doc.data(), id: doc.id))
+              .toList();
+          if (firestoreMemories.isNotEmpty) {
+            serverMemories = firestoreMemories;
+          }
+        } catch (e) {
+          debugPrint('Firestore fallback streamMemories fetch warning: $e');
         }
       }
+
+      // Preserve any in-flight optimistic memories (id starts with 'local_') not yet returned by server
+      final currentCached = _cachedMemoriesMap[relId] ?? [];
+      final pendingOptimistic = currentCached.where((m) =>
+          (m.id?.startsWith('local_') ?? false) &&
+          !serverMemories.any((s) => (s.imageUrl.isNotEmpty && s.imageUrl == m.imageUrl) || s.id == m.id)
+      ).toList();
+
+      // Deduplicate memories by unique id and imageUrl
+      final seenIds = <String>{};
+      final seenUrls = <String>{};
+      final mergedList = <MemoryModel>[];
+
+      for (final m in [...pendingOptimistic, ...serverMemories]) {
+        final id = m.id ?? '';
+        final url = m.imageUrl;
+        if ((id.isNotEmpty && seenIds.contains(id)) || (url.isNotEmpty && seenUrls.contains(url))) {
+          continue;
+        }
+        if (id.isNotEmpty) seenIds.add(id);
+        if (url.isNotEmpty) seenUrls.add(url);
+        mergedList.add(m);
+      }
+
+      _cachedMemoriesMap[relId] = mergedList;
+      _getMemoriesController(relId).add(mergedList);
     }
 
     fetchAndEmit();
@@ -263,6 +298,16 @@ class CloudRelationshipService {
       } catch (e) {
         debugPrint('Realtime channel memories subscription warning: $e');
       }
+
+      // Also listen to Firestore collection as fallback sync
+      try {
+        _firestore
+            .collection('relationships')
+            .doc(relId)
+            .collection('memories')
+            .snapshots()
+            .listen((_) => fetchAndEmit(), onError: (_) {});
+      } catch (_) {}
     }
   }
 
@@ -277,6 +322,17 @@ class CloudRelationshipService {
 
     try {
       await _supabase.from('memories').delete().eq('id', memoryId);
+      if (imageUrl.contains('supabase')) {
+        final uri = Uri.tryParse(imageUrl);
+        if (uri != null) {
+          final segments = uri.pathSegments;
+          final memoriesIdx = segments.indexOf('memories');
+          if (memoriesIdx != -1 && memoriesIdx + 1 < segments.length) {
+            final filePath = segments.sublist(memoriesIdx + 1).join('/');
+            await _supabase.storage.from('memories').remove([filePath]);
+          }
+        }
+      }
     } catch (e) {
       debugPrint('Supabase deleteMemory error: $e');
     }
