@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:intl/intl.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../core/models/relationship_model.dart';
 import '../../core/constants.dart';
 import '../../core/services/cloud_relationship_service.dart';
@@ -93,6 +92,25 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                         letterSpacing: 1.2,
                       ),
                     ),
+                    actions: [
+                      TextButton(
+                        onPressed: _subService.isLoading ? null : () async {
+                          final success = await _subService.restorePurchases();
+                          if (!context.mounted) return;
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Purchases restored! NextMeet+ active ❤️')),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(_subService.error ?? 'No active subscription found.')),
+                            );
+                          }
+                        },
+                        child: const Text('Restore', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                   ),
 
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -346,31 +364,23 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
   }
 
   void _handleUpgrade() async {
-    // Find the correct product based on selection
-    ProductDetails? selectedProduct;
-    final String targetId = isYearly ? SubscriptionService.yearlyId : SubscriptionService.monthlyId;
-    
-    for (var p in _subService.products) {
-      if (p.id == targetId) selectedProduct = p;
-    }
-
-    if (selectedProduct == null) {
-      // If store hasn't loaded real products, show why
-      final String errorMsg = _subService.error != null 
-          ? 'Store Error: ${_subService.error}' 
-          : 'Connecting to Store... Please wait 10 seconds and try again.';
-          
+    final success = await _subService.buyProduct(isYearly);
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🎉 Welcome to NextMeet+! Both of your spaces are upgraded ❤️'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else if (_subService.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMsg),
+          content: Text(_subService.error!),
           backgroundColor: Colors.redAccent,
-        )
+        ),
       );
-      _subService.loadProducts();
-      return;
     }
-
-    await _subService.buyProduct(selectedProduct, isYearly);
   }
 
   Widget _buildSubscriptionDashboard(RelationshipModel rel) {

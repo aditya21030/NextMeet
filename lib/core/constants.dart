@@ -229,3 +229,10 @@ class SupabaseConfig {
   static const String anonKey = 'sb_publishable_-Y856VjMveZ28zMyOe5-zQ_7fMYHnwC';
 }
 
+class RevenueCatConfig {
+  static const String apiKey = 'goog_YDTtQiefCXZrxulXFgTSevALUwk';
+  static const String entitlementId = 'plus';
+  static const String monthlyPackageId = '\$rc_monthly';
+  static const String annualPackageId = '\$rc_annual';
+}
+

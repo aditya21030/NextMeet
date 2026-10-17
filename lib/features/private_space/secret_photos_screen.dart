@@ -13,6 +13,7 @@ import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../profile/nextmeet_plus_screen.dart';
 import '../../core/services/image_compression_service.dart';
 
@@ -165,13 +166,24 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
       }
 
       final fileName = 'private_${DateTime.now().millisecondsSinceEpoch}.webp';
-      final storageRef = _storage.ref().child('relationships/$relId/private_photos/$fileName');
-      
-      await storageRef.putFile(
-        file,
-        SettableMetadata(contentType: 'image/webp'),
-      );
-      final downloadUrl = await storageRef.getDownloadURL();
+      String downloadUrl;
+      try {
+        final bytes = await file.readAsBytes();
+        await Supabase.instance.client.storage.from('memories').uploadBinary(
+          '$relId/private_photos/$fileName',
+          bytes,
+          fileOptions: const FileOptions(contentType: 'image/webp', upsert: true),
+        );
+        downloadUrl = Supabase.instance.client.storage.from('memories').getPublicUrl('$relId/private_photos/$fileName');
+      } catch (supaErr) {
+        debugPrint('Supabase secret photo upload fallback to Firebase: $supaErr');
+        final storageRef = _storage.ref().child('relationships/$relId/private_photos/$fileName');
+        await storageRef.putFile(
+          file,
+          SettableMetadata(contentType: 'image/webp'),
+        );
+        downloadUrl = await storageRef.getDownloadURL();
+      }
       
       await _cloudService.addPrivatePhoto(relId, downloadUrl, sizeBytes);
       VibrationService.success();

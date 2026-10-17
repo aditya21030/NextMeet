@@ -1112,7 +1112,19 @@ class CloudRelationshipService {
   }
   Future<void> deletePrivatePhoto(String relId, String photoId, String url, int size) async {
     await _relationships.doc(relId).collection('private_photos').doc(photoId).delete();
-    try { await _storage.refFromURL(url).delete(); } catch (_) {}
+    try {
+      if (url.contains('supabase.co')) {
+        final uri = Uri.parse(url);
+        final segments = uri.pathSegments;
+        final memoriesIdx = segments.indexOf('memories');
+        if (memoriesIdx != -1 && memoriesIdx + 1 < segments.length) {
+          final filePath = segments.sublist(memoriesIdx + 1).join('/');
+          await _supabase.storage.from('memories').remove([filePath]);
+        }
+      } else {
+        await _storage.refFromURL(url).delete();
+      }
+    } catch (_) {}
     await _relationships.doc(relId).update({'privateSpaceStorageBytes': FieldValue.increment(-size)});
   }
 
@@ -1403,6 +1415,13 @@ class CloudRelationshipService {
           'premiumPlan': planType,
           'premiumExpiry': Timestamp.fromDate(renewalDate),
         }, SetOptions(merge: true));
+        try {
+          _supabase.from('users').update({
+            'is_plus': true,
+            'premium_plan': planType,
+            'premium_expiry': renewalDate.toIso8601String(),
+          }).eq('id', uid);
+        } catch (_) {}
       }
       await batch.commit();
     } catch (_) {}
@@ -1423,7 +1442,7 @@ class CloudRelationshipService {
       'premiumTransactionId': null,
     });
 
-    // 2. Best-effort user updates in Firestore
+    // 2. Best-effort user updates in Firestore & Supabase
     try {
       final relDoc = await _relationships.doc(relId).get();
       final List<String> uids = List<String>.from(relDoc.get('uids') ?? []);
@@ -1435,6 +1454,13 @@ class CloudRelationshipService {
           'premiumPlan': null,
           'premiumExpiry': null,
         });
+        try {
+          _supabase.from('users').update({
+            'is_plus': false,
+            'premium_plan': null,
+            'premium_expiry': null,
+          }).eq('id', uid);
+        } catch (_) {}
       }
       await batch.commit();
     } catch (_) {}

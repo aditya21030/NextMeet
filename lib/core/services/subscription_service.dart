@@ -1,71 +1,67 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:flutter/services.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import '../constants.dart';
 import 'cloud_relationship_service.dart';
 import 'vibration_service.dart';
 
 class SubscriptionService extends ChangeNotifier {
-  final InAppPurchase _iap = InAppPurchase.instance;
   final CloudRelationshipService _cloudService = _cloudServiceInstance;
-  static final _cloudServiceInstance = CloudRelationshipService(); // Shared instance
-  
-  StreamSubscription<List<PurchaseDetails>>? _subscription;
-  
-  // Separate Product IDs for Monthly and Yearly to support Billing v4
-  static const String monthlyId = 'nextmeet_plus_monthly';
-  static const String yearlyId = 'nextmeet_plus_yearly';
-  static const Set<String> _productIds = {monthlyId, yearlyId};
+  static final _cloudServiceInstance = CloudRelationshipService();
 
-  List<ProductDetails> products = [];
+  Offerings? offerings;
+  Package? monthlyPackage;
+  Package? annualPackage;
+  
   bool isAvailable = false;
   bool isLoading = true;
-  bool isLifecycleVerifying = false;
   String? error;
+  String? _activeRelId;
 
-  void initialize(String relId) {
+  static const String monthlyId = 'nextmeet_plus_monthly';
+  static const String yearlyId = 'nextmeet_plus_yearly';
+
+  Future<void> initialize(String relId) async {
+    _activeRelId = relId;
     isLoading = true;
+    error = null;
     notifyListeners();
 
-    final purchaseUpdated = _iap.purchaseStream;
-    _subscription = purchaseUpdated.listen(
-      (purchaseList) => _listenToPurchaseUpdated(purchaseList, relId),
-      onDone: () => _subscription?.cancel(),
-      onError: (err) {
-        error = err.toString();
-        notifyListeners();
-      },
-    );
-    loadProducts();
-  }
+    try {
+      // 1. Configure Purchases with RevenueCat API key and couple ID
+      final configuration = PurchasesConfiguration(RevenueCatConfig.apiKey)
+        ..appUserID = 'rel_$relId';
+      
+      await Purchases.configure(configuration);
+      isAvailable = true;
 
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
+      // 2. Load Offerings
+      await loadProducts();
+
+      // 3. Listen to real-time subscription status changes
+      Purchases.addCustomerInfoUpdateListener((customerInfo) {
+        _handleCustomerInfoUpdate(customerInfo);
+      });
+    } catch (e) {
+      debugPrint('RevenueCat initialization warning: $e');
+      error = e.toString();
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadProducts() async {
     try {
-      isAvailable = await _iap.isAvailable();
-      if (!isAvailable) {
-        error = "Store not available";
-        isLoading = false;
-        notifyListeners();
-        return;
+      offerings = await Purchases.getOfferings();
+      if (offerings?.current != null) {
+        monthlyPackage = offerings!.current!.monthly;
+        annualPackage = offerings!.current!.annual;
       }
-
-      final response = await _iap.queryProductDetails(_productIds);
-      if (response.error != null) {
-        error = response.error!.message;
-        isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      products = response.productDetails;
       isLoading = false;
       notifyListeners();
     } catch (e) {
+      debugPrint('RevenueCat loadOfferings error: $e');
       error = e.toString();
       isLoading = false;
       notifyListeners();
@@ -73,103 +69,138 @@ class SubscriptionService extends ChangeNotifier {
   }
 
   String getPriceById(String productId) {
-    if (products.isEmpty) {
-      return productId == yearlyId ? '₹499' : '₹49';
-    }
-    
-    try {
-      final product = products.firstWhere((p) => p.id == productId);
-      return product.price;
-    } catch (_) {
-      return products.first.price;
+    if (productId == yearlyId) {
+      if (annualPackage != null) {
+        return annualPackage!.storeProduct.priceString;
+      }
+      return '₹499';
+    } else {
+      if (monthlyPackage != null) {
+        return monthlyPackage!.storeProduct.priceString;
+      }
+      return '₹49';
     }
   }
 
-  // --- SUBSCRIPTION LIFECYCLE (AUTO-RESET/RENEW) ---
-  Future<void> processLifecycleCheck(String relId, DateTime? renewalDate) async {
-    if (renewalDate == null) return;
-    final graceDate = renewalDate.add(const Duration(hours: 24));
-    
-    if (DateTime.now().isAfter(graceDate)) {
-      print('Subscription Lifecycle: Past renewal date ($renewalDate). Verifying status...');
-      isLifecycleVerifying = true;
+  Future<bool> buyProduct(bool isYearly) async {
+    if (_activeRelId == null) return false;
+    final relId = _activeRelId!;
+
+    final targetPackage = isYearly ? annualPackage : monthlyPackage;
+    if (targetPackage == null) {
+      error = 'Package not configured yet in RevenueCat. Please add products to your RevenueCat Default Offering.';
       notifyListeners();
-
-      try {
-        await _iap.restorePurchases();
-        
-        final latestRel = await _cloudService.getRelationshipById(relId);
-        if (latestRel != null && latestRel.isPlus && latestRel.premiumRenewalDate != null) {
-          if (DateTime.now().isAfter(latestRel.premiumRenewalDate!.add(const Duration(hours: 24)))) {
-             print('Lifecycle: Store verification failed. Downgrading $relId to Free.');
-             await _cloudService.downgradeToFree(relId);
-          } else {
-             print('Lifecycle: Store verification successful. Status refreshed.');
-          }
-        }
-      } catch (e) {
-        print('Lifecycle check error: $e');
-      } finally {
-        isLifecycleVerifying = false;
-        notifyListeners();
-      }
+      return false;
     }
-  }
 
-  bool _wasYearlySelection = false;
-
-  Future<void> buyProduct(ProductDetails product, bool isYearly) async {
-    _wasYearlySelection = isYearly;
+    isLoading = true;
+    notifyListeners();
     VibrationService.medium();
-    
-    // Using standard Billing v4 purchase parameters since Subv2 is locked out in this environment.
-    final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
-    
-    await _iap.buyNonConsumable(purchaseParam: purchaseParam);
-  }
 
-  void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseList, String relId) async {
-    for (var purchase in purchaseList) {
-      if (purchase.status == PurchaseStatus.pending) {
-        isLoading = true;
-        notifyListeners();
-      } else if (purchase.status == PurchaseStatus.error) {
-        error = purchase.error?.message ?? "Purchase failed";
-        isLoading = false;
-        VibrationService.error();
-        notifyListeners();
-      } else if (purchase.status == PurchaseStatus.purchased || purchase.status == PurchaseStatus.restored) {
-        await _deliverEntitlement(purchase, relId, isYearly: _wasYearlySelection);
-        if (purchase.pendingCompletePurchase) {
-          await _iap.completePurchase(purchase);
-        }
+    try {
+      final purchaseResult = await Purchases.purchasePackage(targetPackage);
+      final customerInfo = purchaseResult.customerInfo;
+      final isEntitled = customerInfo.entitlements.all[RevenueCatConfig.entitlementId]?.isActive == true;
+
+      if (isEntitled) {
+        await _deliverEntitlement(
+          relId: relId,
+          isYearly: isYearly,
+          transactionId: customerInfo.originalAppUserId,
+        );
         isLoading = false;
         notifyListeners();
-      } else if (purchase.status == PurchaseStatus.canceled) {
+        return true;
+      } else {
         isLoading = false;
         notifyListeners();
+        return false;
       }
+    } on PlatformException catch (e) {
+      isLoading = false;
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+        error = null;
+      } else {
+        error = e.message ?? e.toString();
+      }
+      notifyListeners();
+      return false;
+    } catch (e) {
+      isLoading = false;
+      error = e.toString();
+      notifyListeners();
+      return false;
     }
   }
 
-  Future<void> _deliverEntitlement(PurchaseDetails purchase, String relId, {bool isYearly = false}) async {
+  Future<bool> restorePurchases() async {
+    if (_activeRelId == null) return false;
+    final relId = _activeRelId!;
+
+    isLoading = true;
+    notifyListeners();
+    try {
+      final customerInfo = await Purchases.restorePurchases();
+      final isEntitled = customerInfo.entitlements.all[RevenueCatConfig.entitlementId]?.isActive == true;
+      if (isEntitled) {
+        await _deliverEntitlement(
+          relId: relId,
+          isYearly: false,
+          transactionId: customerInfo.originalAppUserId,
+        );
+        isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        error = 'No active NextMeet Plus subscription found to restore.';
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      error = e.toString();
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void _handleCustomerInfoUpdate(CustomerInfo customerInfo) async {
+    if (_activeRelId == null) return;
+    final isEntitled = customerInfo.entitlements.all[RevenueCatConfig.entitlementId]?.isActive == true;
+    if (isEntitled) {
+      await _deliverEntitlement(
+        relId: _activeRelId!,
+        isYearly: false,
+        transactionId: customerInfo.originalAppUserId,
+      );
+    } else {
+      await _cloudService.downgradeToFree(_activeRelId!);
+    }
+  }
+
+  Future<void> _deliverEntitlement({
+    required String relId,
+    required bool isYearly,
+    required String transactionId,
+  }) async {
     try {
       final String planType = isYearly ? 'Annual Sanctuary' : 'Monthly Sanctuary';
-      final DateTime renewalDate = isYearly 
-          ? DateTime.now().add(const Duration(days: 365)) 
+      final DateTime renewalDate = isYearly
+          ? DateTime.now().add(const Duration(days: 365))
           : DateTime.now().add(const Duration(days: 30));
 
       await _cloudService.activateRealPremium(
         relId: relId,
         planType: planType,
-        transactionId: purchase.purchaseID ?? 'NXM-STORE-ID',
+        transactionId: transactionId,
         renewalDate: renewalDate,
       );
-      
+
       VibrationService.success();
-      print('Entitlement delivered for $relId');
     } catch (e) {
-      print('Error delivering entitlement: $e');
+      debugPrint('Error delivering entitlement: $e');
     }
   }
 }
