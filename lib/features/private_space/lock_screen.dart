@@ -47,11 +47,15 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
     _biometricChecked = true;
     try {
       final targetRel = widget.rel ?? await _cloudService.streamRelationship().first;
-      if (targetRel != null && (targetRel.useBiometrics || targetRel.isPlus) && targetRel.privateSpacePin != null) {
+      final localEnabled = await _securityService.isLocalBiometricEnabled();
+      if (targetRel != null && (targetRel.useBiometrics || localEnabled || targetRel.isPlus) && targetRel.privateSpacePin != null) {
         final available = await _securityService.isBiometricAvailable();
         if (available && mounted) {
-          final success = await _securityService.authenticate(reason: 'Unlock your Couple Sanctuary 🔒');
-          if (success && mounted) {
+          final result = await _securityService.authenticateWithDetails(
+            reason: 'Scan Fingerprint or Face Camera to unlock',
+            biometricOnly: false,
+          );
+          if (result.success && mounted) {
             _handleUnlock();
           }
         }
@@ -674,17 +678,22 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
         child: InkWell(
           onTap: () async {
             VibrationService.light();
-            final available = await _securityService.isBiometricAvailable();
-            if (!available) {
-              if (mounted) {
+            final result = await _securityService.authenticateWithDetails(
+              reason: 'Scan Fingerprint or Face Camera to unlock',
+              biometricOnly: false,
+            );
+            if (!result.success) {
+              if (mounted && result.errorMessage != null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Fingerprint / Face ID not available on this device')),
+                  SnackBar(
+                    content: Text(result.errorMessage!),
+                    backgroundColor: Colors.redAccent,
+                  ),
                 );
               }
               return;
             }
-            final ok = await _securityService.authenticate(reason: 'Unlock your Couple Sanctuary 🔒');
-            if (ok && mounted) _handleUnlock();
+            if (mounted) _handleUnlock();
           },
           borderRadius: BorderRadius.circular(40),
           child: Container(

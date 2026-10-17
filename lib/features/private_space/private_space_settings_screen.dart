@@ -7,6 +7,7 @@ import '../../core/services/security_service.dart';
 import '../../core/models/relationship_model.dart';
 import '../../widgets/glass_card.dart';
 import '../profile/nextmeet_plus_screen.dart';
+import '../profile/biometric_security_screen.dart';
 
 class PrivateSpaceSettingsScreen extends StatefulWidget {
   const PrivateSpaceSettingsScreen({super.key});
@@ -183,30 +184,47 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
                             onChanged: (val) async {
                               VibrationService.light();
                               if (val) {
-                                final available = await _securityService.isBiometricAvailable();
-                                if (!available) {
+                                final result = await _securityService.authenticateWithDetails(
+                                  reason: 'Scan Fingerprint or Face to enable biometric unlock',
+                                );
+                                if (!result.success) {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Biometrics not available on this device')),
+                                      SnackBar(
+                                        content: Text(result.errorMessage ?? 'Biometrics not available on this device'),
+                                        backgroundColor: Colors.redAccent,
+                                      ),
                                     );
                                   }
                                   return;
                                 }
-                                final ok = await _securityService.authenticate();
-                                if (ok) {
-                                  await _cloudService.updateBiometricPreference(relId, true);
-                                  VibrationService.success();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Biometric unlock enabled! 🔒✨')),
-                                    );
-                                  }
+                                await _cloudService.updateBiometricPreference(relId, true);
+                                await _securityService.setLocalBiometricEnabled(true);
+                                VibrationService.success();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Biometric unlock enabled! 🔒✨')),
+                                  );
                                 }
                               } else {
                                 await _cloudService.updateBiometricPreference(relId, false);
+                                await _securityService.setLocalBiometricEnabled(false);
                               }
                             },
                           ),
+                        ),
+                        Divider(height: 1, color: AppColors.divider.withValues(alpha: 0.5)),
+                        _buildSettingRow(
+                          'Configure Fingerprint & Face Cam',
+                          'Hardware sensor options and sensor test',
+                          Icons.security_rounded,
+                          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => BiometricSecurityScreen(rel: rel)),
+                            );
+                          },
                         ),
                         Divider(height: 1, color: AppColors.divider.withValues(alpha: 0.5)),
                         _buildSettingRow(

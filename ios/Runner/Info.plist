@@ -49,6 +49,8 @@
 	<string>NextMeet needs access to your photo library to save private photos from the vault.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>NextMeet needs access to your photo library to save private photos from the vault.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>NextMeet uses Face ID and biometric security to unlock your intimate Couple Sanctuary.</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-8510502760785545~4085179966</string>
 </dict>
