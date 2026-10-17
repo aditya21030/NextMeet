@@ -29,11 +29,15 @@ class SubscriptionService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Configure Purchases with RevenueCat API key and couple ID
-      final configuration = PurchasesConfiguration(RevenueCatConfig.apiKey)
-        ..appUserID = 'rel_$relId';
-      
-      await Purchases.configure(configuration);
+      // 1. Configure Purchases with RevenueCat API key and couple ID safely
+      final bool alreadyConfigured = await Purchases.isConfigured;
+      if (!alreadyConfigured) {
+        final configuration = PurchasesConfiguration(RevenueCatConfig.apiKey)
+          ..appUserID = 'rel_$relId';
+        await Purchases.configure(configuration);
+      } else {
+        await Purchases.logIn('rel_$relId');
+      }
       isAvailable = true;
 
       // 2. Load Offerings
@@ -168,15 +172,20 @@ class SubscriptionService extends ChangeNotifier {
 
   void _handleCustomerInfoUpdate(CustomerInfo customerInfo) async {
     if (_activeRelId == null) return;
-    final isEntitled = customerInfo.entitlements.all[RevenueCatConfig.entitlementId]?.isActive == true;
-    if (isEntitled) {
+    final entitlement = customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
+    
+    if (entitlement != null && entitlement.isActive) {
       await _deliverEntitlement(
         relId: _activeRelId!,
         isYearly: false,
         transactionId: customerInfo.originalAppUserId,
       );
-    } else {
-      await _cloudService.downgradeToFree(_activeRelId!);
+    } else if (entitlement != null && !entitlement.isActive) {
+      // Only downgrade if this couple previously had an entitlement on RevenueCat that has expired
+      final currentRel = await _cloudService.getRelationshipById(_activeRelId!);
+      if (currentRel != null && currentRel.isPlus) {
+        await _cloudService.downgradeToFree(_activeRelId!);
+      }
     }
   }
 
