@@ -527,7 +527,12 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
                               child: GestureDetector(
                                 onTap: () => _showFullScreenImage(data['url']),
                                 onLongPress: () => _deletePhoto(relId, doc.id, data['url'], data['sizeBytes'] ?? 0),
-                                child: _buildPhotoCard(data['url'], data['timestamp'] as Timestamp?),
+                                child: _buildPhotoCard(
+                                  data['url'], 
+                                  data['timestamp'] as Timestamp?,
+                                  data['uploadedBy'] as String?,
+                                  relSnapshot.data,
+                                ),
                               ),
                             );
                           },
@@ -600,7 +605,7 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
     );
   }
 
-  Widget _buildPhotoCard(String url, Timestamp? timestamp) {
+  Widget _buildPhotoCard(String url, Timestamp? timestamp, [String? uploadedBy, RelationshipModel? rel]) {
     String timeStr = 'Just now';
     if (timestamp != null) {
       final date = timestamp.toDate();
@@ -611,6 +616,16 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
         timeStr = '${diff.inHours}h ago';
       } else {
         timeStr = '${date.day}/${date.month}';
+      }
+    }
+
+    String authorTag = 'Private Vault';
+    if (uploadedBy != null && rel != null) {
+      final currentUid = _cloudService.currentUid;
+      if (uploadedBy == currentUid) {
+        authorTag = 'Saved by You';
+      } else {
+        authorTag = 'Saved by ${rel.getDisplayPartnerName(currentUid)}';
       }
     }
 
@@ -655,7 +670,7 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(timeStr, style: AppTextStyles.bodyS.copyWith(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
-              Text('Private Space', style: AppTextStyles.bodyS.copyWith(fontSize: 8, color: AppColors.primary, fontWeight: FontWeight.bold)),
+              Text(authorTag, style: AppTextStyles.bodyS.copyWith(fontSize: 8, color: AppColors.primary, fontWeight: FontWeight.bold)),
             ],
           ),
         ),

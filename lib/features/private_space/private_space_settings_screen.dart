@@ -179,7 +179,7 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
                           'Use Fingerprint or Face ID for fast access',
                           Icons.fingerprint_rounded,
                           trailing: Switch(
-                            value: rel.useBiometrics,
+                            value: rel.getMyBiometricPreference(_cloudService.currentUid),
                             activeColor: AppColors.primary,
                             onChanged: (val) async {
                               VibrationService.light();

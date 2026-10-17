@@ -47,8 +47,10 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
     _biometricChecked = true;
     try {
       final targetRel = widget.rel ?? await _cloudService.streamRelationship().first;
+      final myUid = _cloudService.currentUid;
       final localEnabled = await _securityService.isLocalBiometricEnabled();
-      if (targetRel != null && (targetRel.useBiometrics || localEnabled || targetRel.isPlus) && targetRel.privateSpacePin != null) {
+      final myCloudPref = targetRel != null ? targetRel.getMyBiometricPreference(myUid) : false;
+      if (targetRel != null && localEnabled && myCloudPref && targetRel.privateSpacePin != null) {
         final available = await _securityService.isBiometricAvailable();
         if (available && mounted) {
           final result = await _securityService.authenticateWithDetails(

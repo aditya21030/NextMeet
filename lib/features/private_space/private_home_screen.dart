@@ -35,10 +35,21 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
     _scrollController.addListener(() {
       _scrollOffset.value = _scrollController.offset;
     });
+    _updatePresence(true);
+  }
+
+  void _updatePresence(bool isIn) {
+    final relId = widget.rel?.id;
+    if (relId != null) {
+      _cloudService.updateSanctuaryPresence(relId, isIn);
+    } else {
+      _cloudService.updateSanctuaryStatus(isIn);
+    }
   }
 
   @override
   void dispose() {
+    _updatePresence(false);
     _scrollController.dispose();
     _scrollOffset.dispose();
     super.dispose();
@@ -46,6 +57,7 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
 
   void _handleExit() {
     VibrationService.light();
+    _updatePresence(false);
     widget.onLock?.call();
     if (widget.onClose != null) {
       widget.onClose!();
@@ -240,7 +252,7 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
                           partnerName: partnerName,
                           myPhoto: myPhoto,
                           partnerPhoto: partnerPhoto,
-                          isBothOnline: (rel.u1InSanctuary) && (rel.u2InSanctuary),
+                          isBothOnline: rel.isPartnerInSanctuary(currentUid),
                           isPlus: isPlus,
                           relId: relId,
                           rel: rel,

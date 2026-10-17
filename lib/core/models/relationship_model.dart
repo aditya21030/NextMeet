@@ -96,7 +96,9 @@ class RelationshipModel {
   final String? premiumTransactionId;
   final DateTime? premiumRenewalDate;
   final String? premiumPlanType; // 'Monthly' or 'Annual'
-  final bool useBiometrics; // Plus only
+  final bool useBiometrics; // Legacy / global couple flag
+  final bool user1UseBiometrics; // User 1's device biometric preference
+  final bool user2UseBiometrics; // User 2's device biometric preference
   final String? hapticPatternType; // 'Heartbeat', 'Warm Hug', 'Digital Touch'
   final String? mapLineColor; // Hex string for map path (Plus only)
   final String? mapLineStyle; // 'Neon', 'Solid', 'Dotted'
@@ -185,6 +187,8 @@ class RelationshipModel {
     this.premiumRenewalDate,
     this.premiumPlanType,
     this.useBiometrics = false,
+    this.user1UseBiometrics = false,
+    this.user2UseBiometrics = false,
     this.hapticPatternType = 'Standard',
     this.mapLineColor,
     this.mapLineStyle = 'Neon',
@@ -290,6 +294,34 @@ class RelationshipModel {
 
   String getMyPhoto(String? currentUid) => currentUid == uid1 ? (userPhoto1 ?? '') : (userPhoto2 ?? '');
   String getPartnerPhoto(String? currentUid) => currentUid == uid1 ? (userPhoto2 ?? '') : (userPhoto1 ?? '');
+
+  // Biometric Per-User Preference Helpers
+  bool getMyBiometricPreference(String? currentUid) {
+    if (currentUid == uid1) return user1UseBiometrics;
+    if (currentUid == uid2) return user2UseBiometrics;
+    return useBiometrics;
+  }
+
+  bool getPartnerBiometricPreference(String? currentUid) {
+    if (currentUid == uid1) return user2UseBiometrics;
+    if (currentUid == uid2) return user1UseBiometrics;
+    return useBiometrics;
+  }
+
+  // Sanctuary Presence Helpers
+  bool isPartnerInSanctuary(String? currentUid) {
+    final isUser1 = currentUid == uid1;
+    final isIn = isUser1 ? u2InSanctuary : u1InSanctuary;
+    final lastSeen = isUser1 ? u2SanctuaryLastSeen : u1SanctuaryLastSeen;
+    if (!isIn || lastSeen == null) return false;
+    return DateTime.now().difference(lastSeen).inMinutes < 5;
+  }
+
+  bool isBothInSanctuary(String? currentUid) {
+    final isUser1 = currentUid == uid1;
+    final myIn = isUser1 ? u1InSanctuary : u2InSanctuary;
+    return myIn && isPartnerInSanctuary(currentUid);
+  }
 
   bool isPartnerPressing(String? currentUid) {
     final partnerPress = currentUid == uid1 ? user2SyncPress : user1SyncPress;
@@ -408,6 +440,8 @@ class RelationshipModel {
       premiumRenewalDate: _parseDate(map['premiumRenewalDate']),
       premiumPlanType: map['premiumPlanType'],
       useBiometrics: map['useBiometrics'] ?? false,
+      user1UseBiometrics: map['user1UseBiometrics'] ?? map['useBiometrics'] ?? false,
+      user2UseBiometrics: map['user2UseBiometrics'] ?? map['useBiometrics'] ?? false,
       hapticPatternType: map['hapticPatternType'] ?? 'Standard',
       mapLineColor: map['mapLineColor'],
       mapLineStyle: map['mapLineStyle'] ?? 'Neon',
@@ -494,6 +528,8 @@ class RelationshipModel {
       'premiumRenewalDate': premiumRenewalDate != null ? Timestamp.fromDate(premiumRenewalDate!) : null,
       'premiumPlanType': premiumPlanType,
       'useBiometrics': useBiometrics,
+      'user1UseBiometrics': user1UseBiometrics,
+      'user2UseBiometrics': user2UseBiometrics,
       'hapticPatternType': hapticPatternType,
       'mapLineColor': mapLineColor,
       'mapLineStyle': mapLineStyle,
@@ -604,6 +640,8 @@ class RelationshipModel {
     DateTime? premiumRenewalDate,
     String? premiumPlanType,
     bool? useBiometrics,
+    bool? user1UseBiometrics,
+    bool? user2UseBiometrics,
     String? hapticPatternType,
     String? mapLineColor,
     String? mapLineStyle,
@@ -688,6 +726,8 @@ class RelationshipModel {
       premiumRenewalDate: premiumRenewalDate ?? this.premiumRenewalDate,
       premiumPlanType: premiumPlanType ?? this.premiumPlanType,
       useBiometrics: useBiometrics ?? this.useBiometrics,
+      user1UseBiometrics: user1UseBiometrics ?? this.user1UseBiometrics,
+      user2UseBiometrics: user2UseBiometrics ?? this.user2UseBiometrics,
       hapticPatternType: hapticPatternType ?? this.hapticPatternType,
       mapLineColor: mapLineColor ?? this.mapLineColor,
       mapLineStyle: mapLineStyle ?? this.mapLineStyle,

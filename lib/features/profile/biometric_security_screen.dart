@@ -46,7 +46,8 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
     final fpEnabled = await _securityService.isFingerprintEnabled();
     final faceEnabled = await _securityService.isFaceCamEnabled();
 
-    final cloudUseBiometrics = widget.rel?.useBiometrics ?? false;
+    final myUid = _cloudService.currentUid;
+    final cloudUseBiometrics = widget.rel != null ? widget.rel!.getMyBiometricPreference(myUid) : localMaster;
 
     if (mounted) {
       setState(() {
@@ -54,7 +55,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
         _hasFingerprint = hasFingerprint;
         _hasFace = hasFace;
         _hardwareStatus = status;
-        _masterBiometricsEnabled = cloudUseBiometrics || localMaster;
+        _masterBiometricsEnabled = cloudUseBiometrics && localMaster;
         _fingerprintEnabled = fpEnabled;
         _faceCamEnabled = faceEnabled;
         _isLoading = false;

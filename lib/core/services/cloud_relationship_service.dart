@@ -1152,6 +1152,7 @@ class CloudRelationshipService {
         'relationship_id': relId,
         'url': url,
         'size_bytes': size,
+        'uploaded_by': _currentUid,
         'created_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
@@ -1161,6 +1162,7 @@ class CloudRelationshipService {
       await _relationships.doc(relId).collection('private_photos').add({
         'url': url,
         'sizeBytes': size,
+        'uploadedBy': _currentUid,
         'timestamp': FieldValue.serverTimestamp(),
       });
       await _relationships.doc(relId).set({
@@ -1552,7 +1554,14 @@ class CloudRelationshipService {
   }
 
   Future<void> updateBiometricPreference(String relId, bool enabled) async {
-    await _updateRelationshipData(relId, {'useBiometrics': enabled});
+    if (_currentUid == null) return;
+    final rel = _cachedRelationship ?? await getRelationshipById(relId);
+    final isUser1 = _currentUid == rel?.uid1;
+    final field = isUser1 ? 'user1UseBiometrics' : 'user2UseBiometrics';
+    await _updateRelationshipData(relId, {
+      field: enabled,
+      'useBiometrics': enabled,
+    });
   }
 
   // --- PREMIUM ACTIVATION (NEW REAL FLOW) ---
