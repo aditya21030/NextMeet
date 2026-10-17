@@ -6,6 +6,7 @@ import '../../core/models/relationship_model.dart';
 import '../../core/constants.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/subscription_service.dart';
+import '../../core/services/vibration_service.dart';
 
 class NextMeetPlusScreen extends StatefulWidget {
   final String relId;
@@ -41,20 +42,34 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: const Color(0xFF0F0814),
       body: Stack(
         children: [
-          // PREMIUM GRADIENT BACKGROUND
+          // LUXURY AMBIENT BACKGROUND
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFF0F0812),
-                  Color(0xFF1A0A1D),
-                  Color(0xFF0F0812),
+                  Color(0xFF1E0E24),
+                  Color(0xFF130917),
+                  Color(0xFF0A040D),
                 ],
+              ),
+            ),
+          ),
+
+          // Ambient Glow Blob
+          Positioned(
+            top: -60,
+            right: -60,
+            child: Container(
+              width: 240,
+              height: 240,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.15),
               ),
             ),
           ),
@@ -68,25 +83,29 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
               return CustomScrollView(
                 physics: const BouncingScrollPhysics(),
                 slivers: [
+                  // Sleek App Bar
                   SliverAppBar(
-                    backgroundColor: const Color(0xFF0F0812).withValues(alpha: 0.7),
+                    backgroundColor: const Color(0xFF1E0E24).withValues(alpha: 0.7),
                     elevation: 0,
                     pinned: true,
                     centerTitle: true,
                     flexibleSpace: ClipRect(
                       child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                         child: Container(color: Colors.transparent),
                       ),
                     ),
                     leading: IconButton(
                       icon: const Icon(Icons.close_rounded, color: Colors.white70),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        VibrationService.light();
+                        Navigator.pop(context);
+                      },
                     ),
-                    title: Text(
+                    title: const Text(
                       'NextMeet+',
-                      style: AppTextStyles.h1.copyWith(
-                        fontSize: 22,
+                      style: TextStyle(
+                        fontSize: 20,
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
@@ -94,107 +113,193 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                     ),
                     actions: [
                       TextButton(
-                        onPressed: _subService.isLoading ? null : () async {
-                          final success = await _subService.restorePurchases();
-                          if (!context.mounted) return;
-                          if (success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Purchases restored! NextMeet+ active ❤️')),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(_subService.error ?? 'No active subscription found.')),
-                            );
-                          }
-                        },
-                        child: const Text('Restore', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13)),
+                        onPressed: _subService.isLoading
+                            ? null
+                            : () async {
+                                VibrationService.light();
+                                final success = await _subService.restorePurchases();
+                                if (!context.mounted) return;
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Purchases restored! NextMeet+ active ❤️')),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(_subService.error ?? 'No active subscription found.')),
+                                  );
+                                }
+                              },
+                        child: const Text(
+                          'Restore',
+                          style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
                       ),
                       const SizedBox(width: 8),
                     ],
                   ),
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-                  // SUBSCRIPTION DASHBOARD OR PRICING
+                  // Hero Title Section
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: isPlus 
-                        ? _buildSubscriptionDashboard(rel!)
-                        : FadeInDown(
-                            duration: const Duration(milliseconds: 800),
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    gradient: AppColors.primaryGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.celebration_rounded, color: Colors.white, size: 14),
-                                      const SizedBox(width: 8),
-                                      const Text(
-                                        'SANCTUARY ELITE OFFER 🎁', 
-                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1),
-                                      ),
-                                    ],
-                                  ),
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                      child: FadeInDown(
+                        duration: const Duration(milliseconds: 600),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.primary,
+                                    const Color(0xFF845EC2),
+                                  ],
                                 ),
-                                const SizedBox(height: 20),
-                                _buildPricingCards(),
-                                if (_subService.error != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 12),
-                                    child: Text(
-                                      'Store Issue: ${_subService.error}',
-                                      style: const TextStyle(color: Colors.redAccent, fontSize: 10),
-                                    ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.35),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
                                   ),
-                              ],
+                                ],
+                              ),
+                              child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 36),
                             ),
-                          ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Intimacy Without Distance',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                              ),
+                              child: const Text(
+                                '💑 One subscription covers both partners',
+                                style: TextStyle(
+                                  color: Color(0xFFFFB3C6),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-                  // FEATURE LIST
+                  // PRICING CARDS OR ACTIVE DASHBOARD
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: isPlus
+                          ? _buildSubscriptionDashboard(rel!)
+                          : FadeInUp(
+                              duration: const Duration(milliseconds: 600),
+                              child: Column(
+                                children: [
+                                  _buildPricingCards(),
+                                  if (_subService.error != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: Text(
+                                        _subService.error!,
+                                        style: const TextStyle(color: Colors.redAccent, fontSize: 11),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 28)),
+
+                  // CURATED PERKS SECTION HEADER
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'UNLOCKED SUPERPOWERS',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                              color: Colors.white54,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(Icons.stars_rounded, size: 16, color: Colors.amber.shade300),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+                  // CLEAN PERKS LIST
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        FadeInUp(
-                          delay: const Duration(milliseconds: 400),
-                          child: Column(
-                            children: [
-                               _buildPremiumListItem(_FeatureInfo('Smart AI Suggestions ✈️', Icons.auto_awesome_rounded, 'AI-powered suggestions for your shared trips.')),
-                               _buildPremiumListItem(_FeatureInfo('Nearby places for Trip 🗺️', Icons.near_me_rounded, 'Discover perfect stays and spots around your trip.')),
-                               _buildPremiumListItem(_FeatureInfo('Unlimited Memories ✨', Icons.photo_library_rounded, 'Store your beautiful journey with zero limits.')),
-                               _buildPremiumListItem(_FeatureInfo('150 MB Private Space ☁️', Icons.cloud_done_rounded, 'Massive storage for your secret photos and notes.')),
-                               _buildPremiumListItem(_FeatureInfo('Pro-Haptics & Patterns 💓', Icons.vibration_rounded, 'Exclusive heartbeat & touch vibration patterns.')),
-                               _buildPremiumListItem(_FeatureInfo('Neon Glow & Indigo Badge ✨', Icons.stars_rounded, 'Stand out with premium profile aesthetics.')),
-                               _buildPremiumListItem(_FeatureInfo('100% Ad-Free Sanctuary 🛡️', Icons.block_rounded, 'Zero distractions. Just you two.')),
-                               _buildPremiumListItem(_FeatureInfo('Shared Map Love Trail 🗺️', Icons.map_rounded, 'Visualize your journey on a beautiful shared map.')),
-                               _buildPremiumListItem(_FeatureInfo('Environment Status 🌦️', Icons.cloud_circle_rounded, 'Partner real-time weather & time status.')),
-                               
-                               const SizedBox(height: 40),
-                               const SizedBox(height: 40),
-                            ],
-                          ),
+                        _buildCleanPerk(
+                          icon: Icons.lock_open_rounded,
+                          color: const Color(0xFFFF5E7E),
+                          title: '150 MB Secret Vault',
+                          subtitle: 'Massive storage for high-res photos and voice whispers.',
+                        ),
+                        _buildCleanPerk(
+                          icon: Icons.vibration_rounded,
+                          color: const Color(0xFFFF8E71),
+                          title: 'Pro-Haptics Engine',
+                          subtitle: 'Exclusive heartbeat patterns and custom touch rhythms.',
+                        ),
+                        _buildCleanPerk(
+                          icon: Icons.map_rounded,
+                          color: const Color(0xFF845EC2),
+                          title: 'Neon Love Trail & Themes',
+                          subtitle: 'Sanctum luxury map tiles, glow paths, and weather pills.',
+                        ),
+                        _buildCleanPerk(
+                          icon: Icons.photo_library_rounded,
+                          color: const Color(0xFFFF6F91),
+                          title: 'Unlimited Memories',
+                          subtitle: 'Preserve your full relationship journey with zero caps.',
+                        ),
+                        _buildCleanPerk(
+                          icon: Icons.favorite_rounded,
+                          color: const Color(0xFFFFC75F),
+                          title: 'VIP Couple Badge',
+                          subtitle: 'Stand out with glowing neon avatar rings and prestige.',
                         ),
                       ]),
                     ),
                   ),
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 180)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 140)),
                 ],
               );
             },
           ),
 
+          // STICKY BOTTOM ACTION BAR (Hidden when already subscribed)
           StreamBuilder<RelationshipModel?>(
             stream: _cloudService.streamRelationship(),
             builder: (context, snapshot) {
@@ -209,104 +314,193 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
   }
 
   Widget _buildPricingCards() {
+    final yearlyPrice = _subService.getPriceById(SubscriptionService.yearlyId);
+    final monthlyPrice = _subService.getPriceById(SubscriptionService.monthlyId);
+
     return Row(
       children: [
+        // Yearly Card (Highlighted)
         Expanded(
           child: _buildPriceCard(
-            'Monthly',
-            _subService.getPriceById(SubscriptionService.monthlyId),
-            '₹99',
-            'Early Couple Offer 🎁',
-            !isYearly,
-            () => setState(() => isYearly = false),
+            title: 'Annual',
+            price: yearlyPrice,
+            strikethrough: '₹999',
+            badge: 'SAVE 50% ✨',
+            subtitle: 'Best Value • Renews yearly',
+            isSelected: isYearly,
+            onTap: () {
+              VibrationService.light();
+              setState(() => isYearly = true);
+            },
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
+        // Monthly Card
         Expanded(
           child: _buildPriceCard(
-            'Yearly',
-            _subService.getPriceById(SubscriptionService.yearlyId),
-            '₹999',
-            'Best Value ✨',
-            isYearly,
-            () => setState(() => isYearly = true),
-            isBestValue: true,
+            title: 'Monthly',
+            price: monthlyPrice,
+            strikethrough: '₹99',
+            badge: 'Flexible',
+            subtitle: 'Renews monthly',
+            isSelected: !isYearly,
+            onTap: () {
+              VibrationService.light();
+              setState(() => isYearly = false);
+            },
           ),
         ),
       ],
     );
   }
- 
-  Widget _buildPriceCard(String title, String price, String originalPrice, String sub, bool isSelected, VoidCallback onTap, {bool isBestValue = false}) {
+
+  Widget _buildPriceCard({
+    required String title,
+    required String price,
+    required String strikethrough,
+    required String badge,
+    required String subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(24),
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.1),
+            color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.08),
             width: isSelected ? 2 : 1,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           children: [
-            Text(title, style: TextStyle(color: isSelected ? Colors.white : Colors.white60, fontWeight: FontWeight.w900, fontSize: 14)),
-            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                badge,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white70,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(
-                  originalPrice, 
-                  style: TextStyle(
-                    color: Colors.white24, 
-                    fontSize: 12, 
+                  strikethrough,
+                  style: const TextStyle(
+                    color: Colors.white24,
+                    fontSize: 12,
                     decoration: TextDecoration.lineThrough,
-                    fontWeight: FontWeight.w500
-                  )
+                  ),
                 ),
                 const SizedBox(width: 4),
-                Text(price, style: TextStyle(color: isSelected ? AppColors.primary : Colors.white, fontWeight: FontWeight.w900, fontSize: 22)),
+                Text(
+                  price,
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xFFFFB3C6) : Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 22,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 4),
-            Text(sub, textAlign: TextAlign.center, style: TextStyle(color: isSelected ? Colors.white70 : Colors.white38, fontSize: 8, fontWeight: FontWeight.w600)),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isSelected ? Colors.white70 : Colors.white38,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPremiumListItem(_FeatureInfo f) {
+  Widget _buildCleanPerk({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+  }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
+        color: Colors.white.withValues(alpha: 0.035),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(f.icon, color: AppColors.primary, size: 24),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(f.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-                const SizedBox(height: 4),
-                Text(f.description, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
+                ),
               ],
             ),
           ),
@@ -321,43 +515,59 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
       left: 0,
       right: 0,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFF0F0812).withValues(alpha: 0),
-              const Color(0xFF0F0812).withValues(alpha: 0.95),
-              const Color(0xFF0F0812),
+              const Color(0xFF0F0814).withValues(alpha: 0),
+              const Color(0xFF0F0814).withValues(alpha: 0.95),
+              const Color(0xFF0F0814),
             ],
           ),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 40, spreadRadius: 0),
-            ],
-          ),
-          child: ElevatedButton(
-            onPressed: _subService.isLoading ? null : _handleUpgrade,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ElevatedButton(
+              onPressed: _subService.isLoading ? null : _handleUpgrade,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                elevation: 8,
+                shadowColor: AppColors.primary.withValues(alpha: 0.5),
+              ),
+              child: Container(
+                width: double.infinity,
+                alignment: Alignment.center,
+                child: _subService.isLoading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.favorite_rounded, color: Colors.white, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            isYearly ? 'Unlock for Both (Annual) ❤️' : 'Unlock for Both (Monthly) ❤️',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                          ),
+                        ],
+                      ),
+              ),
             ),
-            child: Container(
-              width: double.infinity,
-              alignment: Alignment.center,
-              child: _subService.isLoading 
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text(
-                  'UPGRADE NOW',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5),
-                ),
+            const SizedBox(height: 8),
+            const Text(
+              'Auto-renews • Cancel anytime in Google Play Store',
+              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w500),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -385,30 +595,33 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
 
   Widget _buildSubscriptionDashboard(RelationshipModel rel) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 2),
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              const Icon(Icons.verified_rounded, color: AppColors.primary, size: 28),
-              const SizedBox(width: 12),
-              Text('ACTIVE SUBSCRIPTION', style: AppTextStyles.h3.copyWith(color: Colors.white, fontSize: 16)),
+              const Icon(Icons.verified_rounded, color: AppColors.primary, size: 26),
+              const SizedBox(width: 10),
+              const Text(
+                'ACTIVE COUPLE SUBSCRIPTION',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1),
+              ),
             ],
           ),
-          const SizedBox(height: 24),
-          _buildStatRow('Plan', rel.premiumPlanType ?? 'Monthly Sanctuary', Colors.white),
-          const Divider(color: Colors.white10, height: 32),
-          _buildStatRow('Transaction', rel.premiumTransactionId ?? 'NX-XXX', Colors.white70),
-          const Divider(color: Colors.white10, height: 32),
+          const SizedBox(height: 20),
+          _buildStatRow('Plan Type', rel.premiumPlanType ?? 'Sanctuary Elite', Colors.white),
+          const Divider(color: Colors.white10, height: 24),
           _buildStatRow(
-            'Renews On', 
-            rel.premiumRenewalDate != null ? DateFormat('MMM dd, yyyy').format(rel.premiumRenewalDate!) : '...',
-            AppColors.primary
+            'Renews On',
+            rel.premiumRenewalDate != null
+                ? DateFormat('MMM dd, yyyy').format(rel.premiumRenewalDate!)
+                : 'Active',
+            const Color(0xFFFFB3C6),
           ),
         ],
       ),
@@ -419,16 +632,9 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w600)),
         Text(value, style: TextStyle(color: valueColor, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
-}
-
-class _FeatureInfo {
-  final String title;
-  final IconData icon;
-  final String description;
-  _FeatureInfo(this.title, this.icon, this.description);
 }
