@@ -4,7 +4,6 @@ import 'package:animate_do/animate_do.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
-import '../../core/services/security_service.dart';
 import '../../core/models/relationship_model.dart';
 import 'private_home_screen.dart';
 import '../onboarding/setup_couple_screen.dart';
@@ -20,20 +19,14 @@ class PrivateSpaceLockScreen extends StatefulWidget {
 
 class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
-      // ignore: unused_field
-  final SecurityService _securityService = SecurityService();
   final TextEditingController _pinController = TextEditingController();
-      // ignore: unused_field
-  
-  bool _isSetupMode = false;
   String? _firstPin;
 
   @override
-  void initState() {
-    super.initState();
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
   }
-
-
 
   void _onPinComplete(String pin, RelationshipModel rel) async {
     if (rel.privateSpacePin == null) {
@@ -62,9 +55,11 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
         } else {
           // Mismatch
           VibrationService.error();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('PINs do not match. Try again.')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('PINs do not match. Try again.')),
+            );
+          }
           setState(() {
             _firstPin = null;
             _pinController.clear();
@@ -79,15 +74,16 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
         if (isApproved) {
           await _cloudService.finalizePinReset(rel.id!, pin);
         }
-      // ignore: use_build_context_synchronously
         VibrationService.success();
-        if (widget.onUnlocked != null) {
-          widget.onUnlocked!();
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const PrivateHomeScreen()),
-          );
+        if (mounted) {
+          if (widget.onUnlocked != null) {
+            widget.onUnlocked!();
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const PrivateHomeScreen()),
+            );
+          }
         }
       } else if (isApproved && _firstPin == null) {
         setState(() {
@@ -98,9 +94,11 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
       } else {
         VibrationService.error();
         _pinController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Incorrect PIN ❌')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Incorrect PIN ❌')),
+          );
+        }
       }
     }
   }
@@ -121,10 +119,9 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-      // ignore: use_build_context_synchronously
               await _cloudService.requestPinReset(relId);
               VibrationService.medium();
-              if (mounted) {
+              if (context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Reset request sent to partner. Please wait for approval. ⏳')),
@@ -138,17 +135,8 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
             child: const Text('SEND REQUEST', style: TextStyle(color: Colors.white)),
           ),
         ],
-      // ignore: unused_element
       ),
     );
-  }
-
-  void _showResetConfirmDialog(String relId) {
-    _pinController.clear();
-    setState(() {
-      _isSetupMode = true; // Temporary setup mode for new PIN
-      _firstPin = null;
-    });
   }
 
   @override
@@ -279,6 +267,8 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
                         length: 4,
                         controller: _pinController,
                         obscureText: true,
+                        keyboardType: TextInputType.number,
+                        autofocus: true,
                         onCompleted: (pin) => _onPinComplete(pin, rel),
                       ),
                     ),

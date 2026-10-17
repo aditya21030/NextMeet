@@ -20,56 +20,108 @@ class LoveLettersScreen extends StatefulWidget {
 class _LoveLettersScreenState extends State<LoveLettersScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
   final String? _currentUserId = AuthService().currentUid;
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _addLetter(String relId) {
     final titleController = TextEditingController();
     final contentController = TextEditingController();
+    final promptChips = ['To my soulmate ✨', 'Just thinking of you 💭', 'A promise ❤️', 'Forever & always 💍'];
     VibrationService.medium();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-          left: AppSpacing.xl,
-          right: AppSpacing.xl,
-          top: AppSpacing.xl,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Write a Love Letter 📖', style: AppTextStyles.h3),
-            const SizedBox(height: AppSpacing.xl),
-            TextField(
-              controller: titleController,
-              decoration: AppInputs.premiumInput('Title (e.g. To my soulmate)'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
+            left: AppSpacing.xl,
+            right: AppSpacing.xl,
+            top: AppSpacing.xl,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Write a Love Letter 📖', style: AppTextStyles.h3),
+                const SizedBox(height: 8),
+                Text('Choose a prompt or write your own title:', style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11)),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: promptChips.map((prompt) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ActionChip(
+                          label: Text(prompt, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                          onPressed: () {
+                            VibrationService.light();
+                            setModalState(() {
+                              titleController.text = prompt;
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                TextField(
+                  controller: titleController,
+                  decoration: AppInputs.premiumInput('Title (e.g. To my soulmate)'),
+                ),
+                const SizedBox(height: AppSpacing.m),
+                TextField(
+                  controller: contentController,
+                  maxLines: 5,
+                  decoration: AppInputs.premiumInput('Pour your heart out...'),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                PrimaryButton(
+                  text: 'SEND LETTER',
+                  onPressed: () async {
+                    final title = titleController.text.trim();
+                    final content = contentController.text.trim();
+                    if (title.isNotEmpty && content.isNotEmpty) {
+                      await _cloudService.addLoveLetter(relId, title, content);
+                      VibrationService.success();
+                      if (mounted) Navigator.pop(context);
+                    } else {
+                      VibrationService.error();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter a title and message first! 💌')),
+                      );
+                    }
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.m),
-            TextField(
-              controller: contentController,
-              maxLines: 5,
-              decoration: AppInputs.premiumInput('Pour your heart out...'),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PrimaryButton(
-              text: 'SEND LETTER',
-              onPressed: () async {
-                if (titleController.text.isNotEmpty && contentController.text.isNotEmpty) {
-                  await _cloudService.addLoveLetter(relId, titleController.text, contentController.text);
-                  VibrationService.success();
-      // ignore: use_build_context_synchronously
-                  if (mounted) Navigator.pop(context);
-                }
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -89,20 +141,66 @@ class _LoveLettersScreenState extends State<LoveLettersScreen> {
               onPressed: () => Navigator.pop(context), 
               icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
             ),
-            title: Text('Love Letters ❤️', style: AppTextStyles.h3),
-            centerTitle: true,
+            title: _isSearching
+                ? TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: 'Search love letters...',
+                      border: InputBorder.none,
+                      hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.6)),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val.trim().toLowerCase();
+                      });
+                    },
+                  )
+                : Text('Love Letters ❤️', style: AppTextStyles.h3),
+            centerTitle: !_isSearching,
             actions: [
-              IconButton(onPressed: () => VibrationService.light(), icon: const Icon(Icons.search, color: AppColors.textPrimary, size: 20)),
+              if (_isSearching)
+                IconButton(
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                      _isSearching = false;
+                    });
+                  },
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary, size: 20),
+                )
+              else
+                IconButton(
+                  onPressed: () {
+                    VibrationService.light();
+                    setState(() {
+                      _isSearching = true;
+                    });
+                  },
+                  icon: const Icon(Icons.search, color: AppColors.textPrimary, size: 20),
+                  tooltip: 'Search Letters',
+                ),
             ],
             backgroundColor: Colors.transparent,
             elevation: 0,
           ),
           body: relId == null 
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : StreamBuilder<QuerySnapshot>(
               stream: _cloudService.streamLoveLetters(relId),
               builder: (context, snapshot) {
-                final letters = snapshot.data?.docs ?? [];
+                final allLetters = snapshot.data?.docs ?? [];
+                final letters = _searchQuery.isEmpty
+                    ? allLetters
+                    : allLetters.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final t = (data['title'] ?? '').toString().toLowerCase();
+                        final c = (data['content'] ?? '').toString().toLowerCase();
+                        final s = (data['senderName'] ?? '').toString().toLowerCase();
+                        return t.contains(_searchQuery) || c.contains(_searchQuery) || s.contains(_searchQuery);
+                      }).toList();
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSpacing.l),
@@ -113,20 +211,33 @@ class _LoveLettersScreenState extends State<LoveLettersScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Recent Letters', style: AppTextStyles.h2),
-                            _buildCountBadge('${letters.length} Letters'),
+                            Text(_searchQuery.isEmpty ? 'Recent Letters' : 'Search Results', style: AppTextStyles.h2),
+                            _buildCountBadge('${letters.length} ${letters.length == 1 ? 'Letter' : 'Letters'}'),
                           ],
                         ),
                       ),
                       const SizedBox(height: AppSpacing.l),
-                      if (letters.isEmpty)
+                      if (allLetters.isEmpty)
                         Center(
                           child: Column(
                             children: [
                               const SizedBox(height: 100),
-                              Icon(Icons.edit_note_rounded, size: 64, color: AppColors.divider),
+                              const Icon(Icons.edit_note_rounded, size: 64, color: AppColors.divider),
                               const SizedBox(height: 16),
                               Text('No letters yet. Start writing!', style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        )
+                      else if (_searchQuery.isNotEmpty && letters.isEmpty)
+                        Center(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 80),
+                              const Icon(Icons.search_off_rounded, size: 56, color: AppColors.divider),
+                              const SizedBox(height: 16),
+                              Text('No letters found', style: AppTextStyles.h3),
+                              const SizedBox(height: 4),
+                              Text('No letters matching "$_searchQuery"', style: AppTextStyles.bodyS),
                             ],
                           ),
                         )

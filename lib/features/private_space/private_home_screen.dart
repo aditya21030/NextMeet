@@ -273,7 +273,32 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
                             ),
                           ),
                           const Spacer(),
-                          const Icon(Icons.shield_outlined, size: 16, color: AppColors.primary),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isPlus ? AppColors.primary.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isPlus ? Icons.stars_rounded : Icons.storage_rounded,
+                                  size: 12,
+                                  color: isPlus ? AppColors.primary : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${(rel.privateSpaceStorageBytes / (1024 * 1024)).toStringAsFixed(1)} / ${isPlus ? 150 : 20} MB',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: isPlus ? AppColors.primary : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -320,6 +345,66 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
                               () => _navigateTo(const SecretPhotosScreen()),
                             );
                           },
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+                  // FEATURED 3: Send a Whisper Card
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                      child: FadeInUp(
+                        delay: const Duration(milliseconds: 220),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF7F9),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.pink.shade100.withValues(alpha: 0.6)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF5E7D).withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.edit_note_rounded, color: AppColors.primary, size: 22),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Send a Whisper 💌',
+                                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.textPrimary),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Leave an intimate note for ${_cloudService.currentUid == rel.uid1 ? name2 : name1}',
+                                      style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  VibrationService.light();
+                                  _navigateTo(const LoveLettersScreen());
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                ),
+                                child: const Text('WRITE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

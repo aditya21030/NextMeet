@@ -132,7 +132,58 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
     );
   }
 
-  Future<void> _uploadPhoto(RelationshipModel rel) async {
+  Future<void> _showPhotoSourceSheet(RelationshipModel rel) async {
+    VibrationService.light();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(AppSpacing.l),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 18),
+            const Text('Add Secret Photo 🔒', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 8),
+            const Text('Encrypted and visible only to you two.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            const SizedBox(height: 18),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+                child: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+              ),
+              title: const Text('Take Photo with Camera 📸', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _uploadPhoto(rel, ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+                child: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+              ),
+              title: const Text('Choose from Gallery 🖼️', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _uploadPhoto(rel, ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadPhoto(RelationshipModel rel, [ImageSource source = ImageSource.gallery]) async {
     final relId = rel.id!;
     final double usedMb = rel.privateSpaceStorageBytes / (1024 * 1024);
     final double limitMb = rel.isPlus ? 150.0 : 20.0;
@@ -144,7 +195,7 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
 
     VibrationService.medium();
     final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery, 
+      source: source, 
       maxWidth: 1280,   // Reasonable resolution
       maxHeight: 1280,
       imageQuality: 50, // Good compression
@@ -188,7 +239,7 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
       await _cloudService.addPrivatePhoto(relId, downloadUrl, sizeBytes);
       VibrationService.success();
     } catch (e) {
-      print('Upload Error: $e');
+      debugPrint('Upload Error: $e');
       if (mounted) {
         String msg = 'Failed to upload photo ❌';
         if (e.toString().contains('storage')) {
@@ -278,11 +329,88 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo saved to gallery! ✅')));
       }
     } catch (e) {
-      print('Download Error: $e');
+      debugPrint('Download Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to save photo ❌')));
       }
     }
+  }
+
+  Widget _buildStorageGauge(RelationshipModel rel) {
+    final double usedMb = rel.privateSpaceStorageBytes / (1024 * 1024);
+    final double limitMb = rel.isPlus ? 150.0 : 20.0;
+    final double progress = (usedMb / limitMb).clamp(0.0, 1.0);
+    final bool isNearLimit = progress >= 0.8;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.l),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.l),
+        border: Border.all(color: isNearLimit ? Colors.orange.shade200 : Colors.pink.shade50),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    rel.isPlus ? Icons.stars_rounded : Icons.shield_rounded,
+                    size: 16,
+                    color: rel.isPlus ? Colors.amber : AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    rel.isPlus ? 'PLUS VAULT (150 MB)' : 'FREE VAULT (20 MB)',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                      color: rel.isPlus ? Colors.brown.shade800 : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '${usedMb.toStringAsFixed(1)} / ${limitMb.toInt()} MB',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isNearLimit ? Colors.orange : AppColors.primary,
+              ),
+            ),
+          ),
+          if (!rel.isPlus && isNearLimit) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => NextMeetPlusScreen(relId: rel.id!)));
+              },
+              child: const Row(
+                children: [
+                  Text('Vault almost full • ', style: TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.w600)),
+                  Text('Upgrade to 150MB ✨', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -312,7 +440,7 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
             backgroundColor: Colors.transparent,
           ),
           body: relId == null 
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : StreamBuilder<QuerySnapshot>(
               stream: _cloudService.streamPrivatePhotos(relId),
               builder: (context, snapshot) {
@@ -339,7 +467,9 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xl),
+                      const SizedBox(height: AppSpacing.l),
+                      if (relSnapshot.data != null)
+                        _buildStorageGauge(relSnapshot.data!),
                       if (_isUploading)
                         Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.l),
@@ -350,7 +480,7 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
                           child: Column(
                             children: [
                               const SizedBox(height: 100),
-                              Icon(Icons.photo_library_outlined, size: 64, color: AppColors.divider),
+                              const Icon(Icons.photo_library_outlined, size: 64, color: AppColors.divider),
                               const SizedBox(height: 16),
                               Text('No secret photos yet. Tap + to add!', style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary)),
                             ],
@@ -387,7 +517,7 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
               },
             ),
           floatingActionButton: relSnapshot.data == null ? null : FloatingActionButton(
-            onPressed: () => _uploadPhoto(relSnapshot.data!),
+            onPressed: () => _showPhotoSourceSheet(relSnapshot.data!),
             backgroundColor: AppColors.primary,
             elevation: 8,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -455,9 +585,11 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
       final diff = DateTime.now().difference(date);
       if (diff.inMinutes < 60) {
         timeStr = '${diff.inMinutes}m ago';
-      // ignore: curly_braces_in_flow_control_structures
-      } else if (diff.inHours < 24) timeStr = '${diff.inHours}h ago';
-      else timeStr = '${date.day}/${date.month}';
+      } else if (diff.inHours < 24) {
+        timeStr = '${diff.inHours}h ago';
+      } else {
+        timeStr = '${date.day}/${date.month}';
+      }
     }
 
     return Column(

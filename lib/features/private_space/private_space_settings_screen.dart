@@ -38,7 +38,6 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
               VibrationService.success();
               if (mounted) {
                 // Pop back out the whole way to the main app, so next time they open private space they must set a PIN.
-      // ignore: use_build_context_synchronously
                 Navigator.of(context).popUntil((route) => route.isFirst);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Private PIN cleared! Please set a new one. ✨')));
               }
@@ -236,7 +235,7 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
                   child: Column(
                     children: [
                       Text(
-                        'NextMeet Private Space v2.5.0',
+                        'NextMeet Private Space v1.0.38',
                         style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 10),
                       ),
                       const SizedBox(height: 4),
@@ -299,36 +298,6 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
       ),
     );
   }
-      // ignore: unused_element
-
-  Widget _buildToggleRow(String title, String sub, IconData icon, bool value, Function(bool) onChanged) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, size: 20, color: Colors.orange),
-        ),
-        const SizedBox(width: AppSpacing.m),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppTextStyles.bodyM.copyWith(fontWeight: FontWeight.bold)),
-              Text(sub, style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11)),
-            ],
-          ),
-        ),
-      // ignore: deprecated_member_use
-        Switch.adaptive(
-          value: value,
-          activeColor: AppColors.primary,
-          onChanged: onChanged,
-        ),
-      ],
-    );
-  }
-
   void _showClearDataDialog(String relId) {
     VibrationService.medium();
     showDialog(
@@ -347,8 +316,6 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
               VibrationService.success();
               Navigator.pop(context);
               
-              // New robust clearing
-      // ignore: use_build_context_synchronously
               await _cloudService.clearPrivateSpaceData(relId);
 
               if (mounted) {
