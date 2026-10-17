@@ -202,14 +202,13 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> {
                     VibrationService.success();
                     await _cloudService.updateRelationshipDetails(widget.rel.id!, {'hapticPatternType': _selectedPattern});
                     if (mounted) {
-      // ignore: use_build_context_synchronously
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           backgroundColor: Colors.black87,
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          content: Text('Signature Touch Activated! ✨', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          content: const Text('Signature Touch Activated! ✨', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       );
                     }

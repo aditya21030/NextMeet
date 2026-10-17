@@ -3,7 +3,6 @@ import 'package:animate_do/animate_do.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
-import 'dart:io';
 import 'dart:typed_data';
 import '../../core/models/relationship_model.dart';
 import 'package:image_picker/image_picker.dart';
@@ -96,19 +95,95 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final XFile? pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 50,
-    );
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 70,
+      );
 
-    if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes();
-      VibrationService.light();
-      setState(() => _imageBytes = bytes);
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        VibrationService.light();
+        if (mounted) setState(() => _imageBytes = bytes);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not pick image: $e')),
+        );
+      }
     }
+  }
+
+  void _showImagePickerSheet() {
+    VibrationService.light();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                'Change Profile Photo',
+                style: AppTextStyles.h3.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                ),
+                title: const Text('Take a Photo', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Capture a live picture right now'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                ),
+                title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Select a photo from your album'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _saveProfile() async {
@@ -242,7 +317,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: _pickImage,
+                        onTap: _showImagePickerSheet,
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: const BoxDecoration(

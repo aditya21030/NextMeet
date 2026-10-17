@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
@@ -48,7 +49,21 @@ class HelpSupportScreen extends StatelessWidget {
               icon: Icons.mail_outline_rounded,
               title: 'Email Support',
               subtitle: 'helpnextmeet@gmail.com',
-              onTap: () => VibrationService.light(),
+              onTap: () {
+                Clipboard.setData(const ClipboardData(text: 'helpnextmeet@gmail.com'));
+                VibrationService.success();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: Colors.black87,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    content: const Text(
+                      'Support email copied to clipboard 💌',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.xxl),
 
@@ -81,7 +96,7 @@ class HelpSupportScreen extends StatelessWidget {
               child: const Column(
                 children: [
                   Text(
-                    'Version 1.0.9 (Hardened)',
+                    'Version 1.0.38 (Build 85)',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                   ),
                   SizedBox(height: 8),

@@ -51,7 +51,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               VibrationService.success();
               await _authService.signOut();
               if (mounted) {
-      // ignore: use_build_context_synchronously
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
                   (route) => false,
@@ -234,7 +233,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 8),
                         _buildBadge('Together $togetherDays Days ❤️'),
                         const SizedBox(height: 12),
-                        const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -251,7 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         GestureDetector(
                           onTap: () {
                             VibrationService.medium();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => PrivateSpaceLockScreen()));
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const PrivateSpaceLockScreen()));
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -378,18 +376,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   padding: EdgeInsets.symmetric(vertical: 16),
                                   child: Divider(height: 1, thickness: 0.5),
                                 ),
-                                _buildProfileRow(partnerName, partnerLoc.isEmpty ? 'Not Provided' : partnerLoc, Icons.favorite_rounded, false, () {
+                                _buildProfileRow(partnerName, partnerLoc.isEmpty ? 'Not Provided' : partnerLoc, Icons.favorite_rounded, true, () {
                                   VibrationService.medium();
-                                  // As per user request, Row B (Partner) should probably not allow full profile editing of the other person.
-                                  // For now, let's keep it but make it clear it's for 'Partner' if needed, or disable if user meant only self-edit.
-                                  // But let's fix the flag first.
                                   Navigator.push(
                                     context, 
                                     MaterialPageRoute(
                                       builder: (context) => EditProfileScreen(
                                         relationshipId: relId, 
                                         relationship: rel, 
-                                        isPartner: true, // Always true for 'Partner' row
+                                        isPartner: true, // Edit partner pet nickname
                                       ),
                                     ),
                                   );
@@ -497,10 +492,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   
-                  const SizedBox(height: AppSpacing.l),
-                  
-                  const SizedBox(height: AppSpacing.l),
-
                   const SizedBox(height: AppSpacing.xxl),
 
                   FadeInUp(
@@ -598,20 +589,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       textColor: Colors.redAccent.shade100,
                     ),
                   ),
-      // ignore: unnecessary_null_comparison
                   const SizedBox(height: 12),
-                  if (rel.createdAt != null || rel.anniversaryDate != null)
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 550),
-                      child: Text(
-                        'Partner since ${DateFormat('dd MMMM yyyy').format(rel.createdAt ?? rel.anniversaryDate)} ❤️',
-                        style: AppTextStyles.bodyS.copyWith(
-                          color: AppColors.textSecondary.withValues(alpha: 0.5),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
-                        ),
+                  FadeInUp(
+                    delay: const Duration(milliseconds: 550),
+                    child: Text(
+                      'Partner since ${DateFormat('dd MMMM yyyy').format(rel.createdAt ?? rel.anniversaryDate)} ❤️',
+                      style: AppTextStyles.bodyS.copyWith(
+                        color: AppColors.textSecondary.withValues(alpha: 0.5),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
                       ),
                     ),
+                  ),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -729,123 +718,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onChanged: onChanged,
           ),
         ],
-      ),
-      // ignore: unused_element
-    );
-  }
-
-  Widget _buildPremiumCard(RelationshipModel rel) {
-    final bool isPlus = rel.isPlus;
-    
-    return GestureDetector(
-      onTap: () {
-        VibrationService.medium();
-        Navigator.push(
-          context, 
-          MaterialPageRoute(builder: (context) => NextMeetPlusScreen(relId: rel.id!))
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.m),
-        decoration: BoxDecoration(
-          gradient: isPlus 
-              ? const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : const LinearGradient(
-                  colors: [Color(0xFFBA1B41), Color(0xFF8E0E2F)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-          borderRadius: BorderRadius.circular(AppRadius.l),
-          boxShadow: [
-            BoxShadow(
-              color: (isPlus ? const Color(0xFF6366F1) : const Color(0xFFBA1B41)).withValues(alpha: 0.35),
-              blurRadius: 20,
-              spreadRadius: 2,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isPlus ? Icons.stars_rounded : Icons.workspace_premium_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'NextMeet', 
-                        style: AppTextStyles.h2.copyWith(color: Colors.white, fontSize: 18),
-                      ),
-                      Text(
-                        '+', 
-                        style: AppTextStyles.h2.copyWith(
-                          color: Colors.amberAccent, 
-                          fontSize: 20, 
-                          fontWeight: FontWeight.w900,
-                          shadows: [
-                            Shadow(
-                              color: Colors.amberAccent.withValues(alpha: 0.4),
-                              blurRadius: 6,
-                            )
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (isPlus)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          margin: const EdgeInsets.only(bottom: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'ACTIVE ✨',
-                            style: AppTextStyles.bodyS.copyWith(
-                              color: const Color(0xFF6366F1),
-                              fontSize: 8,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  Text(
-                    isPlus 
-                        ? 'Your digital sanctuary is unlocked.' 
-                        : 'Tap to unlock the ultimate sanctuary ✨', 
-                    style: AppTextStyles.bodyS.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w500,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white54),
-          ],
-        ),
       ),
     );
   }
@@ -1022,7 +894,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           if (isUser1) {
                             updates['user1PartnerNickname'] = myNicknameForPartnerController.text;
                           } else {
-      // ignore: use_build_context_synchronously
                             updates['user2PartnerNickname'] = myNicknameForPartnerController.text;
                           }
 
@@ -1040,6 +911,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+    myNicknameForPartnerController.dispose();
   }
 
   Widget _buildDialogSectionTitle(String title) {
