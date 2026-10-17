@@ -720,41 +720,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSoloActionCard(String title, String subtitle, IconData icon, Color color) {
-    return FadeInUp(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: AppColors.softShadow,
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTextStyles.bodyL.copyWith(fontWeight: FontWeight.w800)),
-                  Text(subtitle, style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.divider),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildNotConnectedState() {
     return Scaffold(
@@ -807,17 +772,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isPast = now.isAfter(data.nextMeetingDate);
     final timeLeft = isPast ? Duration.zero : data.nextMeetingDate.difference(now);
     final daysLeft = timeLeft.inDays;
-    
-    final totalGap = data.nextMeetingDate.difference(data.lastMeetingDate).inDays;
-    final elapsed = now.difference(data.lastMeetingDate).inDays;
-    final double progress = totalGap > 0 ? (elapsed / totalGap).clamp(0.0, 1.0) : 0.0;
-      // ignore: unused_local_variable
-    
-    final daysTogether = now.difference(data.anniversaryDate).inDays;
-    final daysSince = now.difference(data.lastMeetingDate).inDays;
 
-    final String name1 = data.userName1 ?? 'You';
-    final String name2 = data.userName2 ?? 'Partner';
+    final int? partnerOffset = _cloudService.currentUid == data.uid1 ? data.user2TimezoneOffset : data.user1TimezoneOffset;
+    final DateTime partnerTime = partnerOffset != null 
+        ? now.toUtc().add(Duration(minutes: partnerOffset))
+        : now;
+    final String partnerTimeStr = DateFormat.jm().format(partnerTime);
+    final String myTimeStr = DateFormat.jm().format(now);
+    final int? partnerBattery = data.getPartnerBattery(_cloudService.currentUid);
+    final bool isPartnerCharging = data.isPartnerCharging(_cloudService.currentUid);
     
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB), // Very light grey/white
@@ -942,66 +905,98 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   
-                  // Center: Names & Status (Symmetrically Centered & Overflow-Proof)
+                  // Center: Names & Partner Live Mood (Symmetrically Centered & Overflow-Proof)
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Flexible(
-                            child: Text(
-                              data.getDisplayMyName(_cloudService.currentUid), 
-                              style: AppTextStyles.h3.copyWith(fontSize: 17, fontWeight: FontWeight.w900),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.right,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  data.getDisplayMyName(_cloudService.currentUid), 
+                                  style: AppTextStyles.h3.copyWith(fontSize: 16, fontWeight: FontWeight.w900),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 6),
+                                child: Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 16),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  data.getDisplayPartnerName(_cloudService.currentUid), 
+                                  style: AppTextStyles.h3.copyWith(fontSize: 16, fontWeight: FontWeight.w900),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ],
                           ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 6),
-                            child: Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 18),
-                          ),
-                          Flexible(
-                            child: Text(
-                              data.getDisplayPartnerName(_cloudService.currentUid), 
-                              style: AppTextStyles.h3.copyWith(fontSize: 17, fontWeight: FontWeight.w900),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.left,
-                            ),
+                          const SizedBox(height: 3),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF10B981),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  '${data.getDisplayPartnerName(_cloudService.currentUid)}: ${data.getPartnerMood(_cloudService.currentUid)}',
+                                  style: AppTextStyles.bodyS.copyWith(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                   ),
 
-                  // Right: Calendar
+                  // Right: Mood Selector (Replaced redundant Calendar)
                   GestureDetector(
                     onTap: () {
-                      VibrationService.medium();
-                      if (data.id != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CalendarScreen(
-                              relationshipId: data.id!,
-                            ),
-                          ),
-                        );
-                      }
+                      VibrationService.light();
+                      _showMoodPicker(data);
                     },
                     child: Container(
                       width: 44,
                       height: 44,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.25),
+                          width: 1.5,
+                        ),
+                        boxShadow: const [
                           BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 10)),
                         ],
                       ),
-                      child: const Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 22),
+                      child: Center(
+                        child: Text(
+                          data.getMyMood(_cloudService.currentUid).split(' ').last,
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -1123,20 +1118,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.map_rounded, color: Colors.white70, size: 12),
-                                    const SizedBox(width: 4),
+                                    const Icon(Icons.map_rounded, color: Color(0xFF38BDF8), size: 13),
+                                    const SizedBox(width: 5),
                                     Text(
                                       data.formattedDistance,
                                       style: const TextStyle(
-                                        color: Colors.white70,
+                                        color: Colors.white,
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 8),
                                   ],
                                 ),
                               ),
@@ -1192,6 +1190,55 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 6),
+                        
+                        // Sub-row: Local Times & Partner Battery
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'YOU • $myTimeStr',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.55),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.access_time_rounded, color: Colors.white54, size: 11),
+                                const SizedBox(width: 4),
+                                Text(
+                                  partnerTimeStr,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (partnerBattery != null) ...[
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    isPartnerCharging ? Icons.battery_charging_full_rounded : Icons.battery_std_rounded,
+                                    color: isPartnerCharging ? const Color(0xFF10B981) : Colors.white70,
+                                    size: 13,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '$partnerBattery%',
+                                    style: TextStyle(
+                                      color: isPartnerCharging ? const Color(0xFF10B981) : Colors.white.withValues(alpha: 0.8),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 18),
                         
                         // Countdown Blocks: DAYS • HOURS • MINS
@@ -1236,7 +1283,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Row(
                               children: [
                                 Text(
-                                  'Tap to view schedule',
+                                  'Tap to view schedule 📅',
                                   style: TextStyle(
                                     color: const Color(0xFFFB7185).withValues(alpha: 0.9),
                                     fontSize: 11,
@@ -1766,68 +1813,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAvatarPair() {
-    return SizedBox(
-      width: 76,
-      height: 44,
-      child: Stack(
-        children: [
-          // Partner Avatar (Back)
-          Positioned(
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.3), width: 1),
-                boxShadow: [
-                  BoxShadow(color: AppColors.accent.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2),
-                ],
-              ),
-              child: const CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person_rounded, color: AppColors.accent, size: 20),
-              ),
-            ),
-          ),
-          // User Avatar (Front)
-          Positioned(
-            left: 0,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-                boxShadow: [
-                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.15), blurRadius: 12, spreadRadius: 4),
-                ],
-              ),
-              child: const CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person_rounded, color: AppColors.primary, size: 20),
-              ),
-            ),
-          ),
-          // Connection Heart
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: AppColors.softShadow,
-              ),
-              child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 10),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
   Widget _buildQuickIntimacyBar(RelationshipModel data) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
@@ -1908,37 +1893,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPartnerLocalTime(RelationshipModel data) {
-    final int? partnerOffset = _cloudService.currentUid == data.uid1 ? data.user2TimezoneOffset : data.user1TimezoneOffset;
-    if (partnerOffset == null) return const SizedBox.shrink();
-
-    final nowUtc = DateTime.now().toUtc();
-    final partnerTime = nowUtc.add(Duration(minutes: partnerOffset));
-    final timeStr = DateFormat.jm().format(partnerTime); // Localized time (e.g. 10:55 PM)
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.access_time_filled_rounded, size: 10, color: AppColors.primary),
-          const SizedBox(width: 4),
-          Text(
-            'Partner Time: $timeStr',
-            style: AppTextStyles.bodyS.copyWith(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildParticleLayer() {
     if (_particles.isEmpty) return const SizedBox.shrink();
