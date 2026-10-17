@@ -1,5 +1,5 @@
 # NextMeet AI Agent Operating Guidelines & Architecture
-**Project:** NextMeet (Intimate Couple Digital Space) • **Version:** `1.0.38+85`  
+**Project:** NextMeet (Intimate Couple Digital Space) • **Version:** `1.0.39+86`  
 **Stack:** Flutter 3.10+ / Dart 3 • Firebase (Auth, Firestore, Cloud Messaging, Cloud Storage)  
 **Configuration File:** `agents.md`
 

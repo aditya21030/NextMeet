@@ -143,22 +143,6 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
     return arcPoints;
   }
 
-  String _getMapTileUrl(RelationshipModel rel) {
-    if (rel.isPlus) {
-      switch (rel.mapLineStyle) {
-        case 'Sanctum':
-          return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png';
-        case 'Night Indigo':
-          return 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-        case 'Neon':
-        case 'Dotted':
-        default:
-          return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-      }
-    }
-    return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-  }
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<RelationshipModel?>(
@@ -258,10 +242,13 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                   maxZoom: 18,
                 ),
                 children: [
-                  // Vector Tile Layer
+                  // Luxury CartoDB dark/light raster tile layer (no negative-film inversion)
                   TileLayer(
-                    urlTemplate: _getMapTileUrl(rel),
+                    urlTemplate: rel.mapLineStyle == 'Sanctum'
+                        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+                        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
                     subdomains: const ['a', 'b', 'c', 'd'],
+                    userAgentPackageName: 'com.nextmeet.app',
                   ),
 
                   // Flight Connection Arc (Dual Polyline: Neon Ambient Glow + Sharp Laser Core)
@@ -300,7 +287,6 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                           accent: AppColors.primary,
                           battery: myBattery,
                           isCharging: myCharging,
-                          mood: rel.getMyMood(currentUid),
                           timeStr: myTimeStr,
                           isPlus: isPlus,
                           isPartner: false,
@@ -320,7 +306,6 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                           accent: const Color(0xFF6366F1),
                           battery: partnerBattery,
                           isCharging: partnerCharging,
-                          mood: rel.getPartnerMood(currentUid),
                           timeStr: partnerTimeStr,
                           isPlus: isPlus,
                           isPartner: true,
@@ -381,30 +366,20 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
 
               // Floating Frosted Glass Intimacy HUD
               _buildStatsOverlay(rel),
-            ],
-          ),
 
-          // Floating Action Buttons (Center & Theme Switcher)
-          floatingActionButton: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+              // Right-Side Map Controls (Floated comfortably above the Bottom HUD)
+              Positioned(
+                right: 16,
+                bottom: 235,
                 child: FloatingActionButton.small(
-                  heroTag: 'mapStyle',
-                  backgroundColor: const Color(0xFF1E1B4B),
-                  child: const Icon(Icons.palette_rounded, color: Colors.pinkAccent, size: 20),
-                  onPressed: () => _showStyleCustomizer(context, rel),
+                  heroTag: 'mapCenter',
+                  backgroundColor: const Color(0xFF0F172A),
+                  child: const Icon(Icons.crop_free_rounded, color: Colors.white, size: 20),
+                  onPressed: () {
+                    VibrationService.light();
+                    _mapController.move(center, optimalZoom);
+                  },
                 ),
-              ),
-              FloatingActionButton.small(
-                heroTag: 'mapCenter',
-                backgroundColor: const Color(0xFF0F172A),
-                child: const Icon(Icons.crop_free_rounded, color: Colors.white, size: 20),
-                onPressed: () {
-                  VibrationService.light();
-                  _mapController.move(center, optimalZoom);
-                },
               ),
             ],
           ),
@@ -527,7 +502,6 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
     required Color accent,
     required int? battery,
     required bool isCharging,
-    required String mood,
     required String? timeStr,
     required bool isPlus,
     required bool isPartner,
@@ -602,18 +576,44 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                   ],
                   border: Border.all(color: accent, width: 2.5),
                 ),
-                child: CircleAvatar(
-                  radius: 24,
-                  backgroundColor: const Color(0xFF1E293B),
-                  backgroundImage: photo != null && photo.isNotEmpty
-                      ? CachedNetworkImageProvider(photo)
-                      : null,
-                  child: photo == null || photo.isEmpty
-                      ? Text(
-                          name.isNotEmpty ? name[0].toUpperCase() : '?',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                child: ClipOval(
+                  child: photo != null && photo.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: photo,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: const Color(0xFF1E293B),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: const Color(0xFF1E293B),
+                            child: Center(
+                              child: Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+                              ),
+                            ),
+                          ),
                         )
-                      : null,
+                      : Container(
+                          width: 48,
+                          height: 48,
+                          color: const Color(0xFF1E293B),
+                          child: Center(
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+                            ),
+                          ),
+                        ),
                 ),
               ),
 
@@ -652,31 +652,20 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
 
           const SizedBox(height: 4),
 
-          // Name & Mood Pill
+          // Name Pill (Clean, uncluttered, no mood text)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+              boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4)],
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (mood.isNotEmpty) ...[
-                  const SizedBox(height: 1),
-                  Text(
-                    mood,
-                    style: TextStyle(color: accent, fontSize: 8, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ],
+            child: Text(
+              name,
+              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -693,6 +682,11 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
         ? rel.getPartnerLocation(currentUid).split(',').first.trim().toUpperCase()
         : 'PARTNER CITY';
     final String partnerName = rel.getDisplayPartnerName(currentUid);
+    final int? partnerOffset = currentUid == rel.uid1 ? rel.user2TimezoneOffset : rel.user1TimezoneOffset;
+    final DateTime partnerTime = partnerOffset != null
+        ? DateTime.now().toUtc().add(Duration(minutes: partnerOffset))
+        : DateTime.now();
+    final String partnerTimeStr = DateFormat.jm().format(partnerTime);
 
     return Positioned(
       bottom: 24,
@@ -748,12 +742,12 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Row(
                           children: [
-                            Container(width: 14, height: 1.5, color: const Color(0xFFF59E0B)),
+                            Container(width: 14, height: 1.5, color: const Color(0xFFFB7185)),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 4),
-                              child: Icon(Icons.flight_rounded, color: Color(0xFFF59E0B), size: 16),
+                              child: Icon(Icons.flight_rounded, color: Color(0xFFFB7185), size: 16),
                             ),
-                            Container(width: 14, height: 1.5, color: const Color(0xFFF59E0B)),
+                            Container(width: 14, height: 1.5, color: const Color(0xFFFB7185)),
                           ],
                         ),
                       ),
@@ -780,7 +774,7 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                     children: [
                       Expanded(
                         child: _buildGlassStatTile(
-                          icon: Icons.sync_alt_rounded,
+                          icon: Icons.near_me_rounded,
                           iconColor: const Color(0xFF38BDF8),
                           title: 'DISTANCE',
                           value: rel.formattedDistance,
@@ -789,10 +783,10 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                       const SizedBox(width: 10),
                       Expanded(
                         child: _buildGlassStatTile(
-                          icon: Icons.favorite_rounded,
+                          icon: Icons.access_time_filled_rounded,
                           iconColor: const Color(0xFFFB7185),
-                          title: 'SAFE CONNECTION',
-                          value: rel.isPlus ? 'Precision Sync ✨' : 'Heart Sync Active',
+                          title: "${partnerName.toUpperCase()}'S TIME",
+                          value: partnerTimeStr,
                         ),
                       ),
                     ],
@@ -827,12 +821,12 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                           const Icon(Icons.favorite_rounded, color: Colors.white, size: 16),
                           const SizedBox(width: 8),
                           Text(
-                            'SEND DIGITAL TOUCH TO ${partnerName.toUpperCase()} 💓',
+                            'Send Love to $partnerName 💌',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 11,
-                              letterSpacing: 0.6,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ],
@@ -980,30 +974,67 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
             ),
             const SizedBox(height: 12),
             Row(
-              children: ['Sanctum', 'Night Indigo', 'Neon', 'Dotted'].map((style) => Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: ChoiceChip(
-                    label: Text(style, style: const TextStyle(fontSize: 9)),
-                    selected: rel.mapLineStyle == style,
-                    onSelected: (val) {
-                      VibrationService.light();
-                      _cloudService.updateMapSettings(rel.id!, style: style);
-                      Navigator.pop(context);
-                    },
-                    selectedColor: AppColors.primary,
-                    backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    labelStyle: TextStyle(
-                      color: rel.mapLineStyle == style ? Colors.white : Colors.white70,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 9,
-                    ),
-                    side: BorderSide(
-                      color: rel.mapLineStyle == style ? Colors.white : Colors.white12,
+              children: [
+                {'id': 'Dark', 'name': 'Night', 'icon': Icons.dark_mode_rounded},
+                {'id': 'Night Indigo', 'name': 'Indigo', 'icon': Icons.nightlight_round},
+                {'id': 'Neon', 'name': 'Neon', 'icon': Icons.auto_awesome_rounded},
+                {'id': 'Sanctum', 'name': 'Light', 'icon': Icons.light_mode_rounded},
+              ].map((skin) {
+                final String skinId = skin['id'] as String;
+                final bool isSelected = (rel.mapLineStyle == skinId) ||
+                    (skinId == 'Dark' && (rel.mapLineStyle == null || rel.mapLineStyle == 'Dotted' || rel.mapLineStyle == 'Dark'));
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: GestureDetector(
+                      onTap: () {
+                        VibrationService.light();
+                        _cloudService.updateMapSettings(rel.id!, style: skinId);
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected ? Colors.white : Colors.white12,
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              skin['icon'] as IconData,
+                              color: isSelected ? Colors.white : Colors.white70,
+                              size: 16,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              skin['name'] as String,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.white70,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              )).toList(),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 16),
           ],

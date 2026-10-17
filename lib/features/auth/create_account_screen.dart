@@ -8,6 +8,8 @@ import '../../core/services/firebase_auth_service.dart';
 import '../onboarding/setup_couple_screen.dart';
 import 'login_screen.dart';
 import '../profile/terms_policy_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/services/auth_error_handler.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -55,30 +57,72 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               context,
               MaterialPageRoute(builder: (context) => SetupCoupleScreen(creatorName: _nameController.text)),
             );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Could not create account. Please check your details ❤️'),
+                backgroundColor: const Color(0xFFE11D48),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
           }
         }
       } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
           VibrationService.error();
-          
-          String errorMessage = e.toString().toLowerCase();
-          if (errorMessage.contains('email-already-in-use')) {
-             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('This love-mail is already registered! ❤️ Please log in instead.'),
-                duration: Duration(seconds: 4),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Registration failed: ${e.toString().split(']').last.trim()}')),
-            );
-          }
+          final friendlyMsg = AuthErrorHandler.getRegistrationErrorMessage(e);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(friendlyMsg),
+              backgroundColor: const Color(0xFFE11D48),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 4),
+            ),
+          );
         }
       }
     } else {
       VibrationService.error();
+    }
+  }
+
+  void _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    VibrationService.medium();
+    
+    try {
+      final user = await _authService.signInWithGoogle();
+      
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (user != null) {
+          VibrationService.success();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SetupCoupleScreen(creatorName: user.displayName),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        VibrationService.error();
+        final friendlyMsg = AuthErrorHandler.getLoginErrorMessage(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyMsg),
+            backgroundColor: const Color(0xFFE11D48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -344,9 +388,36 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
+                    FadeInUp(
+                      delay: const Duration(milliseconds: 750),
+                      child: Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+                            child: Text('OR CONNECT WITH', 
+                              style: AppTextStyles.bodyS.copyWith(
+                                letterSpacing: 1.2,
+                                color: AppColors.textSecondary.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.xl),
                     FadeInUp(
                       delay: const Duration(milliseconds: 800),
+                      child: _buildSocialButton(
+                        text: 'Continue with Google',
+                        icon: FontAwesomeIcons.google,
+                        onPressed: _handleGoogleSignIn,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    FadeInUp(
+                      delay: const Duration(milliseconds: 850),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
                         child: Row(
@@ -438,6 +509,34 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           letterSpacing: 1.2,
           color: AppColors.textSecondary.withValues(alpha: 0.7),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSocialButton({
+    required String text,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: () {
+        VibrationService.light();
+        onPressed();
+      },
+      icon: FaIcon(icon, size: 18, color: AppColors.textPrimary),
+      label: Flexible(
+        child: Text(
+          text,
+          style: AppTextStyles.bodyL.copyWith(fontWeight: FontWeight.w700),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 56),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.m)),
+        foregroundColor: AppColors.textPrimary,
+        side: BorderSide(color: AppColors.divider.withValues(alpha: 0.8), width: 1.5),
+        backgroundColor: Colors.white,
       ),
     );
   }

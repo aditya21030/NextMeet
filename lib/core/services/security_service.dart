@@ -7,30 +7,49 @@ class SecurityService {
   Future<bool> canCheckBiometrics() async {
     try {
       return await _auth.canCheckBiometrics;
-    } on PlatformException catch (e) {
-      print('Biometric Check Error: $e');
+    } on PlatformException {
+      return false;
+    } catch (_) {
       return false;
     }
   }
 
   Future<bool> isBiometricAvailable() async {
-    final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
-    final bool canAuthenticate = canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
-    return canAuthenticate;
+    try {
+      final bool canCheck = await _auth.canCheckBiometrics;
+      final bool isSupported = await _auth.isDeviceSupported();
+      final List<BiometricType> available = await _auth.getAvailableBiometrics();
+      return (canCheck || isSupported) && (available.isNotEmpty || isSupported);
+    } on PlatformException {
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 
-  Future<bool> authenticate() async {
+  Future<List<BiometricType>> getAvailableBiometrics() async {
+    try {
+      return await _auth.getAvailableBiometrics();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<bool> authenticate({String reason = 'Authenticate to access Couple Sanctuary'}) async {
     try {
       final bool didAuthenticate = await _auth.authenticate(
-        localizedReason: 'Please authenticate to access your Private Space',
+        localizedReason: reason,
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: true,
+          biometricOnly: false, // Allows Fingerprint, Face ID, and Face Camera unlock
+          useErrorDialogs: true,
+          sensitiveTransaction: false,
         ),
       );
       return didAuthenticate;
-    } on PlatformException catch (e) {
-      print('Authentication Error: $e');
+    } on PlatformException {
+      return false;
+    } catch (_) {
       return false;
     }
   }

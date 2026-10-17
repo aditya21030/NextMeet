@@ -8,6 +8,7 @@ import '../../core/services/vibration_service.dart';
 import '../../widgets/primary_button.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import 'connection_success_screen.dart';
+import '../../core/services/auth_error_handler.dart';
 
 class JoinCoupleScreen extends StatefulWidget {
   final String? userName;
@@ -95,17 +96,31 @@ class _JoinCoupleScreenState extends State<JoinCoupleScreen> {
           setState(() => _isSearching = false);
           VibrationService.error();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid code or connection expired ❤️')),
+            SnackBar(
+              content: const Text('Invalid code or connection expired. Please check with your partner ❤️'),
+              backgroundColor: const Color(0xFFE11D48),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 4),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) setState(() => _isSearching = false);
       VibrationService.error();
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-      );
+      if (mounted) {
+        final friendlyMsg = AuthErrorHandler.getJourneyErrorMessage(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyMsg),
+            backgroundColor: const Color(0xFFE11D48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 

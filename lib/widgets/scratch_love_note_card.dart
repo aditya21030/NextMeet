@@ -189,7 +189,7 @@ class _ScratchLoveNoteCardState extends State<ScratchLoveNoteCard> with SingleTi
               ),
               const SizedBox(height: 20),
               PrimaryButton(
-                text: 'SEAL INSIDE ENVELOPE 💌',
+                text: 'Send Love Note 💌',
                 isLoading: isSubmitting,
                 onPressed: () async {
                   final text = textController.text.trim();
@@ -266,8 +266,8 @@ class _ScratchLoveNoteCardState extends State<ScratchLoveNoteCard> with SingleTi
                           'DAILY LOVE NOTE',
                           style: AppTextStyles.bodyS.copyWith(
                             color: const Color(0xFFE11D48),
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.0,
                             fontSize: 10,
                           ),
                         ),
@@ -288,9 +288,9 @@ class _ScratchLoveNoteCardState extends State<ScratchLoveNoteCard> with SingleTi
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _isScratched ? 'RESETS AT MIDNIGHT' : 'SCRATCH FOIL ✨',
+                            _isScratched ? 'Resets at midnight' : 'Scratch to reveal',
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 10,
                               fontWeight: FontWeight.w800,
                               color: _isScratched ? AppColors.textSecondary : const Color(0xFFE11D48),
                             ),
@@ -391,7 +391,7 @@ class _ScratchLoveNoteCardState extends State<ScratchLoveNoteCard> with SingleTi
                                   child: Text(
                                     isCustomFromPartner
                                         ? '— With love, $partnerName 💖'
-                                        : '— Today\'s Intimate Whisper ✨',
+                                        : '— Daily Note ✨',
                                     style: TextStyle(
                                       color: isCustomFromPartner ? const Color(0xFFE11D48) : Colors.grey.shade600,
                                       fontSize: 11,
@@ -450,7 +450,7 @@ class _ScratchLoveNoteCardState extends State<ScratchLoveNoteCard> with SingleTi
                           const Icon(Icons.touch_app_rounded, size: 14, color: AppColors.textSecondary),
                           const SizedBox(width: 6),
                           Text(
-                            'Rub across foil with finger to open',
+                            'Scratch gently to reveal',
                             style: AppTextStyles.bodyS.copyWith(fontSize: 11, color: AppColors.textSecondary),
                           ),
                         ],
@@ -461,7 +461,7 @@ class _ScratchLoveNoteCardState extends State<ScratchLoveNoteCard> with SingleTi
                           const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF10B981)),
                           const SizedBox(width: 6),
                           Text(
-                            'Envelope opened for today',
+                            'Revealed for today',
                             style: AppTextStyles.bodyS.copyWith(fontSize: 11, color: const Color(0xFF10B981), fontWeight: FontWeight.bold),
                           ),
                         ],

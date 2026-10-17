@@ -16,6 +16,7 @@ import '../../core/services/location_search_service.dart';
 import '../../core/models/relationship_model.dart';
 import '../home/main_navigation_screen.dart';
 import 'connection_success_screen.dart';
+import '../../core/services/auth_error_handler.dart';
 
 class CreateCoupleScreen extends StatefulWidget {
   final String? userName;
@@ -616,10 +617,18 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
     } catch (e) {
       if (mounted) setState(() => _isGenerating = false);
       VibrationService.error();
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create journey: $e')),
-      );
+      if (mounted) {
+        final friendlyMsg = AuthErrorHandler.getJourneyErrorMessage(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyMsg),
+            backgroundColor: const Color(0xFFE11D48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 }

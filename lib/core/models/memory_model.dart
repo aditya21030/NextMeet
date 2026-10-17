@@ -12,6 +12,9 @@ class MemoryModel {
   final bool isStory; // New field for manual story selection
   final double? lat;
   final double? lng;
+  final DateTime? unlockDate; // NextMeet+ Time Capsule unlock date
+
+  bool get isTimeLocked => unlockDate != null && DateTime.now().isBefore(unlockDate!);
 
   MemoryModel({
     this.id,
@@ -25,6 +28,7 @@ class MemoryModel {
     this.isStory = false,
     this.lat,
     this.lng,
+    this.unlockDate,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -39,6 +43,7 @@ class MemoryModel {
       'isStory': isStory,
       'lat': lat,
       'lng': lng,
+      'unlockDate': unlockDate != null ? Timestamp.fromDate(unlockDate!) : null,
     };
   }
 
@@ -64,6 +69,7 @@ class MemoryModel {
       isStory: map['isStory'] ?? map['is_story'] ?? false,
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
+      unlockDate: map['unlockDate'] != null ? _parseDate(map['unlockDate']) : (map['unlock_date'] != null ? _parseDate(map['unlock_date']) : null),
     );
   }
 
@@ -79,6 +85,7 @@ class MemoryModel {
     bool? isStory,
     double? lat,
     double? lng,
+    DateTime? unlockDate,
   }) {
     return MemoryModel(
       id: id ?? this.id,
@@ -92,6 +99,7 @@ class MemoryModel {
       isStory: isStory ?? this.isStory,
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
+      unlockDate: unlockDate ?? this.unlockDate,
     );
   }
 }

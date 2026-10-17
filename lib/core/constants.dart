@@ -197,8 +197,8 @@ class AppSubscription {
   static const int plusStreakShieldsPerMonth = 2;
   
   // SHARED MEMORIES
-  static const int freeMaxMemories = 5;
-  static const int plusMaxMemories = 100;
+  static const int freeMaxMemories = 50;
+  static const int plusMaxMemories = 500;
   
   // SHARED TRIP PLANNER
   static const int freeMaxActiveTrips = 1;

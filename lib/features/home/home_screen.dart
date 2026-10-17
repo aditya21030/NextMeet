@@ -148,7 +148,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _nowTimer.cancel();
     _locationTimer.cancel();
-    _batteryTimer?.cancel();
     _batterySubscription?.cancel();
     _batteryTimer?.cancel();
     _heartbeatTimer?.cancel();
@@ -157,27 +156,34 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _triggerParticleEffect(String type) {
+  void _triggerParticleEffect(String type, {String? customEmoji}) {
     if (!mounted) return;
     final math.Random random = math.Random();
     List<String> emojis;
-    switch (type) {
-      case 'miss':
-        emojis = ['❤️', '💖', '💕', '✨', '🥺'];
-        break;
-      case 'hug':
-        emojis = ['🤗', '🫂', '💖', '✨'];
-        if (mounted) setState(() => _showHugGlow = true);
-        _hugGlowTimer?.cancel();
-        _hugGlowTimer = Timer(const Duration(milliseconds: 1400), () {
-          if (mounted) setState(() => _showHugGlow = false);
-        });
-        break;
-      case 'touch':
-        emojis = ['⚡', '💖', '✨', '🔥'];
-        break;
-      default:
-        emojis = ['✨', '💖', '❤️'];
+    if (customEmoji != null && customEmoji.isNotEmpty) {
+      emojis = [customEmoji];
+    } else {
+      switch (type) {
+        case 'miss':
+          emojis = ['❤️', '💖', '💕', '✨', '🥺'];
+          break;
+        case 'hug':
+          emojis = ['🤗', '🫂', '💖', '✨'];
+          if (mounted) setState(() => _showHugGlow = true);
+          _hugGlowTimer?.cancel();
+          _hugGlowTimer = Timer(const Duration(milliseconds: 1400), () {
+            if (mounted) setState(() => _showHugGlow = false);
+          });
+          break;
+        case 'touch':
+          emojis = ['⚡', '💖', '✨', '🔥'];
+          break;
+        case 'emoji':
+          emojis = ['😘', '💖', '✨', '🥰', '🔥'];
+          break;
+        default:
+          emojis = ['✨', '💖', '❤️'];
+      }
     }
 
     final newParticles = List.generate(6, (i) {
@@ -203,11 +209,11 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _handleInteraction(RelationshipModel data, String type) {
+  void _handleInteraction(RelationshipModel data, String type, {String? emoji}) {
     if (data.id == null) return;
     
-    _cloudService.sendTouch(data.id!, type);
-    _triggerParticleEffect(type);
+    _cloudService.sendTouch(data.id!, type, emoji: emoji);
+    _triggerParticleEffect(type, customEmoji: emoji);
     
     switch(type) {
       case 'miss':
@@ -220,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
         VibrationService.hugVibration();
         break;
       case 'emoji':
-        VibrationService.light();
+        VibrationService.sparkle();
         break;
       default:
         VibrationService.light();
@@ -238,13 +244,15 @@ class _HomeScreenState extends State<HomeScreen> {
       _lastHandledTouchTime = data.lastTouchTime;
       
       final type = data.lastTouchType ?? 'miss';
-      VibrationService.touchVibration();
-      _triggerParticleEffect(type);
+      VibrationService.playPattern(data.hapticPatternType);
+      _triggerParticleEffect(type, customEmoji: data.lastTouchEmoji);
     }
   }
 
   void _startHeartbeat() {
     if (_heartbeatTimer != null) return;
+    // Fire immediately so partner experiences zero vibration latency
+    VibrationService.heartbeat();
     _heartbeatTimer = Timer.periodic(const Duration(milliseconds: 700), (timer) {
       if (mounted) {
         VibrationService.heartbeat();
@@ -481,15 +489,6 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
 
               _buildWaitingStep(
-                'Daily Heart Check-in', 
-                'Keep your side of the heart warm', 
-                Icons.favorite_outline_rounded, 
-                AppColors.primary, 
-                false,
-                onTap: () => _showMoodPicker(data),
-              ),
-              
-              _buildWaitingStep(
                 'Create Journey', 
                 'Magic link generated successfully', 
                 Icons.check_circle_rounded, 
@@ -502,14 +501,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icons.radio_button_unchecked_rounded, 
                 Colors.grey, 
                 false
-              ),
-              _buildWaitingStep(
-                'Set Your Mood', 
-                'Current: ${data.getMyMood(_cloudService.currentUid)}', 
-                Icons.emoji_emotions_outlined, 
-                AppColors.primary, 
-                false,
-                onTap: () => _showMoodPicker(data),
               ),
               _buildWaitingStep(
                 'Add First Memory', 
@@ -607,51 +598,6 @@ class _HomeScreenState extends State<HomeScreen> {
       default:
         Share.share(message, subject: 'NextMeet Love Invite');
     }
-  }
-
-  void _showMoodPicker(RelationshipModel data) {
-    VibrationService.medium();
-    final List<String> moods = ['Happy 💖', 'Missing You 🥺', 'In Love 🥰', 'Excited ✨', 'Chill ☕', 'Thinking of You 💭'];
-    
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Set Your Mood', style: AppTextStyles.h2),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 12, runSpacing: 12,
-              children: moods.map((mood) => InkWell(
-                onTap: () async {
-                  await _cloudService.updateMyStatus(data.id!, data, mood: mood);
-      // ignore: use_build_context_synchronously
-                  VibrationService.success();
-                  if (mounted) Navigator.pop(context);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: data.getMyMood(_cloudService.currentUid) == mood ? AppColors.primary.withValues(alpha: 0.1) : AppColors.background,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: data.getMyMood(_cloudService.currentUid) == mood ? AppColors.primary : Colors.transparent),
-                  ),
-                  child: Text(mood, style: TextStyle(fontWeight: FontWeight.bold, color: data.getMyMood(_cloudService.currentUid) == mood ? AppColors.primary : AppColors.textPrimary)),
-                ),
-              )).toList(),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showAddMemorySheet(RelationshipModel data) {
@@ -835,7 +781,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Expanded(
                                 child: TextButton(
                                   onPressed: () => _cloudService.cancelPinReset(data.id!),
-                                  child: const Text('DENY', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                                  child: const Text('Decline', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -850,7 +796,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
-                                  child: const Text('APPROVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  child: const Text('Approve', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                 ),
                               ),
                             ],
@@ -905,134 +851,140 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   
-                  // Center: Names & Partner Live Mood (Symmetrically Centered & Overflow-Proof)
+                  // Center: Couple Names (Symmetrically Centered & Overflow-Proof)
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  data.getDisplayMyName(_cloudService.currentUid), 
-                                  style: AppTextStyles.h3.copyWith(fontSize: 16, fontWeight: FontWeight.w900),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 6),
-                                child: Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 16),
-                              ),
-                              Flexible(
-                                child: Text(
-                                  data.getDisplayPartnerName(_cloudService.currentUid), 
-                                  style: AppTextStyles.h3.copyWith(fontSize: 16, fontWeight: FontWeight.w900),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.left,
-                                ),
-                              ),
-                            ],
+                          Flexible(
+                            child: Text(
+                              data.getDisplayMyName(_cloudService.currentUid), 
+                              style: AppTextStyles.h3.copyWith(fontSize: 16, fontWeight: FontWeight.w900),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                            ),
                           ),
-                          const SizedBox(height: 3),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF10B981),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Flexible(
-                                child: Text(
-                                  '${data.getDisplayPartnerName(_cloudService.currentUid)}: ${data.getPartnerMood(_cloudService.currentUid)}',
-                                  style: AppTextStyles.bodyS.copyWith(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 16),
+                          ),
+                          Flexible(
+                            child: Text(
+                              data.getDisplayPartnerName(_cloudService.currentUid), 
+                              style: AppTextStyles.h3.copyWith(fontSize: 16, fontWeight: FontWeight.w900),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.left,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
 
-                  // Right: Mood Selector (Replaced redundant Calendar)
-                  GestureDetector(
+                  // Right: Symmetric placeholder to keep couple names centered with the left avatar
+                  const SizedBox(width: 44, height: 44),
+                ],
+              ),
+            ),
+            // Intimate Live Mood Status Row
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // My Mood (tap to change)
+                  InkWell(
                     onTap: () {
                       VibrationService.light();
-                      _showMoodPicker(data);
+                      _showMoodPickerSheet(data);
                     },
+                    borderRadius: BorderRadius.circular(16),
                     child: Container(
-                      width: 44,
-                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.25),
-                          width: 1.5,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 10)),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 4,
+                          ),
                         ],
                       ),
-                      child: Center(
-                        child: Text(
-                          data.getMyMood(_cloudService.currentUid).split(' ').last,
-                          style: const TextStyle(fontSize: 20),
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            data.getMyMood(_cloudService.currentUid),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.edit_rounded, size: 10, color: AppColors.primary),
+                        ],
                       ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Partner Mood (real-time display)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Text(
+                      '${data.getDisplayPartnerName(_cloudService.currentUid)}: ${data.getPartnerMood(_cloudService.currentUid)}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            // Love Streak Tracker
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 20),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          '${data.streakCount} DAY LOVE STREAK', 
-                          style: AppTextStyles.bodyS.copyWith(color: Colors.orange.shade800, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+            // Love Streak Tracker (Only display when active)
+            if (data.streakCount > 0) ...[
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 16),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            '${data.streakCount} Day Love Streak', 
+                            style: AppTextStyles.bodyS.copyWith(
+                              color: Colors.orange.shade800,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 20),
+            ] else
+              const SizedBox(height: 20),
             
             // Hero Reunion Boarding Pass Countdown
             Padding(
@@ -1090,11 +1042,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   const Icon(Icons.flight_takeoff_rounded, color: Color(0xFFFB7185), size: 14),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'NEXT MEETUP',
+                                    'NEXT REUNION',
                                     style: AppTextStyles.bodyS.copyWith(
                                       color: const Color(0xFFFB7185),
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.2,
                                       fontSize: 10,
                                     ),
                                   ),
@@ -1147,45 +1099,49 @@ class _HomeScreenState extends State<HomeScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(
-                                data.getMyLocation(_cloudService.currentUid).isNotEmpty
-                                    ? data.getMyLocation(_cloudService.currentUid).split(',').first.trim().toUpperCase()
-                                    : 'YOUR CITY',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  data.getMyLocation(_cloudService.currentUid).isNotEmpty
+                                      ? data.getMyLocation(_cloudService.currentUid).split(',').first.trim().toUpperCase()
+                                      : 'YOUR CITY',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 8),
                               child: Row(
                                 children: [
-                                  Container(width: 16, height: 1.5, color: const Color(0xFFF59E0B)),
+                                  Container(width: 16, height: 1.5, color: const Color(0xFFFB7185)),
                                   const Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 4),
-                                    child: Icon(Icons.flight_rounded, color: Color(0xFFF59E0B), size: 18),
+                                    child: Icon(Icons.flight_rounded, color: Color(0xFFFB7185), size: 18),
                                   ),
-                                  Container(width: 16, height: 1.5, color: const Color(0xFFF59E0B)),
+                                  Container(width: 16, height: 1.5, color: const Color(0xFFFB7185)),
                                 ],
                               ),
                             ),
                             Expanded(
-                              child: Text(
-                                data.getPartnerLocation(_cloudService.currentUid).isNotEmpty
-                                    ? data.getPartnerLocation(_cloudService.currentUid).split(',').first.trim().toUpperCase()
-                                    : 'PARTNER CITY',
-                                textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  data.getPartnerLocation(_cloudService.currentUid).isNotEmpty
+                                      ? data.getPartnerLocation(_cloudService.currentUid).split(',').first.trim().toUpperCase()
+                                      : 'PARTNER CITY',
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -1197,7 +1153,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'YOU • $myTimeStr',
+                              'You • $myTimeStr',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.55),
                                 fontSize: 10,
@@ -1241,17 +1197,33 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 18),
                         
-                        // Countdown Blocks: DAYS • HOURS • MINS
+                        // Countdown Blocks: Days • Hours • Mins
                         if (isPast)
                           Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Text(
-                                'Together Again 🎉 Tap to schedule Next Meet!',
-                                style: AppTextStyles.bodyL.copyWith(
-                                  color: const Color(0xFFF59E0B),
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFB7185).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFFB7185).withValues(alpha: 0.3)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.calendar_month_rounded, color: Color(0xFFFB7185), size: 16),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Plan Next Reunion',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 10),
+                                ],
                               ),
                             ),
                           )
@@ -1259,16 +1231,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildCountdownBlock('$daysLeft', 'DAYS'),
+                              _buildCountdownBlock('$daysLeft', 'Days'),
                               _buildCountdownColon(),
-                              _buildCountdownBlock('${timeLeft.inHours % 24}'.padLeft(2, '0'), 'HOURS'),
+                              _buildCountdownBlock('${timeLeft.inHours % 24}'.padLeft(2, '0'), 'Hours'),
                               _buildCountdownColon(),
-                              _buildCountdownBlock('${timeLeft.inMinutes % 60}'.padLeft(2, '0'), 'MINS'),
+                              _buildCountdownBlock('${timeLeft.inMinutes % 60}'.padLeft(2, '0'), 'Mins'),
                             ],
                           ),
                         const SizedBox(height: 14),
                         
-                        // Footer Date & Tap Call to Action
+                        // Footer Date & Schedule Action
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -1280,18 +1252,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            Row(
+                            const Row(
                               children: [
                                 Text(
-                                  'Tap to view schedule 📅',
+                                  'View Schedule',
                                   style: TextStyle(
-                                    color: const Color(0xFFFB7185).withValues(alpha: 0.9),
+                                    color: Color(0xFFFB7185),
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFFB7185), size: 10),
+                                SizedBox(width: 4),
+                                Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFFB7185), size: 10),
                               ],
                             ),
                           ],
@@ -1308,6 +1280,11 @@ class _HomeScreenState extends State<HomeScreen> {
             // Sleek Tactile Quick Intimacy Bar (Replaces 4 bloated cards with 1 clean chic row)
             _buildQuickIntimacyBar(data),
 
+            const SizedBox(height: 10),
+
+            // Live Love Emoji Quick React Bar
+            _buildQuickEmojiReactBar(data),
+
             const SizedBox(height: 24),
 
             // Discovery Section
@@ -1319,10 +1296,29 @@ class _HomeScreenState extends State<HomeScreen> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
                 child: GestureDetector(
-                  onLongPressStart: (_) {
+                  onTapDown: (_) {
                     setState(() => _isPressingSync = true);
                     _startSyncPulse(data.id!, data.uid1 == _cloudService.currentUid);
                     VibrationService.medium();
+                  },
+                  onTapUp: (_) {
+                    setState(() => _isPressingSync = false);
+                    _stopSyncPulse(data.id!, data.uid1 == _cloudService.currentUid);
+                    _stopHeartbeat();
+                  },
+                  onTapCancel: () {
+                    if (_isPressingSync) {
+                      setState(() => _isPressingSync = false);
+                      _stopSyncPulse(data.id!, data.uid1 == _cloudService.currentUid);
+                      _stopHeartbeat();
+                    }
+                  },
+                  onLongPressStart: (_) {
+                    if (!_isPressingSync) {
+                      setState(() => _isPressingSync = true);
+                      _startSyncPulse(data.id!, data.uid1 == _cloudService.currentUid);
+                      VibrationService.medium();
+                    }
                   },
                   onLongPressEnd: (_) {
                     setState(() => _isPressingSync = false);
@@ -1409,18 +1405,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                _isPressingSync ? 'HOLDING HANDS...' : 'HEART SYNC',
+                                _isPressingSync ? 'Holding hands...' : 'Heart Sync',
                                 style: AppTextStyles.bodyS.copyWith(
                                   color: _isPressingSync ? Colors.white : Colors.pinkAccent,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 2.0,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.2,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 _isPressingSync 
-                                  ? (partnerPressing ? 'CONNECTED WITH HEART! ✨' : 'Wait for ${data.getDisplayPartnerName(_cloudService.currentUid)} to join')
-                                  : 'Press and hold to sync hearts',
+                                  ? (partnerPressing ? 'Holding hands together ❤️' : 'Waiting for ${data.getDisplayPartnerName(_cloudService.currentUid)}...')
+                                  : 'Touch and hold together',
                                 style: AppTextStyles.bodyM.copyWith(
                                   color: _isPressingSync ? Colors.white : AppColors.textPrimary,
                                   fontWeight: FontWeight.w600,
@@ -1443,11 +1439,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: const Text(
-                                      'STAYING CONNECTED! ✨',
+                                      'Connected ❤️',
                                       style: TextStyle(
                                         color: Colors.pinkAccent,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 11,
                                       ),
                                     ),
                                   ),
@@ -1534,7 +1530,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  const Text('DAILY QUESTION FOR TWO', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2, color: AppColors.primary)),
+                  const Text('Question of the Day', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.primary)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -1561,7 +1557,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
               PrimaryButton(
-                text: 'LOCK IN MY ANSWER 💖',
+                text: 'Save Answer 💌',
                 isLoading: isSaving,
                 onPressed: () async {
                   final text = answerController.text.trim();
@@ -1623,11 +1619,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 16),
                       const SizedBox(width: 8),
                       Text(
-                        'DAILY QUESTION FOR TWO',
+                        'DAILY QUESTION',
                         style: AppTextStyles.bodyS.copyWith(
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
                           color: AppColors.primary,
-                          letterSpacing: 1.2,
+                          letterSpacing: 1.0,
                           fontSize: 10,
                         ),
                       ),
@@ -1645,10 +1641,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Text(
                       haveBothAnswered
-                          ? 'BOTH ANSWERED ✨'
+                          ? 'Both Answered ✨'
                           : (hasPartnerAnswered
                               ? '$partnerName answered! 🔒'
-                              : (myAnswer != null ? 'Waiting for $partnerName ⏳' : 'New today 💌')),
+                              : (myAnswer != null ? 'Waiting for $partnerName' : 'New today 💌')),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -1697,13 +1693,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 8),
                           Text(
                             hasPartnerAnswered
-                                ? 'ANSWER TO UNLOCK $partnerName\'S ANSWER ✨'
-                                : 'ANSWER TODAY\'S QUESTION 💌',
+                                ? 'Unlock $partnerName\'s answer ✨'
+                                : 'Write your answer 💌',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                              letterSpacing: 0.5,
+                              fontSize: 13,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ],
@@ -1724,8 +1720,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'YOUR ANSWER:',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.primary),
+                          'Your Answer:',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -1749,7 +1745,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const Icon(Icons.lock_rounded, size: 14, color: AppColors.textSecondary),
                         const SizedBox(width: 6),
                         Text(
-                          '$partnerName\'s answer unlocks once they reply 🔒',
+                          '$partnerName\'s answer unlocks once they reply',
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                         ),
                       ],
@@ -1770,8 +1766,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'YOU:',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.primary),
+                        'You:',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1794,8 +1790,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$partnerName:'.toUpperCase(),
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF6366F1)),
+                        '$partnerName:',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF6366F1)),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1890,6 +1886,150 @@ class _HomeScreenState extends State<HomeScreen> {
       width: 1,
       height: 20,
       color: const Color(0xFFF1F5F9),
+    );
+  }
+
+  void _showMoodPickerSheet(RelationshipModel data) {
+    if (data.id == null) return;
+    final moods = [
+      'Happy 💖',
+      'Missing You 🥺',
+      'In Love 🥰',
+      'Need a Hug 🫂',
+      'Sleepy 😴',
+      'Working 💻',
+      'Spicy 🔥',
+      'Grateful ✨',
+      'Thinking of You 💭',
+      'Traveling ✈️',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'How are you feeling right now? ✨',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Color(0xFF1E293B)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${data.getDisplayPartnerName(_cloudService.currentUid)} will see your updated mood live.',
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: moods.map((m) {
+                final isCurrent = data.getMyMood(_cloudService.currentUid) == m;
+                return InkWell(
+                  onTap: () async {
+                    VibrationService.success();
+                    Navigator.pop(context);
+                    await _cloudService.updateMyStatus(data.id!, data, mood: m);
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isCurrent ? AppColors.primary.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isCurrent ? AppColors.primary : const Color(0xFFE2E8F0),
+                        width: isCurrent ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      m,
+                      style: TextStyle(
+                        fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                        color: isCurrent ? AppColors.primary : const Color(0xFF1E293B),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickEmojiReactBar(RelationshipModel data) {
+    final emojis = [
+      {'emoji': '😘', 'label': 'Kiss'},
+      {'emoji': '🥺', 'label': 'Miss'},
+      {'emoji': '🔥', 'label': 'Spicy'},
+      {'emoji': '💖', 'label': 'Love'},
+      {'emoji': '✨', 'label': 'Magic'},
+      {'emoji': '💋', 'label': 'Smooch'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: emojis.map((e) {
+            final emojiStr = e['emoji']!;
+            return InkWell(
+              onTap: () {
+                _handleInteraction(data, 'emoji', emoji: emojiStr);
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0).withValues(alpha: 0.5)),
+                ),
+                child: Text(
+                  emojiStr,
+                  style: const TextStyle(fontSize: 20),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 

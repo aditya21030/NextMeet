@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
@@ -31,9 +32,11 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
   bool _isUploading = false;
 
   bool _isRecalculating = false;
+  bool _storageCheckDone = false;
 
   Future<void> _checkAndRepairsStorage(String relId, RelationshipModel rel, List<QueryDocumentSnapshot> docs) async {
-    if (_isRecalculating) return;
+    if (_storageCheckDone || _isRecalculating) return;
+    _storageCheckDone = true;
     int calculatedSize = 0;
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
@@ -44,9 +47,9 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
     if ((rel.privateSpaceStorageBytes - calculatedSize).abs() > 1024) {
       _isRecalculating = true;
       try {
-        await FirebaseFirestore.instance.collection('relationships').doc(relId).update({
+        await FirebaseFirestore.instance.collection('relationships').doc(relId).set({
           'privateSpaceStorageBytes': calculatedSize,
-        });
+        }, SetOptions(merge: true));
       } catch (e) {
         // ignore
       } finally {
@@ -185,7 +188,7 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
 
   Future<void> _uploadPhoto(RelationshipModel rel, [ImageSource source = ImageSource.gallery]) async {
     final relId = rel.id!;
-    final double usedMb = rel.privateSpaceStorageBytes / (1024 * 1024);
+    final double usedMb = (rel.privateSpaceStorageBytes < 0 ? 0 : rel.privateSpaceStorageBytes) / (1024 * 1024);
     final double limitMb = rel.isPlus ? 150.0 : 20.0;
     
     if (usedMb >= limitMb) {
@@ -196,9 +199,9 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
     VibrationService.medium();
     final XFile? image = await _picker.pickImage(
       source: source, 
-      maxWidth: 1280,   // Reasonable resolution
+      maxWidth: 1280,   // High-definition vault resolution
       maxHeight: 1280,
-      imageQuality: 50, // Good compression
+      imageQuality: 70, // Balanced quality
     );
     
     if (image == null) return;
@@ -228,25 +231,44 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
         downloadUrl = Supabase.instance.client.storage.from('memories').getPublicUrl('$relId/private_photos/$fileName');
       } catch (supaErr) {
         debugPrint('Supabase secret photo upload fallback to Firebase: $supaErr');
+        try {
+          if (FirebaseAuth.instance.currentUser == null) {
+            await FirebaseAuth.instance.signInAnonymously();
+          }
+        } catch (_) {}
         final storageRef = _storage.ref().child('relationships/$relId/private_photos/$fileName');
-        await storageRef.putFile(
+        final uploadTask = await storageRef.putFile(
           file,
           SettableMetadata(contentType: 'image/webp'),
         );
-        downloadUrl = await storageRef.getDownloadURL();
+        downloadUrl = await uploadTask.ref.getDownloadURL();
       }
       
       await _cloudService.addPrivatePhoto(relId, downloadUrl, sizeBytes);
       VibrationService.success();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Secret photo securely saved in vault 🔒✨'),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('Upload Error: $e');
       if (mounted) {
-        String msg = 'Failed to upload photo ❌';
-        if (e.toString().contains('storage')) {
-          _showStorageLimitDialog(rel);
-          return;
-        }
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Could not upload photo. Please check your internet connection ❤️'),
+            backgroundColor: const Color(0xFFE11D48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);

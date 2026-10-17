@@ -11,7 +11,8 @@ import '../../core/models/relationship_model.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/primary_button.dart';
 import 'package:share_plus/share_plus.dart';
-import '../private_space/lock_screen.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import '../private_space/private_space_settings_screen.dart';
 import 'terms_policy_screen.dart';
 import '../auth/login_screen.dart';
 import '../onboarding/setup_couple_screen.dart';
@@ -31,6 +32,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
 
   bool _notificationsEnabled = true;
+
+  Future<void> _handleClearCache() async {
+    VibrationService.medium();
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cleaning_services_rounded, color: AppColors.primary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text('Clear Cache', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'This will free up device storage by clearing downloaded photos and cached avatars. Your shared photos in the cloud remain completely safe.',
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.m)),
+            ),
+            child: const Text('CLEAR CACHE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      await DefaultCacheManager().emptyCache();
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+      VibrationService.success();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 10),
+                Text('Image cache cleared successfully! ✨'),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
 
 
   void _handleLogout() {
@@ -109,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           appBar: AppBar(
             backgroundColor: AppColors.background,
             elevation: 0,
-            title: Text('Profile', style: AppTextStyles.h3),
+            title: Text('Settings', style: AppTextStyles.h3),
             centerTitle: true,
           ),
           body: Container(
@@ -232,57 +299,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 8),
                         _buildBadge('Together $togetherDays Days ❤️'),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.location_on_rounded, size: 14, color: AppColors.textSecondary),
-                            const SizedBox(width: 4),
+                            Icon(
+                              rel.isPlus ? Icons.stars_rounded : Icons.favorite_rounded, 
+                              size: 14, 
+                              color: rel.isPlus ? const Color(0xFF6366F1) : AppColors.primary,
+                            ),
+                            const SizedBox(width: 6),
                             Text(
-                              'Connected in NextMeet 🌍', 
-                              style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                              rel.isPlus ? 'NextMeet+ VIP Couple' : 'Private Couple Space', 
+                              style: AppTextStyles.bodyS.copyWith(
+                                color: rel.isPlus ? const Color(0xFF6366F1) : AppColors.textSecondary, 
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        // PRIVATE SPACE OVAL BADGE
-                        GestureDetector(
-                          onTap: () {
-                            VibrationService.medium();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const PrivateSpaceLockScreen()));
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(AppRadius.m),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10)],
-                              border: Border.all(color: Colors.pinkAccent.withValues(alpha: 0.1)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.shield_rounded, color: Colors.pinkAccent, size: 14),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'PRIVATE SPACE', 
-                                  style: TextStyle(
-                                    color: Colors.pinkAccent, 
-                                    fontSize: 10, 
-                                    fontWeight: FontWeight.w900, 
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.pinkAccent, size: 10),
-                              ],
-                            ),
-                          ),
-                        ),
-                        ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
 
                   // INVITE PARTNER SECTION (ONLY FOR SOLO USERS)
                   if (rel.uid2 == null) ...[
@@ -494,6 +533,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   
                   const SizedBox(height: AppSpacing.xxl),
 
+                  // Security & Sanctuary Section
+                  FadeInUp(
+                    delay: const Duration(milliseconds: 350),
+                    child: Column(
+                      children: [
+                        _buildSectionHeader('SECURITY & SANCTUARY'),
+                        GlassCard(
+                          padding: const EdgeInsets.all(AppSpacing.m),
+                          child: Column(
+                            children: [
+                              _buildPreferenceRow(
+                                'Sanctuary PIN & Biometrics', 
+                                Icons.lock_outline_rounded, 
+                                Colors.pinkAccent,
+                                () {
+                                  Navigator.push(
+                                    context, 
+                                    MaterialPageRoute(builder: (context) => const PrivateSpaceSettingsScreen()),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+
                   FadeInUp(
                     delay: const Duration(milliseconds: 400),
                     child: RepaintBoundary(
@@ -504,24 +572,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             padding: const EdgeInsets.all(AppSpacing.m),
                             child: Column(
                               children: [
-                                _buildPreferenceToggle('Notifications', Icons.notifications_active_rounded, Colors.blue, _notificationsEnabled, (val) {
+                                _buildPreferenceToggle('Push Notifications', Icons.notifications_active_rounded, Colors.blue, _notificationsEnabled, (val) {
                                   VibrationService.light();
                                   setState(() => _notificationsEnabled = val);
                                   _cloudService.updateRelationshipDetails(relId, {'notificationsEnabled': val});
                                 }),
+                                const Divider(height: 16, thickness: 0.5),
+                                _buildPreferenceRow(
+                                  'Clear Image Cache', 
+                                  Icons.cleaning_services_rounded, 
+                                  Colors.orange,
+                                  _handleClearCache,
+                                ),
                                 if (rel.isPlus) ...[
                                   const Divider(height: 16, thickness: 0.5),
                                   _buildPreferenceRow(
-                                    'Elite Signature ❤️', 
+                                    'Elite Signature & Haptics ❤️', 
                                     Icons.vibration_rounded, 
                                     AppColors.primary,
                                     () {
-                                      VibrationService.medium();
                                       Navigator.push(
                                         context, 
-                                        MaterialPageRoute(builder: (context) => HapticPreferencesScreen(rel: rel))
+                                        MaterialPageRoute(builder: (context) => HapticPreferencesScreen(rel: rel)),
                                       );
-                                    }
+                                    },
                                   ),
                                 ],
                               ],
@@ -557,20 +631,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 'Terms of Service', 
                                 Icons.description_rounded, 
                                 Colors.amber,
-                                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(
-                                  title: 'Terms of Service',
-                                  content: 'Welcome to NextMeet. By using this application, you agree to our terms. NextMeet provides a shared digital sanctuary for couples to enhance their connection through shared memories, synchronized planning, and secure private communication.\n\n1. TERMS OF USE\nBy accessing NextMeet, you agree to use the service for personal, non-commercial purposes only. You are responsible for all content shared within your relationship space.\n\n2. ACCOUNT SECURITY\nYou are responsible for maintaining the confidentiality of your account credentials. All activities under your account are your responsibility.\n\n3. SERVICE LIMITATIONS\nWhile we strive for 100% uptime, NextMeet is provided "as is". We reserve the right to modify or discontinue features to improve the user experience.',
-                                ))),
+                                () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(initialTab: 0))),
                               ),
                               const Divider(height: 16, thickness: 0.5),
                               _buildPreferenceRow(
                                 'Privacy Policy', 
                                 Icons.privacy_tip_rounded, 
                                 Colors.teal,
-                                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(
-                                  title: 'Privacy Policy',
-                                  content: 'Your privacy is our utmost priority at NextMeet. This policy outlines how we handle your data.\n\n1. DATA COLLECTION\nWe collect minimal information required for synchronization, including your names, moods, and shared trip details. This data is used solely to provide "couple-sync" features.\n\n2. PRIVATE SPACE ENCRYPTION\nContent shared in your "Private Space" is intended ONLY for you and your partner. We implement industry-standard security to protect your shared sanctuary.\n\n3. THIRD-PARTY DISCLOSURE\nNextMeet does NOT sell, trade, or otherwise transfer your personal information to outside parties. Your data belongs to your relationship.',
-                                ))),
+                                () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(initialTab: 1))),
                               ),
                             ],
                           ),
@@ -589,16 +657,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       textColor: Colors.redAccent.shade100,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   FadeInUp(
                     delay: const Duration(milliseconds: 550),
-                    child: Text(
-                      'Partner since ${DateFormat('dd MMMM yyyy').format(rel.createdAt ?? rel.anniversaryDate)} ❤️',
-                      style: AppTextStyles.bodyS.copyWith(
-                        color: AppColors.textSecondary.withValues(alpha: 0.5),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Partner since ${DateFormat('dd MMMM yyyy').format(rel.createdAt ?? rel.anniversaryDate)} ❤️',
+                          style: AppTextStyles.bodyS.copyWith(
+                            color: AppColors.textSecondary.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'NextMeet v1.0.39 • Intimate Digital Space for Two',
+                          style: AppTextStyles.bodyS.copyWith(
+                            color: AppColors.textSecondary.withValues(alpha: 0.45),
+                            fontWeight: FontWeight.w500,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 100),
@@ -767,151 +848,155 @@ class _ProfileScreenState extends State<ProfileScreen> {
     DateTime selectedNextMeeting = data.nextMeetingDate;
     DateTime selectedLastMeeting = data.lastMeetingDate;
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.75,
-          decoration: const BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.xl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Couple Info ✨', style: AppTextStyles.h1.copyWith(fontSize: 28)),
-                      const SizedBox(height: AppSpacing.m),
-                      Text(
-                        'Customize your shared journey and milestones.',
-                        style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      
-                      _buildDialogSectionTitle('PET NAMES'),
-                      const SizedBox(height: AppSpacing.m),
-                      TextField(
-                        controller: myNicknameForPartnerController,
-                        decoration: InputDecoration(
-                          hintText: 'e.g. My Love, Sweetie',
-                          prefixIcon: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 20),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.5))),
+    try {
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setModalState) => Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: const BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.xl),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Couple Info ✨', style: AppTextStyles.h1.copyWith(fontSize: 28)),
+                        const SizedBox(height: AppSpacing.m),
+                        Text(
+                          'Customize your shared journey and milestones.',
+                          style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.divider.withValues(alpha: 0.5)),
+                        const SizedBox(height: AppSpacing.xl),
+                        
+                        _buildDialogSectionTitle('PET NAMES'),
+                        const SizedBox(height: AppSpacing.m),
+                        TextField(
+                          controller: myNicknameForPartnerController,
+                          decoration: InputDecoration(
+                            hintText: 'e.g. My Love, Sweetie',
+                            prefixIcon: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 20),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.5))),
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.favorite_border_rounded, color: AppColors.textSecondary, size: 20),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('What my partner calls me', style: AppTextStyles.bodyS.copyWith(fontSize: 10, color: AppColors.textSecondary)),
-                                Text(partnersNicknameForMe, style: AppTextStyles.bodyL.copyWith(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                              ],
-                            ),
-                          ],
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.divider.withValues(alpha: 0.5)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.favorite_border_rounded, color: AppColors.textSecondary, size: 20),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('What my partner calls me', style: AppTextStyles.bodyS.copyWith(fontSize: 10, color: AppColors.textSecondary)),
+                                  Text(partnersNicknameForMe, style: AppTextStyles.bodyL.copyWith(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      
-                      const SizedBox(height: AppSpacing.xl),
-                      _buildDialogSectionTitle('MILESTONES'),
-                      const SizedBox(height: AppSpacing.m),
-                      _buildDateSelector(
-                        label: 'Anniversary', 
-                        date: selectedAnniversary, 
-                        icon: Icons.auto_awesome_rounded,
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context, 
-                            initialDate: selectedAnniversary, 
-                            firstDate: DateTime(1900), 
-                            lastDate: DateTime.now(),
-                          );
-                          if (date != null) setModalState(() => selectedAnniversary = date);
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.m),
-                      _buildDateSelector(
-                        label: 'Next Meetup', 
-                        date: selectedNextMeeting, 
-                        icon: Icons.flight_takeoff_rounded,
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context, 
-                            initialDate: selectedNextMeeting, 
-                            firstDate: DateTime.now(), 
-                            lastDate: DateTime.now().add(const Duration(days: 1000)),
-                          );
-                          if (date != null) setModalState(() => selectedNextMeeting = date);
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.m),
-                      _buildDateSelector(
-                        label: 'Last Meeting Date',
-                        date: selectedLastMeeting,
-                        icon: Icons.history_toggle_off_rounded,
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context, 
-                            initialDate: selectedLastMeeting, 
-                            firstDate: DateTime(2000), 
-                            lastDate: DateTime.now(),
-                          );
-                          if (date != null) setModalState(() => selectedLastMeeting = date);
-                        },
-                      ),
-                      
-                      const SizedBox(height: AppSpacing.xxl),
-                      PrimaryButton(
-                        text: 'Save Couple Info',
-                        onPressed: () async {
-                          final updates = <String, dynamic>{
-                            'anniversaryDate': selectedAnniversary,
-                            'nextMeetingDate': selectedNextMeeting,
-                            'lastMeetingDate': selectedLastMeeting,
-                          };
+                        
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildDialogSectionTitle('MILESTONES'),
+                        const SizedBox(height: AppSpacing.m),
+                        _buildDateSelector(
+                          label: 'Anniversary', 
+                          date: selectedAnniversary, 
+                          icon: Icons.auto_awesome_rounded,
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context, 
+                              initialDate: selectedAnniversary, 
+                              firstDate: DateTime(1900), 
+                              lastDate: DateTime.now(),
+                            );
+                            if (date != null) setModalState(() => selectedAnniversary = date);
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.m),
+                        _buildDateSelector(
+                          label: 'Next Meetup', 
+                          date: selectedNextMeeting, 
+                          icon: Icons.flight_takeoff_rounded,
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context, 
+                              initialDate: selectedNextMeeting, 
+                              firstDate: DateTime.now(), 
+                              lastDate: DateTime.now().add(const Duration(days: 1000)),
+                            );
+                            if (date != null) setModalState(() => selectedNextMeeting = date);
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.m),
+                        _buildDateSelector(
+                          label: 'Last Meeting Date',
+                          date: selectedLastMeeting,
+                          icon: Icons.history_toggle_off_rounded,
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context, 
+                              initialDate: selectedLastMeeting, 
+                              firstDate: DateTime(2000), 
+                              lastDate: DateTime.now(),
+                            );
+                            if (date != null) setModalState(() => selectedLastMeeting = date);
+                          },
+                        ),
+                        
+                        const SizedBox(height: AppSpacing.xxl),
+                        PrimaryButton(
+                          text: 'Save Couple Info',
+                          onPressed: () async {
+                            final updates = <String, dynamic>{
+                              'anniversaryDate': selectedAnniversary,
+                              'nextMeetingDate': selectedNextMeeting,
+                              'lastMeetingDate': selectedLastMeeting,
+                            };
 
-                          if (isUser1) {
-                            updates['user1PartnerNickname'] = myNicknameForPartnerController.text;
-                          } else {
-                            updates['user2PartnerNickname'] = myNicknameForPartnerController.text;
-                          }
+                            if (isUser1) {
+                              updates['user1PartnerNickname'] = myNicknameForPartnerController.text;
+                            } else {
+                              updates['user2PartnerNickname'] = myNicknameForPartnerController.text;
+                            }
 
-                          await _cloudService.updateRelationshipDetails(data.id!, updates);
-                          if (mounted) Navigator.pop(context);
-                          VibrationService.success();
-                        },
-                      ),
-                    ],
+                            await _cloudService.updateRelationshipDetails(data.id!, updates);
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                            VibrationService.success();
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-    myNicknameForPartnerController.dispose();
+      );
+    } finally {
+      myNicknameForPartnerController.dispose();
+    }
   }
 
   Widget _buildDialogSectionTitle(String title) {
@@ -968,7 +1053,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: Text('Profile', style: AppTextStyles.h3),
+        title: Text('Settings', style: AppTextStyles.h3),
         centerTitle: true,
       ),
       body: Container(
@@ -1044,10 +1129,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(AppSpacing.m),
                 child: Column(
                   children: [
-                    _buildPreferenceToggle('Notifications', Icons.notifications_active_rounded, Colors.blue, _notificationsEnabled, (val) {
+                    _buildPreferenceToggle('Push Notifications', Icons.notifications_active_rounded, Colors.blue, _notificationsEnabled, (val) {
                       VibrationService.light();
                       setState(() => _notificationsEnabled = val);
                     }),
+                    const Divider(height: 16, thickness: 0.5),
+                    _buildPreferenceRow(
+                      'Clear Image Cache', 
+                      Icons.cleaning_services_rounded, 
+                      Colors.orange,
+                      _handleClearCache,
+                    ),
                   ],
                 ),
               ),
@@ -1071,20 +1163,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Terms of Service', 
                       Icons.description_rounded, 
                       Colors.amber,
-                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(
-                        title: 'Terms of Service',
-                        content: 'Welcome to NextMeet. By using this application, you agree to our terms.',
-                      ))),
+                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(initialTab: 0))),
                     ),
                     const Divider(height: 16, thickness: 0.5),
                     _buildPreferenceRow(
                       'Privacy Policy', 
                       Icons.privacy_tip_rounded, 
                       Colors.teal,
-                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(
-                        title: 'Privacy Policy',
-                        content: 'Your privacy is our utmost priority at NextMeet.',
-                      ))),
+                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(initialTab: 1))),
                     ),
                   ],
                 ),

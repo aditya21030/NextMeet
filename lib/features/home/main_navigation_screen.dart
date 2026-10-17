@@ -43,10 +43,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     super.dispose();
   }
 
+  final GlobalKey<SanctuaryTabState> _sanctuaryKey = GlobalKey<SanctuaryTabState>();
+
   late final List<Widget> _screens = [
     HomeScreen(initialSynced: widget.initialSynced),
     const MemoriesScreen(),
-    const SanctuaryTab(),
+    SanctuaryTab(
+      key: _sanctuaryKey,
+      onExit: () {
+        if (mounted) setState(() => _selectedIndex = 0);
+      },
+    ),
     const ProfileScreen(),
   ];
 
@@ -59,11 +66,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       builder: (context, snapshot) {
         final isPaired = snapshot.hasData && snapshot.data?.uid2 != null;
 
-        return Scaffold(
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: _screens,
-          ),
+        return PopScope(
+          canPop: _selectedIndex == 0,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (_selectedIndex == 2) {
+              _sanctuaryKey.currentState?.lock();
+              setState(() => _selectedIndex = 0);
+            } else if (_selectedIndex != 0) {
+              setState(() => _selectedIndex = 0);
+            }
+          },
+          child: Scaffold(
+            body: IndexedStack(
+              index: _selectedIndex,
+              children: _screens,
+            ),
           bottomNavigationBar: SafeArea(
             top: false,
             child: Container(
@@ -152,8 +170,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    },
+  );
   }
 }

@@ -39,6 +39,7 @@ class RelationshipModel {
   
   // Interaction/Real-time
   final String? lastTouchType;
+  final String? lastTouchEmoji;
   final String? lastTouchFrom;
   final DateTime? lastTouchTime;
   final Map<String, String>? userTokens;
@@ -132,6 +133,7 @@ class RelationshipModel {
     this.user2PartnerNickname,
     this.partnerFcmToken,
     this.lastTouchType,
+    this.lastTouchEmoji,
     this.lastTouchFrom,
     this.lastTouchTime,
     this.userTokens,
@@ -354,6 +356,7 @@ class RelationshipModel {
       user2PartnerNickname: map['user2PartnerNickname'],
       partnerFcmToken: map['partnerFcmToken'],
       lastTouchType: map['lastTouchType'],
+      lastTouchEmoji: map['lastTouchEmoji'],
       lastTouchFrom: map['lastTouchFrom'],
       lastTouchTime: _parseDate(map['lastTouchTime']),
       userTokens: map['userTokens'] != null ? Map<String, String>.from(map['userTokens']) : null,
@@ -439,6 +442,7 @@ class RelationshipModel {
       'user2PartnerNickname': user2PartnerNickname,
       'partnerFcmToken': partnerFcmToken,
       'lastTouchType': lastTouchType,
+      'lastTouchEmoji': lastTouchEmoji,
       'lastTouchFrom': lastTouchFrom,
       'lastTouchTime': lastTouchTime != null ? Timestamp.fromDate(lastTouchTime!) : null,
       'userTokens': userTokens,
@@ -548,6 +552,7 @@ class RelationshipModel {
     String? user2PartnerNickname,
     String? partnerFcmToken,
     String? lastTouchType,
+    String? lastTouchEmoji,
     String? lastTouchFrom,
     DateTime? lastTouchTime,
     Map<String, String>? userTokens,
@@ -631,6 +636,7 @@ class RelationshipModel {
       user2PartnerNickname: user2PartnerNickname ?? this.user2PartnerNickname,
       partnerFcmToken: partnerFcmToken ?? this.partnerFcmToken,
       lastTouchType: lastTouchType ?? this.lastTouchType,
+      lastTouchEmoji: lastTouchEmoji ?? this.lastTouchEmoji,
       lastTouchFrom: lastTouchFrom ?? this.lastTouchFrom,
       lastTouchTime: lastTouchTime ?? this.lastTouchTime,
       userTokens: userTokens ?? this.userTokens,

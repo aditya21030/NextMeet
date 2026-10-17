@@ -7,6 +7,7 @@ import '../../core/constants.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/services/vibration_service.dart';
+import 'terms_policy_screen.dart';
 
 class NextMeetPlusScreen extends StatefulWidget {
   final String relId;
@@ -260,34 +261,64 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
                         _buildCleanPerk(
+                          icon: Icons.fingerprint_rounded,
+                          color: const Color(0xFF10B981),
+                          title: 'Face & Fingerprint Passcode',
+                          subtitle: 'Instant biometric unlock for Sanctuary without typing your 4-digit code.',
+                        ),
+                        _buildCleanPerk(
+                          icon: Icons.mic_rounded,
+                          color: const Color(0xFFFB8500),
+                          title: 'Secret Voice Whispers',
+                          subtitle: 'Record and preserve intimate audio moments encrypted in your Couple Sanctuary.',
+                        ),
+                        _buildCleanPerk(
                           icon: Icons.lock_open_rounded,
+                          color: const Color(0xFFFF4D6D),
+                          title: '150 MB Ultra-HD Vault',
+                          subtitle: '7.5x storage space for crystal-clear secret photos and voice notes.',
+                        ),
+                        _buildCleanPerk(
+                          icon: Icons.movie_filter_rounded,
                           color: const Color(0xFFFF5E7E),
-                          title: '150 MB Secret Vault',
-                          subtitle: 'Massive storage for high-res photos and voice whispers.',
+                          title: 'Cinematic Love Story Reel',
+                          subtitle: 'Full-screen Ken Burns motion, romantic transitions, and ambient soundtrack.',
                         ),
                         _buildCleanPerk(
-                          icon: Icons.vibration_rounded,
-                          color: const Color(0xFFFF8E71),
-                          title: 'Pro-Haptics Engine',
-                          subtitle: 'Exclusive heartbeat patterns and custom touch rhythms.',
+                          icon: Icons.auto_stories_rounded,
+                          color: const Color(0xFF8B5CF6),
+                          title: '3D Flipping Storybook',
+                          subtitle: 'Realistic coffee-table photobook with turning pages and handwritten notes.',
                         ),
                         _buildCleanPerk(
-                          icon: Icons.map_rounded,
-                          color: const Color(0xFF845EC2),
-                          title: 'Neon Love Trail & Themes',
-                          subtitle: 'Sanctum luxury map tiles, glow paths, and weather pills.',
+                          icon: Icons.hourglass_top_rounded,
+                          color: const Color(0xFFF59E0B),
+                          title: 'Couple Time Capsules',
+                          subtitle: 'Seal secret surprise memories locked until anniversaries or milestones.',
                         ),
                         _buildCleanPerk(
                           icon: Icons.photo_library_rounded,
-                          color: const Color(0xFFFF6F91),
-                          title: 'Unlimited Memories',
-                          subtitle: 'Preserve your full relationship journey with zero caps.',
+                          color: const Color(0xFFFF8E71),
+                          title: 'Eternal 500+ HD Memories',
+                          subtitle: 'Preserve your full relationship journey without free-tier photo limits.',
                         ),
                         _buildCleanPerk(
-                          icon: Icons.favorite_rounded,
+                          icon: Icons.palette_rounded,
+                          color: const Color(0xFF06B6D4),
+                          title: 'Custom Chat Atmosphere',
+                          subtitle: 'Personalize your private couple chat with custom themes and photos.',
+                        ),
+                        _buildCleanPerk(
+                          icon: Icons.vibration_rounded,
+                          color: const Color(0xFF845EC2),
+                          title: 'Pro-Haptics Engine',
+                          subtitle: 'Exclusive heartbeat patterns and custom tactile touch rhythms.',
+                        ),
+                        _buildCleanPerk(
+                          icon: Icons.stars_rounded,
                           color: const Color(0xFFFFC75F),
-                          title: 'VIP Couple Badge',
-                          subtitle: 'Stand out with glowing neon avatar rings and prestige.',
+                          title: 'VIP Couple Prestige Badge',
+                          subtitle: 'Glowing golden avatar aura on both phones to celebrate your bond.',
                         ),
                       ]),
                     ),
@@ -566,6 +597,33 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
             const Text(
               'Auto-renews • Cancel anytime in Google Play Store',
               style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    VibrationService.light();
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(initialTab: 0)));
+                  },
+                  child: const Text(
+                    'Terms of Service',
+                    style: TextStyle(color: Colors.white54, fontSize: 10, decoration: TextDecoration.underline),
+                  ),
+                ),
+                const Text('  •  ', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                GestureDetector(
+                  onTap: () {
+                    VibrationService.light();
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(initialTab: 1)));
+                  },
+                  child: const Text(
+                    'Privacy Policy',
+                    style: TextStyle(color: Colors.white54, fontSize: 10, decoration: TextDecoration.underline),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

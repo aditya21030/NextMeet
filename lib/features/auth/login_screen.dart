@@ -13,6 +13,7 @@ import '../onboarding/setup_couple_screen.dart';
 import 'create_account_screen.dart';
 import 'forgot_identity_screen.dart';
 import '../home/main_navigation_screen.dart';
+import '../../core/services/auth_error_handler.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? initialInviteCode;
@@ -109,8 +110,15 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           setState(() => _isLoading = false);
           VibrationService.error();
+          final friendlyMsg = AuthErrorHandler.getLoginErrorMessage(e);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login failed: ${e.toString().replaceAll('Exception: ', '').split(']').last.trim()}')),
+            SnackBar(
+              content: Text(friendlyMsg),
+              backgroundColor: const Color(0xFFE11D48),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 4),
+            ),
           );
         }
       }
@@ -137,18 +145,14 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         VibrationService.error();
-        String errorString = e.toString();
-        String displayError = 'Google Sign-In failed: ${errorString.split(']').last.trim()}';
-        
-        if (errorString.contains('ApiException: 10')) {
-          displayError = 'Google Sign-In failed: Developer must add SHA-1 fingerprint to Firebase console.';
-        } else if (errorString.contains('network_error')) {
-          displayError = 'Google Sign-In failed: Check your internet connection.';
-        }
+        final friendlyMsg = AuthErrorHandler.getLoginErrorMessage(e);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(displayError),
+            content: Text(friendlyMsg),
+            backgroundColor: const Color(0xFFE11D48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             duration: const Duration(seconds: 4),
           ),
         );

@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
+import '../../core/constants.dart';
 import '../../core/models/relationship_model.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../private_space/lock_screen.dart';
 import '../private_space/private_home_screen.dart';
 
 class SanctuaryTab extends StatefulWidget {
-  const SanctuaryTab({super.key});
+  final VoidCallback? onExit;
+  const SanctuaryTab({super.key, this.onExit});
 
   @override
-  State<SanctuaryTab> createState() => _SanctuaryTabState();
+  State<SanctuaryTab> createState() => SanctuaryTabState();
 }
 
-class _SanctuaryTabState extends State<SanctuaryTab> {
+class SanctuaryTabState extends State<SanctuaryTab> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
   bool _isUnlocked = false;
 
-  void _lock() {
-    setState(() => _isUnlocked = false);
+  void lock() {
+    if (mounted) setState(() => _isUnlocked = false);
   }
 
   void _unlock() {
-    setState(() => _isUnlocked = true);
+    if (mounted) setState(() => _isUnlocked = true);
+  }
+
+  void _handleExit() {
+    lock();
+    widget.onExit?.call();
   }
 
   @override
@@ -29,17 +36,38 @@ class _SanctuaryTabState extends State<SanctuaryTab> {
       stream: _cloudService.streamRelationship(),
       builder: (context, snapshot) {
         final rel = snapshot.data;
-        // If not paired yet, or no PIN configured, or already unlocked in session:
-        if (rel == null || rel.privateSpacePin == null || _isUnlocked) {
-          return PrivateHomeScreen(
-            onLock: (rel?.privateSpacePin != null) ? _lock : null,
+        if (rel == null) {
+          return const Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
           );
         }
 
-        // Otherwise, show lock screen to verify PIN
-        return PrivateSpaceLockScreen(
-          onUnlocked: _unlock,
-          isTabMode: true,
+        // If paired and has PIN configured, require unlock unless already unlocked in session:
+        if (rel.uid2 != null && rel.privateSpacePin != null && !_isUnlocked) {
+          return PrivateSpaceLockScreen(
+            rel: rel,
+            onUnlocked: _unlock,
+            onClose: _handleExit,
+            isTabMode: true,
+          );
+        }
+
+        // If paired and no PIN set yet, show lock screen in setup mode
+        if (rel.uid2 != null && rel.privateSpacePin == null && !_isUnlocked) {
+          return PrivateSpaceLockScreen(
+            rel: rel,
+            onUnlocked: _unlock,
+            onClose: _handleExit,
+            isTabMode: true,
+          );
+        }
+
+        // Otherwise show unlocked PrivateHomeScreen
+        return PrivateHomeScreen(
+          rel: rel,
+          onLock: lock,
+          onClose: _handleExit,
         );
       },
     );

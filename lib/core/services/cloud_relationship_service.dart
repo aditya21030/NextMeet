@@ -51,6 +51,7 @@ class CloudRelationshipService {
 
   static final Map<String, StreamController<List<CalendarEventModel>>> _eventsStreamControllers = {};
   static final Map<String, List<CalendarEventModel>> _cachedEventsMap = {};
+  static final Set<String> _activeEventsListeners = {};
 
   static StreamController<List<CalendarEventModel>> _getEventsController(String relId) {
     return _eventsStreamControllers.putIfAbsent(
@@ -60,7 +61,7 @@ class CloudRelationshipService {
   }
 
   // Upload a memory with image
-  Future<void> addMemory(String relId, File image, String caption, String location, {bool isStory = false, double? lat, double? lng}) async {
+  Future<void> addMemory(String relId, File image, String caption, String location, {bool isStory = false, double? lat, double? lng, DateTime? unlockDate}) async {
     if (_currentUid == null) throw Exception('User not authenticated');
     
     // SECURITY: Enforce Memory limits
@@ -98,6 +99,11 @@ class CloudRelationshipService {
       imageUrl = _supabase.storage.from('memories').getPublicUrl('$relId/memories/$fileName');
     } catch (e) {
       debugPrint('Supabase storage memory upload fallback to Firebase: $e');
+      try {
+        if (FirebaseAuth.instance.currentUser == null) {
+          await FirebaseAuth.instance.signInAnonymously();
+        }
+      } catch (_) {}
       final ref = _storage.ref().child('relationships/$relId/memories/$fileName');
       final uploadTask = await ref.putFile(
         compressedImage,
@@ -117,6 +123,7 @@ class CloudRelationshipService {
       isStory: isStory,
       lat: lat,
       lng: lng,
+      unlockDate: unlockDate,
     );
 
     // 0ms INSTANT OPTIMISTIC EMISSION
@@ -137,6 +144,7 @@ class CloudRelationshipService {
         'lng': lng,
         'date': nowIso,
         'created_at': nowIso,
+        'unlock_date': unlockDate?.toIso8601String(),
       }).select().maybeSingle();
 
       if (insertRes != null && insertRes['id'] != null) {
@@ -165,6 +173,7 @@ class CloudRelationshipService {
         'isStory': isStory,
         'lat': lat,
         'lng': lng,
+        'unlockDate': unlockDate != null ? Timestamp.fromDate(unlockDate) : null,
       });
     } catch (_) {}
 
@@ -309,26 +318,54 @@ class CloudRelationshipService {
   }
 
   Future<String> createJourney(RelationshipModel localData) async {
-    if (_currentUid == null) throw Exception('User not authenticated');
+    final uid = _currentUid ?? _auth.currentUid ?? _supabase.auth.currentUser?.id;
+    if (uid == null) throw Exception('User not authenticated');
     final String code = (math.Random().nextInt(900000) + 100000).toString();
     final relDocRef = _relationships.doc();
-    final relationship = localData.copyWith(id: relDocRef.id, uid1: _currentUid, uids: [_currentUid!], inviteCode: code, createdAt: DateTime.now(), status: 'waiting');
-    await relDocRef.set(relationship.toFirestore());
-    
-    final userEmail = _auth.currentUser?.email ?? 'Unknown Email';
-    await _invites.doc(code).set({
-      'creatorUid': _currentUid, 
-      'relationshipId': relDocRef.id, 
-      'status': 'pending', 
-      'createdAt': FieldValue.serverTimestamp(),
-      'creatorEmail': userEmail
-    });
+    final relationship = localData.copyWith(
+      id: relDocRef.id, 
+      uid1: uid, 
+      uids: [uid], 
+      inviteCode: code, 
+      createdAt: DateTime.now(), 
+      status: 'waiting',
+    );
 
-    // Admin Dashboard Sync
+    // 1. Supabase Sync (Primary real-time database)
+    try {
+      await _supabase.from('relationships').upsert({
+        'id': relDocRef.id,
+        'uid1': uid,
+        'uids': [uid],
+        'invite_code': code,
+        'status': 'waiting',
+        'data': relationship.toFirestoreMap(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase createJourney sync warning: $e');
+    }
+
+    // 2. Firestore Sync & Invites
+    try {
+      await relDocRef.set(relationship.toFirestore());
+      final userEmail = _auth.currentUser?.email ?? 'Unknown Email';
+      await _invites.doc(code).set({
+        'creatorUid': uid, 
+        'relationshipId': relDocRef.id, 
+        'status': 'pending', 
+        'createdAt': FieldValue.serverTimestamp(),
+        'creatorEmail': userEmail
+      });
+    } catch (e) {
+      debugPrint('Firestore createJourney sync warning: $e');
+    }
+
+    // 3. Admin Dashboard Sync
     try {
       await _firestore.collection('pending_relationships').doc(relDocRef.id).set({
         'relId': relDocRef.id,
-        'uid1': _currentUid,
+        'uid1': uid,
         'userName1': localData.userName1 ?? "Partner 1",
         'inviteCode': code,
         'createdAt': FieldValue.serverTimestamp(),
@@ -340,23 +377,12 @@ class CloudRelationshipService {
         'lastUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      print('Error syncing createJourney to admin dashboard: $e');
+      debugPrint('Error syncing createJourney to admin dashboard: $e');
     }
 
-    // Supabase Sync
-    try {
-      await _supabase.from('relationships').upsert({
-        'id': relDocRef.id,
-        'uid1': _currentUid,
-        'uids': [_currentUid!],
-        'invite_code': code,
-        'status': 'waiting',
-        'data': relationship.toFirestoreMap(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('Supabase createJourney sync warning: $e');
-    }
+    // Update local cache so UI reacts immediately
+    _cachedRelationship = relationship;
+    _relationshipStreamController.add(relationship);
     
     return code;
   }
@@ -602,62 +628,6 @@ class CloudRelationshipService {
     }
   }
 
-  // --- TEMP SCRIPT FOR ADMIN / MIGRATION ---
-  Future<void> syncOldAcceptedRelationships() async {
-    try {
-      final snapshot = await _firestore.collection('relationships').where('status', isEqualTo: 'active').get();
-      final batch = _firestore.batch();
-      
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final relId = doc.id;
-        final uid1 = data['uid1'];
-        final uid2 = data['uid2'];
-        
-        if (uid1 != null && uid2 != null) {
-          final acceptedRef = _firestore.collection('accepted_relationships').doc(relId);
-          batch.set(acceptedRef, {
-            'relId': relId,
-            'uid1': uid1,
-            'uid2': uid2,
-            'userName1': data['userName1'],
-            'userName2': data['userName2'],
-            'acceptedAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-        }
-      }
-      
-      final pendingSnap = await _firestore.collection('invites').where('status', isEqualTo: 'pending').get();
-      for (var doc in pendingSnap.docs) {
-        final data = doc.data();
-        final code = doc.id;
-        final relId = data['relationshipId'];
-        final uid1 = data['creatorUid'];
-        if (relId != null && uid1 != null) {
-          // Fetch the relationship document to try to get the real username
-          final relDoc = await _firestore.collection('relationships').doc(relId).get();
-          final relData = relDoc.data();
-          final userName1 = relData?['userName1'] ?? 'Unknown User';
-          
-          final pendingRef = _firestore.collection('pending_relationships').doc(relId);
-          batch.set(pendingRef, {
-            'relId': relId,
-            'uid1': uid1,
-            'userName1': userName1,
-            'creatorEmail': data['creatorEmail'] ?? 'Old User (Email Unknown)',
-            'inviteCode': code,
-            'createdAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-        }
-      }
-      
-      await batch.commit();
-      print('Successfully synced old relationships to accepted_relationships collection!');
-    } catch (e) {
-      print('Error syncing old relationships: $e');
-      rethrow;
-    }
-  }
 
   Future<void> _updateRelationshipData(String relId, Map<String, dynamic> updates) async {
     // 0. INSTANT OPTIMISTIC LOCAL EMISSION (0ms UI Update)
@@ -723,19 +693,23 @@ class CloudRelationshipService {
     }
   }
 
-  Future<void> sendTouch(String relId, String type) async {
+  Future<void> sendTouch(String relId, String type, {String? emoji}) async {
     if (_currentUid == null) return;
-    await _updateRelationshipData(relId, {
+    final touchData = <String, dynamic>{
       'lastTouchType': type,
       'lastTouchFrom': _currentUid,
       'lastTouchTime': DateTime.now(),
-    });
+    };
+    if (emoji != null) touchData['lastTouchEmoji'] = emoji;
+    await _updateRelationshipData(relId, touchData);
     String logTitle = 'Sent a "Touch" ❤️';
     if (type == 'miss') {
       logTitle = 'Sent a "Miss You" 🥺';
-      // ignore: curly_braces_in_flow_control_structures
-    } else if (type == 'hug') logTitle = 'Sent a "Digital Hug" 🤗';
-    else if (type == 'emoji') logTitle = 'Sent a Reaction ✨';
+    } else if (type == 'hug') {
+      logTitle = 'Sent a "Digital Hug" 🤗';
+    } else if (type == 'emoji') {
+      logTitle = emoji != null ? 'Sent a Reaction $emoji' : 'Sent a Reaction ✨';
+    }
     await logActivity(relId, 'nudge', logTitle);
   }
 
@@ -1006,6 +980,11 @@ class CloudRelationshipService {
       return _supabase.storage.from('memories').getPublicUrl('$relId/profiles/$fileName');
     } catch (e) {
       debugPrint('Supabase uploadProfilePhoto fallback to Firebase: $e');
+      try {
+        if (FirebaseAuth.instance.currentUser == null) {
+          await FirebaseAuth.instance.signInAnonymously();
+        }
+      } catch (_) {}
       final ref = _storage.ref().child('relationships/$relId/profiles/$fileName');
       final metadata = SettableMetadata(contentType: 'image/webp');
       final uploadTask = await ref.putData(compressedBytes, metadata);
@@ -1014,7 +993,12 @@ class CloudRelationshipService {
   }
 
   // --- PRIVATE SPACE ---
-  Future<void> updatePrivateSpacePin(String relId, String? pin) async => await _updateRelationshipData(relId, {'privateSpacePin': pin});
+  Future<void> updatePrivateSpacePin(String relId, String? pin) async => await _updateRelationshipData(relId, {
+    'privateSpacePin': pin,
+    'pinResetRequestBy': null,
+    'pinResetRequestAt': null,
+    'pinResetApproved': false,
+  });
   Future<void> updatePrivateSpaceTimeout(String relId, String timeout) async => await _updateRelationshipData(relId, {'privateSpaceTimeout': timeout});
   Future<void> requestPinReset(String relId) async => await _updateRelationshipData(relId, {'pinResetRequestBy': _currentUid, 'pinResetRequestAt': DateTime.now(), 'pinResetApproved': false});
   Future<void> approvePinReset(String relId) async => await _updateRelationshipData(relId, {'pinResetApproved': true});
@@ -1107,11 +1091,34 @@ class CloudRelationshipService {
 
   Stream<QuerySnapshot> streamPrivatePhotos(String relId) => _relationships.doc(relId).collection('private_photos').orderBy('timestamp', descending: true).snapshots();
   Future<void> addPrivatePhoto(String relId, String url, int size) async {
-    await _relationships.doc(relId).collection('private_photos').add({'url': url, 'sizeBytes': size, 'timestamp': FieldValue.serverTimestamp()});
-    await _relationships.doc(relId).update({'privateSpaceStorageBytes': FieldValue.increment(size)});
+    try {
+      await _supabase.from('private_photos').insert({
+        'relationship_id': relId,
+        'url': url,
+        'size_bytes': size,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase addPrivatePhoto notice: $e');
+    }
+    try {
+      await _relationships.doc(relId).collection('private_photos').add({
+        'url': url,
+        'sizeBytes': size,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      await _relationships.doc(relId).set({
+        'privateSpaceStorageBytes': FieldValue.increment(size),
+      }, SetOptions(merge: true));
+    } catch (_) {}
   }
   Future<void> deletePrivatePhoto(String relId, String photoId, String url, int size) async {
-    await _relationships.doc(relId).collection('private_photos').doc(photoId).delete();
+    try {
+      await _supabase.from('private_photos').delete().eq('id', photoId);
+    } catch (_) {}
+    try {
+      await _relationships.doc(relId).collection('private_photos').doc(photoId).delete();
+    } catch (_) {}
     try {
       if (url.contains('supabase.co')) {
         final uri = Uri.parse(url);
@@ -1125,30 +1132,90 @@ class CloudRelationshipService {
         await _storage.refFromURL(url).delete();
       }
     } catch (_) {}
-    await _relationships.doc(relId).update({'privateSpaceStorageBytes': FieldValue.increment(-size)});
+    try {
+      await _relationships.doc(relId).set({
+        'privateSpaceStorageBytes': FieldValue.increment(-size),
+      }, SetOptions(merge: true));
+    } catch (_) {}
   }
 
   Stream<QuerySnapshot> streamPrivateNotes(String relId) => _relationships.doc(relId).collection('private_notes').orderBy('timestamp', descending: true).snapshots();
-  Future<void> addPrivateNote(String relId, String title, String content, String category) async => await _relationships.doc(relId).collection('private_notes').add({'title': title, 'content': content, 'category': category, 'createdBy': _currentUid, 'timestamp': FieldValue.serverTimestamp()});
-  Future<void> deletePrivateNote(String relId, String noteId) async => await _relationships.doc(relId).collection('private_notes').doc(noteId).delete();
+  Future<void> addPrivateNote(String relId, String title, String content, String category) async {
+    try {
+      await _supabase.from('private_notes').insert({
+        'relationship_id': relId,
+        'author_id': _currentUid ?? 'partner',
+        'title': title,
+        'content': content,
+        'category': category,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase addPrivateNote notice: $e');
+    }
+    await _relationships.doc(relId).collection('private_notes').add({'title': title, 'content': content, 'category': category, 'createdBy': _currentUid, 'timestamp': FieldValue.serverTimestamp()});
+  }
+  Future<void> deletePrivateNote(String relId, String noteId) async {
+    try {
+      await _supabase.from('private_notes').delete().eq('id', noteId);
+    } catch (_) {}
+    await _relationships.doc(relId).collection('private_notes').doc(noteId).delete();
+  }
 
   Stream<QuerySnapshot> streamLoveLetters(String relId) => _relationships.doc(relId).collection('love_letters').orderBy('timestamp', descending: true).snapshots();
-  Future<void> addLoveLetter(String relId, String title, String content) async => await _relationships.doc(relId).collection('love_letters').add({'title': title, 'content': content, 'senderId': _currentUid, 'senderName': 'Partner', 'timestamp': FieldValue.serverTimestamp()});
-  Future<void> deleteLoveLetter(String relId, String letterId) async => await _relationships.doc(relId).collection('love_letters').doc(letterId).delete();
+  Future<void> addLoveLetter(String relId, String title, String content) async {
+    try {
+      await _supabase.from('love_letters').insert({
+        'relationship_id': relId,
+        'sender_id': _currentUid ?? 'partner',
+        'sender_name': 'Partner',
+        'title': title,
+        'content': content,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase addLoveLetter notice: $e');
+    }
+    await _relationships.doc(relId).collection('love_letters').add({'title': title, 'content': content, 'senderId': _currentUid, 'senderName': 'Partner', 'timestamp': FieldValue.serverTimestamp()});
+  }
+  Future<void> deleteLoveLetter(String relId, String letterId) async {
+    try {
+      await _supabase.from('love_letters').delete().eq('id', letterId);
+    } catch (_) {}
+    await _relationships.doc(relId).collection('love_letters').doc(letterId).delete();
+  }
 
   // --- RITUALS ---
   Stream<QuerySnapshot> streamRituals(String relId) => _relationships.doc(relId).collection('rituals').orderBy('order', descending: false).snapshots();
   Future<void> addRitual(String relId, String title, String icon) async {
+    final order = DateTime.now().millisecondsSinceEpoch;
+    try {
+      await _supabase.from('rituals').insert({
+        'relationship_id': relId,
+        'title': title,
+        'emoji': icon,
+        'is_completed': false,
+        'order': order,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase addRitual notice: $e');
+    }
     await _relationships.doc(relId).collection('rituals').add({
       'title': title,
       'emoji': icon,
       'u1Completed': false,
       'u2Completed': false,
       'lastCompleted': null,
-      'order': DateTime.now().millisecondsSinceEpoch,
+      'order': order,
     });
   }
   Future<void> toggleRitual(String relId, String ritualId, bool isUser1, bool completed) async {
+    try {
+      await _supabase.from('rituals').update({
+        'is_completed': completed,
+      }).eq('id', ritualId);
+    } catch (_) {}
     await _relationships.doc(relId).collection('rituals').doc(ritualId).update({
       isUser1 ? 'u1Completed' : 'u2Completed': completed,
       'lastCompleted': FieldValue.serverTimestamp(),
@@ -1162,8 +1229,8 @@ class CloudRelationshipService {
       'content': content,
       'color': colorHex,
       'authorUid': _currentUid,
-      'posX': 0.5, // 0.0 to 1.0 (relative to container width)
-      'posY': 0.5, // 0.0 to 1.0 (relative to container height)
+      'posX': 0.5,
+      'posY': 0.5,
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
@@ -1176,14 +1243,58 @@ class CloudRelationshipService {
   Future<void> deleteWhisperNote(String relId, String noteId) async => await _relationships.doc(relId).collection('whisper_notes').doc(noteId).delete();
 
   Stream<QuerySnapshot> streamSurprises(String relId) => _relationships.doc(relId).collection('surprise_messages').orderBy('unlockDate', descending: false).snapshots();
-  Future<void> addSurprise(String relId, String title, String content, DateTime unlockDate, String? imageUrl) async => await _relationships.doc(relId).collection('surprise_messages').add({'title': title, 'content': content, 'unlockDate': Timestamp.fromDate(unlockDate), 'imageUrl': imageUrl, 'senderId': _currentUid, 'timestamp': FieldValue.serverTimestamp()});
-  Future<void> deleteSurprise(String relId, String surpriseId) async => await _relationships.doc(relId).collection('surprise_messages').doc(surpriseId).delete();
+  Future<void> addSurprise(String relId, String title, String content, DateTime unlockDate, String? imageUrl) async {
+    try {
+      await _supabase.from('surprise_messages').insert({
+        'relationship_id': relId,
+        'sender_id': _currentUid ?? 'partner',
+        'title': title,
+        'content': content,
+        'image_url': imageUrl,
+        'unlock_date': unlockDate.toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase addSurprise notice: $e');
+    }
+    await _relationships.doc(relId).collection('surprise_messages').add({'title': title, 'content': content, 'unlockDate': Timestamp.fromDate(unlockDate), 'imageUrl': imageUrl, 'senderId': _currentUid, 'timestamp': FieldValue.serverTimestamp()});
+  }
+  Future<void> deleteSurprise(String relId, String surpriseId) async {
+    try {
+      await _supabase.from('surprise_messages').delete().eq('id', surpriseId);
+    } catch (_) {}
+    await _relationships.doc(relId).collection('surprise_messages').doc(surpriseId).delete();
+  }
 
   // --- BUCKET LIST ---
   Stream<QuerySnapshot> streamBucketItems(String relId) => _relationships.doc(relId).collection('bucket_list').orderBy('timestamp', descending: true).snapshots();
-  Future<void> addBucketItem(String relId, String title, String category) async => await _relationships.doc(relId).collection('bucket_list').add({'title': title, 'category': category, 'isCompleted': false, 'createdBy': _currentUid, 'timestamp': FieldValue.serverTimestamp()});
-  Future<void> toggleBucketItem(String relId, String itemId, bool completed) async => await _relationships.doc(relId).collection('bucket_list').doc(itemId).update({'isCompleted': completed});
-  Future<void> deleteBucketItem(String relId, String itemId) async => await _relationships.doc(relId).collection('bucket_list').doc(itemId).delete();
+  Future<void> addBucketItem(String relId, String title, String category) async {
+    try {
+      await _supabase.from('bucket_list').insert({
+        'relationship_id': relId,
+        'title': title,
+        'category': category,
+        'is_completed': false,
+        'created_by': _currentUid,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase addBucketItem notice: $e');
+    }
+    await _relationships.doc(relId).collection('bucket_list').add({'title': title, 'category': category, 'isCompleted': false, 'createdBy': _currentUid, 'timestamp': FieldValue.serverTimestamp()});
+  }
+  Future<void> toggleBucketItem(String relId, String itemId, bool completed) async {
+    try {
+      await _supabase.from('bucket_list').update({'is_completed': completed}).eq('id', itemId);
+    } catch (_) {}
+    await _relationships.doc(relId).collection('bucket_list').doc(itemId).update({'isCompleted': completed});
+  }
+  Future<void> deleteBucketItem(String relId, String itemId) async {
+    try {
+      await _supabase.from('bucket_list').delete().eq('id', itemId);
+    } catch (_) {}
+    await _relationships.doc(relId).collection('bucket_list').doc(itemId).delete();
+  }
 
   // --- CALENDAR (0ms Reactive & Synced with Supabase) ---
   Stream<List<CalendarEventModel>> streamCalendarEvents(String relId) async* {
@@ -1195,6 +1306,9 @@ class CloudRelationshipService {
   }
 
   void _setupEventsListener(String relId) {
+    if (_activeEventsListeners.contains(relId)) return;
+    _activeEventsListeners.add(relId);
+
     Future<void> fetchAndEmit() async {
       try {
         final res = await _supabase
