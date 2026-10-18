@@ -177,7 +177,7 @@ class CloudRelationshipService {
       });
     } catch (_) {}
 
-    await logActivity(relId, 'memory', 'New ${isStory ? "Story" : "Moment"}: $location 📸');
+    await logActivity(relId, 'memory', 'New memory saved: $location');
     await incrementStat(relId, 'memories');
   }
 
@@ -216,8 +216,7 @@ class CloudRelationshipService {
 
   void _setupMemoriesListener(String relId) {
     Future<void> fetchAndEmit() async {
-      List<MemoryModel> serverMemories = [];
-
+      List<MemoryModel> supabaseMemories = [];
       try {
         final res = await _supabase
             .from('memories')
@@ -225,32 +224,30 @@ class CloudRelationshipService {
             .eq('relationship_id', relId)
             .order('date', ascending: false);
 
-        serverMemories = (res as List)
+        supabaseMemories = (res as List)
             .map((m) => MemoryModel.fromFirestore(m as Map<String, dynamic>, id: m['id']?.toString()))
             .toList();
       } catch (e) {
         debugPrint('Supabase streamMemories fetch warning: $e');
       }
 
-      // If Supabase returned empty, check Firestore fallback for existing or legacy memories
-      if (serverMemories.isEmpty) {
-        try {
-          final snap = await _firestore
-              .collection('relationships')
-              .doc(relId)
-              .collection('memories')
-              .orderBy('date', descending: true)
-              .get();
-          final firestoreMemories = snap.docs
-              .map((doc) => MemoryModel.fromFirestore(doc.data(), id: doc.id))
-              .toList();
-          if (firestoreMemories.isNotEmpty) {
-            serverMemories = firestoreMemories;
-          }
-        } catch (e) {
-          debugPrint('Firestore fallback streamMemories fetch warning: $e');
-        }
+      List<MemoryModel> firestoreMemories = [];
+      try {
+        final snap = await _firestore
+            .collection('relationships')
+            .doc(relId)
+            .collection('memories')
+            .orderBy('date', descending: true)
+            .get();
+        firestoreMemories = snap.docs
+            .map((doc) => MemoryModel.fromFirestore(doc.data(), id: doc.id))
+            .toList();
+      } catch (e) {
+        debugPrint('Firestore fallback streamMemories fetch warning: $e');
       }
+
+      // Merge both remote sources so photos from either Supabase or Firestore are never lost
+      final serverMemories = [...supabaseMemories, ...firestoreMemories];
 
       // Preserve any in-flight optimistic memories (id starts with 'local_') not yet returned by server
       final currentCached = _cachedMemoriesMap[relId] ?? [];
@@ -274,6 +271,9 @@ class CloudRelationshipService {
         if (url.isNotEmpty) seenUrls.add(url);
         mergedList.add(m);
       }
+
+      // Sort by date descending
+      mergedList.sort((a, b) => b.date.compareTo(a.date));
 
       _cachedMemoriesMap[relId] = mergedList;
       _getMemoriesController(relId).add(mergedList);
@@ -337,10 +337,23 @@ class CloudRelationshipService {
       debugPrint('Supabase deleteMemory error: $e');
     }
     try {
+      if (imageUrl.isNotEmpty) {
+        final querySnap = await _firestore
+            .collection('relationships')
+            .doc(relId)
+            .collection('memories')
+            .where('imageUrl', isEqualTo: imageUrl)
+            .get();
+        for (var doc in querySnap.docs) {
+          await doc.reference.delete();
+        }
+      }
       await _firestore.collection('relationships').doc(relId).collection('memories').doc(memoryId).delete();
-      await _storage.refFromURL(imageUrl).delete();
+      if (imageUrl.contains('firebasestorage')) {
+        await _storage.refFromURL(imageUrl).delete();
+      }
     } catch (_) {}
-    await logActivity(relId, 'delete', 'A memory was removed 🗑️');
+    await logActivity(relId, 'delete', 'A memory was removed');
   }
 
   Future<void> updateMemoryCaptions(String relId, String memoryId, {String? caption, String? p1Caption, String? p2Caption}) async {

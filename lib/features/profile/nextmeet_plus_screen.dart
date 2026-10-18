@@ -279,16 +279,10 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                           subtitle: '7.5x storage space for crystal-clear secret photos and voice notes.',
                         ),
                         _buildCleanPerk(
-                          icon: Icons.movie_filter_rounded,
+                          icon: Icons.history_edu_rounded,
                           color: const Color(0xFFFF5E7E),
-                          title: 'Cinematic Love Story Reel',
-                          subtitle: 'Full-screen Ken Burns motion, romantic transitions, and ambient soundtrack.',
-                        ),
-                        _buildCleanPerk(
-                          icon: Icons.auto_stories_rounded,
-                          color: const Color(0xFF8B5CF6),
-                          title: '3D Flipping Storybook',
-                          subtitle: 'Realistic coffee-table photobook with turning pages and handwritten notes.',
+                          title: 'Romantic "On This Day" Flashbacks',
+                          subtitle: 'Relive special anniversary moments and trips as they happened on this date in past months and years.',
                         ),
                         _buildCleanPerk(
                           icon: Icons.hourglass_top_rounded,
@@ -356,7 +350,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
             title: 'Annual',
             price: yearlyPrice,
             strikethrough: '₹999',
-            badge: 'SAVE 50% ✨',
+            badge: 'SAVE 50%',
             subtitle: 'Best Value • Renews yearly',
             isSelected: isYearly,
             onTap: () {

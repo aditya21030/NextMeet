@@ -311,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              rel.isPlus ? 'NextMeet+ VIP Couple' : 'Private Couple Space', 
+                              rel.isPlus ? 'Intimate Sanctuary' : 'Private Couple Space', 
                               style: AppTextStyles.bodyS.copyWith(
                                 color: rel.isPlus ? const Color(0xFF6366F1) : AppColors.textSecondary, 
                                 fontWeight: FontWeight.w700,
@@ -489,19 +489,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: 'NextMeet', 
-                                          style: AppTextStyles.bodyL.copyWith(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
-                                        ),
-                                        TextSpan(
-                                          text: '+', 
-                                          style: AppTextStyles.bodyL.copyWith(color: const Color(0xFFFF5E7D), fontWeight: FontWeight.w900, fontSize: 18),
-                                        ),
-                                      ],
-                                    ),
+                                  Text(
+                                    rel.isPlus ? 'Sanctuary Membership' : 'NextMeet+', 
+                                    style: AppTextStyles.bodyL.copyWith(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
                                   ),
                                   Text(
                                     rel.isPlus ? 'Manage your premium experience' : 'Unlock the ultimate digital sanctuary', 

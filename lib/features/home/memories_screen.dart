@@ -50,14 +50,18 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
     );
   }
 
-  void _viewStory(MemoryModel moment, String relId, RelationshipModel rel) {
+  void _openMemoryDetail(MemoryModel moment, String relId, RelationshipModel rel) {
     VibrationService.medium();
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black,
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, anim1, anim2) => _StoryPage(moment: moment, relId: relId, rel: rel, cloudService: _cloudService),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _MemoryDetailScreen(
+          moment: moment,
+          relId: relId,
+          rel: rel,
+          cloudService: _cloudService,
+        ),
+      ),
     );
   }
 
@@ -202,7 +206,17 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
             }
             
             final moments = snapshot.data ?? [];
-            final stories = moments.where((m) => m.isStory).toList();
+            MemoryModel? onThisDayMoment;
+            if (rel.isPlus && _searchQuery.isEmpty) {
+              final now = DateTime.now();
+              for (final m in moments) {
+                if (m.date.month == now.month && m.date.day == now.day && m.date.year != now.year) {
+                  onThisDayMoment = m;
+                  break;
+                }
+              }
+            }
+
             final filteredMoments = _searchQuery.isEmpty
                 ? moments
                 : moments.where((m) {
@@ -249,14 +263,16 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: AppSpacing.s),
-                          if (stories.isNotEmpty && _searchQuery.isEmpty) ...[
-                            _buildFeaturedMemory(stories[0], relId, rel),
-                            const SizedBox(height: AppSpacing.xl),
+                          _buildVaultHeader(rel, moments.length),
+                          const SizedBox(height: AppSpacing.m),
+                          if (onThisDayMoment != null) ...[
+                            _buildOnThisDayCard(onThisDayMoment, relId, rel),
+                            const SizedBox(height: AppSpacing.l),
                           ],
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(_searchQuery.isEmpty ? 'All Moments' : 'Search Results', style: AppTextStyles.h3),
+                              Text(_searchQuery.isEmpty ? 'All Keepsakes' : 'Search Results', style: AppTextStyles.h3),
                               _buildCountBadge(filteredMoments.length),
                             ],
                           ),
@@ -457,61 +473,181 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
     );
   }
 
-  Widget _buildFeaturedMemory(MemoryModel featured, String relId, RelationshipModel rel) {
-    return GestureDetector(
-      onTap: () => _viewStory(featured, relId, rel),
-      child: Container(
-        width: double.infinity,
-        height: 360,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.xxl),
-          boxShadow: AppColors.premiumShadow,
-          image: DecorationImage(image: CachedNetworkImageProvider(featured.imageUrl), fit: BoxFit.cover),
+  Widget _buildVaultHeader(RelationshipModel rel, int count) {
+    final bool isPlus = rel.isPlus;
+    final int maxMemories = isPlus ? AppSubscription.plusMaxMemories : AppSubscription.freeMaxMemories;
+    final bool isNearLimit = !isPlus && count >= (maxMemories - 10);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isPlus ? const Color(0xFFFBF8F5) : Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.m),
+        border: Border.all(
+          color: isPlus
+              ? const Color(0xFFE8D5C4)
+              : (isNearLimit ? AppColors.accent.withValues(alpha: 0.3) : Colors.grey.shade200),
+          width: 1,
         ),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.xxl),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black.withValues(alpha: 0.1), Colors.black.withValues(alpha: 0.85)],
+        boxShadow: AppColors.softShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isPlus
+                  ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
+                  : AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPlus ? Icons.auto_awesome_rounded : Icons.photo_library_outlined,
+              size: 18,
+              color: isPlus ? const Color(0xFFB38F2D) : AppColors.primary,
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                child: const Text('FEATURED STORY', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPlus ? '$count Moments Saved • Unlimited Vault' : '$count / $maxMemories Moments Saved',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isPlus
+                      ? 'Private & high-resolution encrypted scrapbook'
+                      : (isNearLimit ? 'Nearing free keepsake vault limit' : 'Milestone moments preserved together'),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isNearLimit ? AppColors.accent : AppColors.textSecondary,
+                    fontWeight: isNearLimit ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!isPlus)
+            InkWell(
+              onTap: () {
+                VibrationService.light();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => NextMeetPlusScreen(relId: rel.id!)),
+                );
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Text(
+                  'Upgrade',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
-              Text(featured.location, style: AppTextStyles.h1.copyWith(color: Colors.white, fontSize: 28)),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnThisDayCard(MemoryModel moment, String relId, RelationshipModel rel) {
+    final now = DateTime.now();
+    final yearsAgo = now.year - moment.date.year;
+    final timeAgoText = yearsAgo > 0
+        ? '$yearsAgo year${yearsAgo > 1 ? 's' : ''} ago today'
+        : DateFormat('MMMM d, yyyy').format(moment.date);
+
+    return GestureDetector(
+      onTap: () => _openMemoryDetail(moment, relId, rel),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F1728),
+          borderRadius: BorderRadius.circular(AppRadius.l),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1F1728).withValues(alpha: 0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 76,
+                height: 76,
+                child: CachedNetworkImage(
+                  imageUrl: moment.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(color: Colors.white10),
+                  errorWidget: (context, url, error) => const Icon(Icons.photo, color: Colors.white30),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded, size: 12, color: Colors.white70),
-                      const SizedBox(width: 8),
+                      Icon(Icons.history_edu_rounded, size: 14, color: Color(0xFFFF8E71)),
+                      SizedBox(width: 6),
                       Text(
-                        DateFormat('MMM dd, yyyy').format(featured.date).toUpperCase(), 
-                        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w800, fontSize: 10),
+                        'ON THIS DAY',
+                        style: TextStyle(
+                          color: Color(0xFFFF8E71),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
                       ),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppRadius.circle)),
-                    child: const Text('VIEW', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1)),
+                  const SizedBox(height: 6),
+                  Text(
+                    moment.location.isNotEmpty ? moment.location : 'Milestone Memory',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    timeAgoText,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white54, size: 24),
+          ],
         ),
       ),
     );
@@ -584,7 +720,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
           if (isLocked) {
             _showSealedCapsuleDialog(moment);
           } else {
-            _viewStory(moment, relId, rel);
+            _openMemoryDetail(moment, relId, rel);
           }
         },
         child: Container(
@@ -637,7 +773,27 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                             ],
                           ),
                         )
-                        : CachedNetworkImage(imageUrl: moment.imageUrl, fit: BoxFit.cover),
+                        : CachedNetworkImage(
+                            imageUrl: moment.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey.shade100,
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey.shade100,
+                              child: const Center(
+                                child: Icon(Icons.broken_image_rounded, color: Colors.grey, size: 24),
+                              ),
+                            ),
+                          ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -674,21 +830,35 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
   }
 }
 
-class _StoryPage extends StatefulWidget {
+class _MemoryDetailScreen extends StatefulWidget {
   final MemoryModel moment;
   final String relId;
   final RelationshipModel rel;
   final CloudRelationshipService cloudService;
 
-  const _StoryPage({required this.moment, required this.relId, required this.rel, required this.cloudService});
+  const _MemoryDetailScreen({
+    required this.moment,
+    required this.relId,
+    required this.rel,
+    required this.cloudService,
+  });
 
   @override
-  State<_StoryPage> createState() => _StoryPageState();
+  State<_MemoryDetailScreen> createState() => _MemoryDetailScreenState();
 }
 
-class _StoryPageState extends State<_StoryPage> {
+class _MemoryDetailScreenState extends State<_MemoryDetailScreen> {
   final TextEditingController _editController = TextEditingController();
+  late String _p1Caption;
+  late String _p2Caption;
   bool get _isUser1 => widget.cloudService.currentUid == widget.rel.uid1;
+
+  @override
+  void initState() {
+    super.initState();
+    _p1Caption = widget.moment.partner1Caption ?? '';
+    _p2Caption = widget.moment.partner2Caption ?? '';
+  }
 
   @override
   void dispose() {
@@ -700,13 +870,18 @@ class _StoryPageState extends State<_StoryPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Memory?'),
-        content: const Text('Are you sure you want to remove this memory?'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Memory?', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to remove this keepsake from your shared timeline?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
           TextButton(
-            onPressed: () => Navigator.pop(context, true), 
-            child: const Text('DELETE', style: TextStyle(color: Colors.red)),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -719,42 +894,87 @@ class _StoryPageState extends State<_StoryPage> {
     }
   }
 
+  void _shareMoment() {
+    VibrationService.light();
+    final caption = widget.moment.caption.isNotEmpty ? '"${widget.moment.caption}" - ' : '';
+    Share.share('NextMeet Keepsake: $caption${widget.moment.location} (${DateFormat('MMMM d, yyyy').format(widget.moment.date)})\n${widget.moment.imageUrl}');
+  }
+
   void _showEditCaption() {
-    _editController.text = _isUser1 ? (widget.moment.partner1Caption ?? '') : (widget.moment.partner2Caption ?? '');
+    final currentCaption = _isUser1 ? _p1Caption : _p2Caption;
+    _editController.text = currentCaption;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Your Perspective', style: AppTextStyles.h3),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _editController,
-                maxLines: 3,
-                decoration: const InputDecoration(hintText: 'What were you thinking in this moment?'),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (_isUser1) {
-                      await widget.cloudService.updateMemoryCaptions(widget.relId, widget.moment.id!, p1Caption: _editController.text);
-                    } else {
-                      await widget.cloudService.updateMemoryCaptions(widget.relId, widget.moment.id!, p2Caption: _editController.text);
-                    }
-                    if (mounted) Navigator.pop(context);
-                  },
-                  child: const Text('SAVE CAPTION'),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Your Perspective', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Share what you were feeling in this moment. Your partner will see this note in the scrapbook.',
+              style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _editController,
+              maxLines: 4,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'What made this day special to you?',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                filled: true,
+                fillColor: AppColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final text = _editController.text.trim();
+                  if (_isUser1) {
+                    setState(() => _p1Caption = text);
+                    await widget.cloudService.updateMemoryCaptions(widget.relId, widget.moment.id!, p1Caption: text);
+                  } else {
+                    setState(() => _p2Caption = text);
+                    await widget.cloudService.updateMemoryCaptions(widget.relId, widget.moment.id!, p2Caption: text);
+                  }
+                  VibrationService.success();
+                  if (mounted) Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: const Text('Save Perspective', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -762,128 +982,195 @@ class _StoryPageState extends State<_StoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final myCaption = _isUser1 ? _p1Caption : _p2Caption;
+    final partnerCaption = _isUser1 ? _p2Caption : _p1Caption;
+
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: CachedNetworkImage(
-              imageUrl: widget.moment.imageUrl,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                color: Colors.black,
-                child: const Center(
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+      backgroundColor: const Color(0xFF0F0B13),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          DateFormat('MMMM d, yyyy').format(widget.moment.date),
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: Colors.white70, size: 22),
+            onPressed: _shareMoment,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70, size: 22),
+            onPressed: _deleteMoment,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pinch-to-zoom photo container
+            Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.55,
+                minHeight: 280,
+              ),
+              width: double.infinity,
+              color: Colors.black,
+              child: InteractiveViewer(
+                minScale: 1.0,
+                maxScale: 3.5,
+                child: CachedNetworkImage(
+                  imageUrl: widget.moment.imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                  ),
+                  errorWidget: (context, url, error) => const Center(
+                    child: Icon(Icons.broken_image_rounded, color: Colors.white30, size: 48),
+                  ),
                 ),
               ),
-              errorWidget: (context, url, error) => const Center(
-                child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
-              ),
             ),
-          ),
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: 0.4), Colors.transparent, Colors.transparent, Colors.black.withValues(alpha: 0.9)],
-                ),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.l),
+
+            // Keepsake Journal Details
+            Padding(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Location and Date Row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildStoryBadge(DateFormat('MMMM dd, yyyy').format(widget.moment.date).toUpperCase()),
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: _deleteMoment,
-                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 28),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 32),
-                          ),
-                        ],
+                      const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.moment.location.isNotEmpty ? widget.moment.location : 'Keepsake Location',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
-                  const Spacer(),
-                  FadeInUp(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.moment.location, style: AppTextStyles.h1.copyWith(color: Colors.white, fontSize: 36)),
-                        const SizedBox(height: 24),
-                        const Text('OUR PERSPECTIVES', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-                        const SizedBox(height: 12),
-                        _buildPerspectiveTile(
-                          _isUser1 ? 'YOU SAID' : 'PARTNER SAID', 
-                          widget.moment.partner1Caption ?? 'No thoughts yet...', 
-                          () { if (_isUser1) _showEditCaption(); }
+                  const SizedBox(height: 12),
+
+                  // Main caption if available
+                  if (widget.moment.caption.isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      child: Text(
+                        widget.moment.caption,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          height: 1.5,
+                          fontStyle: FontStyle.italic,
                         ),
-                        const SizedBox(height: 12),
-                        _buildPerspectiveTile(
-                          !_isUser1 ? 'YOU SAID' : 'PARTNER SAID', 
-                          widget.moment.partner2Caption ?? 'No thoughts yet...', 
-                          () { if (!_isUser1) _showEditCaption(); }
-                        ),
-                      ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // Dual Perspectives Section Header
+                  const Text(
+                    'OUR PERSPECTIVES',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xxl),
+                  const SizedBox(height: 12),
+
+                  // Your Perspective Card
+                  _buildPerspectiveCard(
+                    title: 'Your Perspective',
+                    content: myCaption.isNotEmpty ? myCaption : 'Tap to write what you felt in this moment...',
+                    isMine: true,
+                    onTap: _showEditCaption,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Partner's Perspective Card
+                  _buildPerspectiveCard(
+                    title: "Partner's Perspective",
+                    content: partnerCaption.isNotEmpty ? partnerCaption : 'Waiting for your partner to share their thoughts...',
+                    isMine: false,
+                    onTap: null,
+                  ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStoryBadge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.white30)),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1)),
-    );
-  }
-
-  Widget _buildPerspectiveTile(String label, String content, VoidCallback onTap) {
-    bool isMine = label.contains('YOU');
+  Widget _buildPerspectiveCard({
+    required String title,
+    required String content,
+    required bool isMine,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
-      onTap: isMine ? onTap : null,
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isMine ? Colors.white.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05), 
-          borderRadius: BorderRadius.circular(12), 
-          border: Border.all(color: isMine ? AppColors.primary.withValues(alpha: 0.3) : Colors.white10)
+          color: isMine ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isMine ? AppColors.primary.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.06),
+          ),
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(label, style: TextStyle(color: isMine ? AppColors.primary : Colors.white30, fontSize: 8, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.7,
-                  child: Text(content, style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.4)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: isMine ? AppColors.primary : Colors.white60,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
+                if (isMine)
+                  const Icon(Icons.edit_note_rounded, color: AppColors.primary, size: 20),
               ],
             ),
-            const Spacer(),
-            if (isMine) const Icon(Icons.edit_note_rounded, color: AppColors.primary, size: 18),
+            const SizedBox(height: 8),
+            Text(
+              content,
+              style: TextStyle(
+                color: content.startsWith('Tap to') || content.startsWith('Waiting')
+                    ? Colors.white38
+                    : Colors.white.withValues(alpha: 0.9),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
           ],
         ),
       ),
@@ -910,7 +1197,6 @@ class _AddMomentBottomSheet extends StatefulWidget {
 
 class _AddMomentBottomSheetState extends State<_AddMomentBottomSheet> {
   File? _selectedImage;
-  bool _isStory = false;
   bool _isTimeCapsule = false;
   DateTime? _unlockDate;
   bool _isUploading = false;
@@ -981,7 +1267,7 @@ class _AddMomentBottomSheetState extends State<_AddMomentBottomSheet> {
         _selectedImage!,
         _captionController.text.trim(),
         finalLocation,
-        isStory: _isStory,
+        isStory: false,
         unlockDate: _isTimeCapsule ? _unlockDate : null,
       );
 
@@ -1381,51 +1667,6 @@ class _AddMomentBottomSheetState extends State<_AddMomentBottomSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Daily Story Toggle
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              decoration: BoxDecoration(
-                color: _isStory
-                    ? AppColors.primary.withValues(alpha: 0.08)
-                    : AppColors.background,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: _isStory
-                      ? AppColors.primary.withValues(alpha: 0.3)
-                      : Colors.pink.shade50,
-                ),
-              ),
-              child: SwitchListTile(
-                value: _isStory,
-                onChanged: (v) {
-                  VibrationService.light();
-                  setState(() => _isStory = v);
-                },
-                contentPadding: EdgeInsets.zero,
-                activeColor: AppColors.primary,
-                title: const Row(
-                  children: [
-                    Text(
-                      'Pin as Story',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                subtitle: Text(
-                  'Highlight at the top of your timeline',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary.withValues(alpha: 0.8),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-
             // Time Capsule Toggle
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -1458,7 +1699,7 @@ class _AddMomentBottomSheetState extends State<_AddMomentBottomSheet> {
                       initialDate: DateTime.now().add(const Duration(days: 7)),
                       firstDate: DateTime.now().add(const Duration(days: 1)),
                       lastDate: DateTime.now().add(const Duration(days: 3650)),
-                      helpText: 'Select unlock date',
+                      helpText: 'Select milestone unlock date',
                     );
                     if (picked != null) {
                       setState(() {
@@ -1487,17 +1728,7 @@ class _AddMomentBottomSheetState extends State<_AddMomentBottomSheet> {
                     ),
                     if (!widget.rel.isPlus) ...[
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Plus',
-                          style: TextStyle(color: Colors.amber.shade900, fontSize: 9, fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                      Icon(Icons.lock_outline_rounded, size: 15, color: Colors.amber.shade800),
                     ],
                   ],
                 ),
