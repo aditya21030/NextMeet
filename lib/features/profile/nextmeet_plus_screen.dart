@@ -221,16 +221,6 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                           child: _buildPricingSelector(),
                         ),
 
-                        if (_subService.error != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Text(
-                              _subService.error!,
-                              style: const TextStyle(color: AppColors.error, fontSize: 12),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-
                         const SizedBox(height: AppSpacing.xl),
                       ],
 
@@ -433,47 +423,53 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
                         style: AppTextStyles.bodyL.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary.withValues(alpha: 0.12)
-                              : AppColors.divider,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          badge,
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                            letterSpacing: 0.5,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: 0.12)
+                                : AppColors.divider,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            badge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                              letterSpacing: 0.4,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     subPrice,
-                    style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary),
+                    style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 12),
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: AppSpacing.s),
             // Price
             Text(
               price,
               style: AppTextStyles.bodyL.copyWith(
                 fontWeight: FontWeight.w900,
                 color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                fontSize: 16,
+                fontSize: 17,
               ),
             ),
           ],

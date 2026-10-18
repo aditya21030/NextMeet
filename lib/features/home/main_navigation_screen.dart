@@ -10,6 +10,7 @@ import '../auth/login_screen.dart';
 import 'dart:async';
 import '../../core/models/relationship_model.dart';
 import '../../core/services/cloud_relationship_service.dart';
+import '../../core/services/in_app_update_service.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final bool initialSynced;
@@ -33,6 +34,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           MaterialPageRoute(builder: (context) => const LoginScreen()),
           (route) => false,
         );
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        InAppUpdateService().checkForUpdateSilently(context: context);
       }
     });
   }

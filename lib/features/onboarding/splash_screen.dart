@@ -11,7 +11,7 @@ import 'setup_couple_screen.dart';
 import 'package:flutter/services.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/services/notification_service.dart';
-import 'package:in_app_update/in_app_update.dart';
+import '../../core/services/in_app_update_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -114,17 +114,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkForUpdates() async {
-    try {
-      final info = await InAppUpdate.checkForUpdate().timeout(const Duration(seconds: 5));
-      if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-        await InAppUpdate.performImmediateUpdate();
-      }
-    } catch (e) {
-      print('InAppUpdate Error: $e');
-      // Silently return instead of blocking the app with a dialog.
-      // This ensures that development APKs or low-internet situations don't prevent app usage.
-      return;
-    }
+    await InAppUpdateService().checkForUpdateSilently();
   }
 
   @override

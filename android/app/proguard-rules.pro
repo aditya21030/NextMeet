@@ -19,3 +19,10 @@
 # AdMob
 -keep class com.google.android.gms.ads.** { *; }
 -keep class com.google.ads.** { *; }
+
+# RevenueCat Purchases
+-keep class com.revenuecat.purchases.** { *; }
+
+# Google Play In-App Updates & Core
+-keep class com.google.android.play.core.** { *; }
+

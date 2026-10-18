@@ -48,8 +48,8 @@ class SubscriptionService extends ChangeNotifier {
         _handleCustomerInfoUpdate(customerInfo);
       });
     } catch (e) {
-      debugPrint('RevenueCat initialization warning: $e');
-      error = e.toString();
+      debugPrint('RevenueCat initialization notice: $e');
+      isAvailable = false;
       isLoading = false;
       notifyListeners();
     }
@@ -65,8 +65,7 @@ class SubscriptionService extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     } catch (e) {
-      debugPrint('RevenueCat loadOfferings error: $e');
-      error = e.toString();
+      debugPrint('RevenueCat loadOfferings notice: $e');
       isLoading = false;
       notifyListeners();
     }
@@ -92,7 +91,7 @@ class SubscriptionService extends ChangeNotifier {
 
     final targetPackage = isYearly ? annualPackage : monthlyPackage;
     if (targetPackage == null) {
-      error = 'Package not configured yet in RevenueCat. Please add products to your RevenueCat Default Offering.';
+      error = 'Google Play billing is currently initializing. Please try again in a moment.';
       notifyListeners();
       return false;
     }
@@ -125,14 +124,18 @@ class SubscriptionService extends ChangeNotifier {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
         error = null;
+      } else if (errorCode == PurchasesErrorCode.paymentPendingError) {
+        error = 'Your payment is pending approval in Google Play.';
+      } else if (errorCode == PurchasesErrorCode.storeProblemError) {
+        error = 'Google Play Store is temporarily unreachable. Please try again.';
       } else {
-        error = e.message ?? e.toString();
+        error = 'Purchase could not be completed. Please check your payment method in Google Play.';
       }
       notifyListeners();
       return false;
     } catch (e) {
       isLoading = false;
-      error = e.toString();
+      error = 'An unexpected error occurred. Please try again.';
       notifyListeners();
       return false;
     }
@@ -157,13 +160,14 @@ class SubscriptionService extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        error = 'No active NextMeet Plus subscription found to restore.';
+        error = 'No active NextMeet+ subscription found to restore.';
         isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      error = e.toString();
+      debugPrint('Restore purchases error: $e');
+      error = 'Unable to restore purchases. Please verify your Google account.';
       isLoading = false;
       notifyListeners();
       return false;

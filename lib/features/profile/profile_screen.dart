@@ -18,6 +18,7 @@ import '../onboarding/setup_couple_screen.dart';
 import 'package:intl/intl.dart';
 import 'nextmeet_plus_screen.dart';
 import 'haptic_preferences_screen.dart';
+import '../../core/services/in_app_update_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -600,6 +601,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Colors.teal,
                                 () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(initialTab: 1))),
                               ),
+                              const Divider(height: 16, thickness: 0.5),
+                              _buildPreferenceRow(
+                                'Check for Updates', 
+                                Icons.system_update_rounded, 
+                                Colors.blueAccent,
+                                () => InAppUpdateService().checkForUpdateManually(context),
+                              ),
                             ],
                           ),
                         ),
@@ -1131,6 +1139,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Icons.privacy_tip_rounded, 
                       Colors.teal,
                       () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPolicyScreen(initialTab: 1))),
+                    ),
+                    const Divider(height: 16, thickness: 0.5),
+                    _buildPreferenceRow(
+                      'Check for Updates', 
+                      Icons.system_update_rounded, 
+                      Colors.blueAccent,
+                      () => InAppUpdateService().checkForUpdateManually(context),
                     ),
                   ],
                 ),
