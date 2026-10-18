@@ -69,7 +69,7 @@ class TermsPolicyScreen extends StatelessWidget {
             number: '3',
             title: 'Private Sanctuary & Security',
             content:
-                'The Sanctuary is a protected couple vault locked by a 4-digit PIN or local device biometrics (Fingerprint / Face ID). You are exclusively responsible for safeguarding your passcode. NextMeet staff cannot decrypt or recover your Sanctuary contents without your device authentication.',
+                'The Sanctuary is a protected couple vault locked by a 4-digit PIN or local device biometrics (Fingerprint). You are exclusively responsible for safeguarding your passcode. NextMeet staff cannot decrypt or recover your Sanctuary contents without your device authentication.',
           ),
           _buildSection(
             number: '4',
@@ -132,7 +132,7 @@ class TermsPolicyScreen extends StatelessWidget {
             number: '4',
             title: 'Device Permissions & Local Privacy',
             content:
-                '• Biometrics: Fingerprint and Face Unlock credentials never leave your physical device hardware (Android Keystore / iOS Secure Enclave).\n'
+                '• Biometrics: Fingerprint credentials never leave your physical device hardware (Android Keystore / iOS Secure Enclave).\n'
                 '• Microphone: Used solely when you record a Secret Voice Whisper.\n'
                 '• Photo Library: Used solely when you select a memory or secret photo.',
           ),

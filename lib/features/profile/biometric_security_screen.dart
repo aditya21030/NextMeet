@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/security_service.dart';
@@ -24,7 +23,6 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
   bool _isLoading = true;
   bool _isHardwareSupported = false;
   bool _hasFingerprint = false;
-  bool _hasFace = false;
   String _hardwareStatus = 'Checking sensors...';
 
   bool _masterBiometricsEnabled = false;
@@ -39,7 +37,6 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
   Future<void> _loadBiometricState() async {
     final isSupported = await _securityService.isBiometricAvailable();
     final hasFingerprint = await _securityService.supportsFingerprint();
-    final hasFace = await _securityService.supportsFaceRecognition();
     final status = await _securityService.getHardwareStatusDescription();
 
     final localMaster = await _securityService.isLocalBiometricEnabled();
@@ -51,7 +48,6 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
       setState(() {
         _isHardwareSupported = isSupported;
         _hasFingerprint = hasFingerprint;
-        _hasFace = hasFace;
         _hardwareStatus = status;
         _masterBiometricsEnabled = cloudUseBiometrics && localMaster;
         _isLoading = false;
@@ -75,7 +71,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
       }
 
       final result = await _securityService.authenticateWithDetails(
-        reason: 'Confirm your Fingerprint or Face to enable biometric unlock',
+        reason: 'Confirm your Fingerprint to enable biometric unlock',
       );
 
       if (!result.success) {
@@ -109,8 +105,6 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
     }
   }
 
-  final ImagePicker _picker = ImagePicker();
-
   Future<void> _enrollSlot({
     required String type,
     required String? relId,
@@ -122,42 +116,6 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
     setState(() => _isEnrolling = true);
 
     try {
-      if (type == 'face') {
-        // Face Cam uses the front camera directly - NEVER the fingerprint sensor!
-        final XFile? photo = await _picker.pickImage(
-          source: ImageSource.camera,
-          preferredCameraDevice: CameraDevice.front,
-          imageQuality: 80,
-        );
-
-        if (!mounted) return;
-
-        if (photo != null) {
-          if (relId != null) {
-            await _cloudService.updateBiometricSlot(relId, type: type, enrolled: true);
-          }
-          await _securityService.setFaceCamEnabled(true);
-          await _securityService.setLocalBiometricEnabled(true);
-          setState(() => _masterBiometricsEnabled = true);
-
-          VibrationService.success();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('$slotName (1/1) registered with front camera! 📷✨'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Face Cam enrollment was cancelled.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
       // Fingerprint uses hardware biometric sensor
       if (!_isHardwareSupported) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -210,49 +168,6 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
     required String slotName,
   }) async {
     VibrationService.medium();
-
-    if (type == 'face') {
-      // Face Cam test: open front camera
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
-        imageQuality: 80,
-      );
-
-      if (!mounted) return;
-
-      if (photo != null) {
-        VibrationService.success();
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-            title: const Row(
-              children: [
-                Icon(Icons.face_retouching_natural_rounded, color: AppColors.success, size: 24),
-                SizedBox(width: 10),
-                Text('Face Cam Verified!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-              ],
-            ),
-            content: const Text(
-              'Your front camera Face Cam recognition is active, verified, and functioning perfectly.',
-              style: TextStyle(fontSize: 14, height: 1.4),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.m)),
-                ),
-                child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
-      }
-      return;
-    }
 
     // Fingerprint test: hardware biometric sensor
     final result = await _securityService.authenticateWithDetails(
@@ -338,11 +253,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
 
     if (confirm == true && relId != null) {
       await _cloudService.updateBiometricSlot(relId, type: type, enrolled: false);
-      if (type == 'fingerprint') {
-        await _securityService.setFingerprintEnabled(false);
-      } else {
-        await _securityService.setFaceCamEnabled(false);
-      }
+      await _securityService.setFingerprintEnabled(false);
       VibrationService.success();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -358,7 +269,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
   Future<void> _testGeneralSensor() async {
     VibrationService.medium();
     final result = await _securityService.authenticateWithDetails(
-      reason: 'Scan your Fingerprint or Face Camera to test hardware',
+      reason: 'Scan your Fingerprint to test hardware',
       biometricOnly: false,
     );
 
@@ -378,7 +289,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
             ],
           ),
           content: const Text(
-            'Your low-level native biometric sensor (Fingerprint & Face Cam) is fully operational and authenticated with NextMeet.',
+            'Your low-level native biometric sensor (Fingerprint) is fully operational and authenticated with NextMeet.',
             style: TextStyle(fontSize: 14, height: 1.4),
           ),
           actions: [
@@ -416,10 +327,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
         final partnerName = rel != null ? rel.getPartnerName(myUid) : 'Partner';
 
         final myFpEnrolled = rel != null ? rel.isMyFingerprintEnrolled(myUid) : false;
-        final myFaceEnrolled = rel != null ? rel.isMyFaceCamEnrolled(myUid) : false;
-
         final partnerFpEnrolled = rel != null ? rel.isPartnerFingerprintEnrolled(myUid) : false;
-        final partnerFaceEnrolled = rel != null ? rel.isPartnerFaceCamEnrolled(myUid) : false;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -428,7 +336,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
               onPressed: () => Navigator.pop(context),
               icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
             ),
-            title: Text('Fingerprint & Face Cam', style: AppTextStyles.h3),
+            title: Text('Fingerprint Security', style: AppTextStyles.h3),
             centerTitle: true,
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -553,15 +461,15 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
 
                       const SizedBox(height: AppSpacing.xl),
 
-                      // User 1 Slot Section (Your Slots: strictly 1 FP & 1 Face Cam)
+                      // User 1 Slot Section (Your Fingerprint Slot)
                       FadeInUp(
                         delay: const Duration(milliseconds: 200),
-                        child: _buildSectionHeader('YOUR BIOMETRIC SLOTS (1 OF 1 EACH)'),
+                        child: _buildSectionHeader('YOUR BIOMETRIC SLOT (1 OF 1)'),
                       ),
                       FadeInUp(
                         delay: const Duration(milliseconds: 220),
                         child: Text(
-                          'Each user has exactly 1 Fingerprint and 1 Face Cam slot to guarantee pairing integrity.',
+                          'Each user has exactly 1 Fingerprint slot to guarantee pairing integrity.',
                           style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11.5),
                         ),
                       ),
@@ -594,41 +502,12 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: AppSpacing.m),
-
-                      // Your Face Cam Slot
-                      FadeInUp(
-                        delay: const Duration(milliseconds: 260),
-                        child: _buildUserSlotCard(
-                          title: 'Face Cam Slot (1/1)',
-                          icon: Icons.face_retouching_natural_rounded,
-                          isEnrolled: myFaceEnrolled,
-                          isAvailable: true,
-                          enrolledSubtitle: 'Your 1 registered face cam recognition is active.',
-                          emptySubtitle: 'No face cam registered yet. Enroll your single slot.',
-                          onEnroll: () => _enrollSlot(
-                            type: 'face',
-                            relId: relId,
-                            slotName: 'Face Cam',
-                          ),
-                          onTest: () => _testOrRescanSlot(
-                            type: 'face',
-                            slotName: 'Face Cam',
-                          ),
-                          onRemove: () => _removeSlot(
-                            type: 'face',
-                            relId: relId,
-                            slotName: 'Face Cam',
-                          ),
-                        ),
-                      ),
-
                       const SizedBox(height: AppSpacing.xl),
 
                       // Partner Slot Section (Read-only status)
                       FadeInUp(
                         delay: const Duration(milliseconds: 300),
-                        child: _buildSectionHeader("${partnerName.toUpperCase()}'S BIOMETRIC SLOTS (1 OF 1 EACH)"),
+                        child: _buildSectionHeader("${partnerName.toUpperCase()}'S BIOMETRIC SLOT (1 OF 1)"),
                       ),
                       FadeInUp(
                         delay: const Duration(milliseconds: 320),
@@ -646,19 +525,6 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
                           title: 'Fingerprint Slot (1/1)',
                           icon: Icons.fingerprint_rounded,
                           isEnrolled: partnerFpEnrolled,
-                          partnerName: partnerName,
-                        ),
-                      ),
-
-                      const SizedBox(height: AppSpacing.m),
-
-                      // Partner's Face Cam Slot
-                      FadeInUp(
-                        delay: const Duration(milliseconds: 360),
-                        child: _buildPartnerSlotCard(
-                          title: 'Face Cam Slot (1/1)',
-                          icon: Icons.face_retouching_natural_rounded,
-                          isEnrolled: partnerFaceEnrolled,
                           partnerName: partnerName,
                         ),
                       ),

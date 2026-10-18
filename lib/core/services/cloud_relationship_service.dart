@@ -1585,9 +1585,6 @@ class CloudRelationshipService {
     if (type == 'fingerprint') {
       final field = isUser1 ? 'user1FingerprintEnrolled' : 'user2FingerprintEnrolled';
       updates[field] = enrolled;
-    } else if (type == 'face') {
-      final field = isUser1 ? 'user1FaceCamEnrolled' : 'user2FaceCamEnrolled';
-      updates[field] = enrolled;
     }
     if (enrolled) {
       final prefField = isUser1 ? 'user1UseBiometrics' : 'user2UseBiometrics';

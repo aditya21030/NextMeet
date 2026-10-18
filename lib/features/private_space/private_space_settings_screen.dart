@@ -176,7 +176,7 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
                         Divider(height: 1, color: AppColors.divider.withValues(alpha: 0.5)),
                         _buildSettingRow(
                           'Biometric Unlock',
-                          'Use Fingerprint or Face ID for fast access',
+                          'Use Fingerprint for fast access',
                           Icons.fingerprint_rounded,
                           trailing: Switch(
                             value: rel.getMyBiometricPreference(_cloudService.currentUid),
@@ -185,7 +185,7 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
                               VibrationService.light();
                               if (val) {
                                 final result = await _securityService.authenticateWithDetails(
-                                  reason: 'Scan Fingerprint or Face to enable biometric unlock',
+                                  reason: 'Scan Fingerprint to enable biometric unlock',
                                 );
                                 if (!result.success) {
                                   if (context.mounted) {
@@ -215,7 +215,7 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
                         ),
                         Divider(height: 1, color: AppColors.divider.withValues(alpha: 0.5)),
                         _buildSettingRow(
-                          'Configure Fingerprint & Face Cam',
+                          'Configure Fingerprint Lock',
                           'Hardware sensor options and sensor test',
                           Icons.security_rounded,
                           trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),

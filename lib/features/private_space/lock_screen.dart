@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
@@ -666,34 +665,12 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
     if (mounted) _handleUnlock();
   }
 
-  Future<void> _unlockWithFaceCam() async {
-    VibrationService.light();
-    try {
-      final XFile? photo = await ImagePicker().pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
-        imageQuality: 80,
-      );
-      if (photo != null && mounted) {
-        _handleUnlock();
-      }
-    } catch (_) {}
-  }
-
   Widget _buildBiometricSlot(RelationshipModel rel) {
     final myUid = _cloudService.currentUid;
     final hasFp = rel.isMyFingerprintEnrolled(myUid) || rel.getMyBiometricPreference(myUid);
-    final hasFace = rel.isMyFaceCamEnrolled(myUid);
 
-    if (rel.privateSpacePin == null || (!hasFp && !hasFace)) {
+    if (rel.privateSpacePin == null || !hasFp) {
       return const SizedBox(width: 70, height: 70);
-    }
-
-    if (hasFace && !hasFp) {
-      return _buildBiometricButton(
-        icon: Icons.face_retouching_natural_rounded,
-        onTap: _unlockWithFaceCam,
-      );
     }
 
     return _buildBiometricButton(

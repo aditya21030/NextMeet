@@ -23,7 +23,6 @@ class SecurityService {
 
   static const String _keyBiometricsEnabled = 'nextmeet_biometrics_enabled';
   static const String _keyFingerprintEnabled = 'nextmeet_fingerprint_enabled';
-  static const String _keyFaceCamEnabled = 'nextmeet_face_cam_enabled';
 
   Future<bool> canCheckBiometrics() async {
     try {
@@ -79,18 +78,6 @@ class SecurityService {
     }
   }
 
-  Future<bool> supportsFaceRecognition() async {
-    try {
-      final available = await _auth.getAvailableBiometrics();
-      if (available.contains(BiometricType.face) || available.contains(BiometricType.weak)) {
-        return true;
-      }
-      return false;
-    } catch (_) {
-      return false;
-    }
-  }
-
   Future<bool> supportsIris() async {
     try {
       final available = await _auth.getAvailableBiometrics();
@@ -106,14 +93,9 @@ class SecurityService {
       final bool isSupported = await _auth.isDeviceSupported();
 
       final bool hasFingerprint = available.contains(BiometricType.fingerprint) || available.contains(BiometricType.strong);
-      final bool hasFace = available.contains(BiometricType.face) || available.contains(BiometricType.weak);
 
-      if (hasFingerprint && hasFace) {
-        return 'Fingerprint & Face Cam Ready';
-      } else if (hasFingerprint) {
-        return 'Fingerprint Scanner Enrolled';
-      } else if (hasFace) {
-        return 'Face Cam / Face ID Ready';
+      if (hasFingerprint) {
+        return 'Fingerprint Sensor Ready';
       } else if (isSupported || available.isNotEmpty) {
         return 'Device Biometrics Ready';
       } else {
@@ -159,7 +141,7 @@ class SecurityService {
           message = 'Biometric sensors are currently unavailable on this device.';
           break;
         case 'NotEnrolled':
-          message = 'No fingerprint or face data enrolled. Please register in phone Settings.';
+          message = 'No fingerprint enrolled. Please register in phone Settings.';
           break;
         case 'LockedOut':
           message = 'Too many failed attempts. Biometrics temporarily locked.';
@@ -214,15 +196,5 @@ class SecurityService {
   Future<void> setFingerprintEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyFingerprintEnabled, enabled);
-  }
-
-  Future<bool> isFaceCamEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_keyFaceCamEnabled) ?? true;
-  }
-
-  Future<void> setFaceCamEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_keyFaceCamEnabled, enabled);
   }
 }
