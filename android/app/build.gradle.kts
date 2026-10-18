@@ -32,6 +32,8 @@ android {
                 keyPassword = keyPass
                 storeFile = rootProject.file("app/$store")
                 storePassword = storePass
+                enableV1Signing = true
+                enableV2Signing = true
             }
         }
     }
