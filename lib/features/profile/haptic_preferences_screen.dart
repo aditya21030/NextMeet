@@ -249,13 +249,13 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> with 
               ),
               const SizedBox(height: 8),
               Text(
-                'NextMeet Pro includes 16 exclusive heartbeat rhythms and custom tactile sensations shared across both phones.',
+                'NextMeet+ includes 16 exclusive heartbeat rhythms and custom tactile sensations shared across both phones.',
                 style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary, height: 1.4),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.xl),
               PrimaryButton(
-                text: 'Upgrade with NextMeet Pro ❤️',
+                text: 'Upgrade with NextMeet+ ❤️',
                 onPressed: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -469,7 +469,7 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> with 
                           const Icon(Icons.stars_rounded, color: AppColors.primary, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            isPlusUser ? 'PRO RHYTHMIC SUITE (UNLOCKED)' : 'PRO RHYTHMIC SUITE',
+                            isPlusUser ? 'NEXTMEET+ RHYTHMIC SUITE (UNLOCKED)' : 'NEXTMEET+ RHYTHMIC SUITE',
                             style: AppTextStyles.bodyM.copyWith(
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.2,
@@ -647,9 +647,9 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> with 
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'PRO',
+                                '+',
                                 style: TextStyle(
-                                  fontSize: 8.5,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w900,
                                   color: AppColors.primary,
                                   letterSpacing: 0.5,

@@ -27,14 +27,10 @@ class PrivateHomeScreen extends StatefulWidget {
 class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
   final ScrollController _scrollController = ScrollController();
-  final ValueNotifier<double> _scrollOffset = ValueNotifier<double>(0);
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(() {
-      _scrollOffset.value = _scrollController.offset;
-    });
     _updatePresence(true);
   }
 
@@ -51,7 +47,6 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
   void dispose() {
     _updatePresence(false);
     _scrollController.dispose();
-    _scrollOffset.dispose();
     super.dispose();
   }
 
@@ -196,50 +191,39 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(
-          children: [
-            // Parallax Soft Gradient & Decorative Layer
-            _buildParallaxBackground(isPlus),
-            
-            CustomScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // Elegant Pinned Header
-                ValueListenableBuilder<double>(
-                  valueListenable: _scrollOffset,
-                  builder: (context, offset, _) => SliverAppBar(
-                    pinned: true,
-                    expandedHeight: 0,
-                    backgroundColor: offset > 20
-                        ? AppColors.background.withValues(alpha: 0.95)
-                        : Colors.transparent,
-                    elevation: offset > 20 ? 1 : 0,
-                    centerTitle: true,
-                    leading: IconButton(
-                      onPressed: _handleExit,
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 20),
-                      tooltip: 'Exit Sanctuary',
-                    ),
-                    title: const Text(
-                      'SANCTUARY',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 2, color: AppColors.textPrimary),
-                    ),
-                    actions: [
-                      IconButton(
-                        onPressed: _handleExit,
-                        icon: const Icon(Icons.lock_outline_rounded, color: AppColors.textPrimary, size: 20),
-                        tooltip: 'Lock Sanctuary',
-                      ),
-                      IconButton(
-                        onPressed: () => _navigateTo(const PrivateSpaceSettingsScreen()),
-                        icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary, size: 20),
-                        tooltip: 'Sanctuary Settings',
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                  ),
+        body: CustomScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              scrolledUnderElevation: 1,
+              centerTitle: true,
+              leading: IconButton(
+                onPressed: _handleExit,
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 20),
+                tooltip: 'Exit Sanctuary',
+              ),
+              title: const Text(
+                'SANCTUARY',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 2, color: AppColors.textPrimary),
+              ),
+              actions: [
+                IconButton(
+                  onPressed: _handleExit,
+                  icon: const Icon(Icons.lock_outline_rounded, color: AppColors.textPrimary, size: 20),
+                  tooltip: 'Lock Sanctuary',
                 ),
+                IconButton(
+                  onPressed: () => _navigateTo(const PrivateSpaceSettingsScreen()),
+                  icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary, size: 20),
+                  tooltip: 'Sanctuary Settings',
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
 
                   // Profile Header Section (Clean, aligned, centered)
                   SliverToBoxAdapter(
@@ -487,10 +471,8 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
               ),
-            ],
-          ),
-        ),
-      );
+      ),
+    );
   }
 
   Widget _buildHeroFeaturedCard(String title, String sub, IconData icon, Color color, VoidCallback onTap) {
@@ -565,61 +547,6 @@ class _PrivateHomeScreenState extends State<PrivateHomeScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildParallaxBackground(bool isPlus) {
-    return ValueListenableBuilder<double>(
-      valueListenable: _scrollOffset,
-      builder: (context, offset, _) => Stack(
-        children: [
-          // Base Soft Romantic Gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFFF5F7), // Soft cashmere blush
-                  AppColors.background,
-                ],
-              ),
-            ),
-          ),
-          // Top Floating Heart Accent
-          Positioned(
-            top: -20 - (offset * 0.2),
-            right: 16,
-            child: Opacity(
-              opacity: 0.12,
-              child: Icon(Icons.favorite, size: 100, color: AppColors.primary.withValues(alpha: 0.3)),
-            ),
-          ),
-          // Middle Floating Accent
-          Positioned(
-            top: 260 - (offset * 0.3),
-            left: -40,
-            child: Opacity(
-              opacity: 0.08,
-              child: Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.05),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryLight.withValues(alpha: 0.2),
-                      blurRadius: 90,
-                      spreadRadius: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

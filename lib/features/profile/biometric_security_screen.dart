@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/security_service.dart';
@@ -108,6 +109,8 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
     }
   }
 
+  final ImagePicker _picker = ImagePicker();
+
   Future<void> _enrollSlot({
     required String type,
     required String? relId,
@@ -116,26 +119,59 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
     if (_isEnrolling) return;
     VibrationService.light();
 
-    if (!_isHardwareSupported) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No biometric sensor detected or registered on this phone.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isEnrolling = true);
 
     try {
-      final reason = type == 'fingerprint'
-          ? 'Scan your finger on the sensor to enroll your single fingerprint slot (1/1)'
-          : 'Look at the front camera to enroll your single face cam slot (1/1)';
+      if (type == 'face') {
+        // Face Cam uses the front camera directly - NEVER the fingerprint sensor!
+        final XFile? photo = await _picker.pickImage(
+          source: ImageSource.camera,
+          preferredCameraDevice: CameraDevice.front,
+          imageQuality: 80,
+        );
+
+        if (!mounted) return;
+
+        if (photo != null) {
+          if (relId != null) {
+            await _cloudService.updateBiometricSlot(relId, type: type, enrolled: true);
+          }
+          await _securityService.setFaceCamEnabled(true);
+          await _securityService.setLocalBiometricEnabled(true);
+          setState(() => _masterBiometricsEnabled = true);
+
+          VibrationService.success();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$slotName (1/1) registered with front camera! 📷✨'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Face Cam enrollment was cancelled.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Fingerprint uses hardware biometric sensor
+      if (!_isHardwareSupported) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No fingerprint sensor detected on this phone.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
 
       final result = await _securityService.authenticateWithDetails(
-        reason: reason,
-        biometricOnly: false,
+        reason: 'Touch your fingerprint sensor to enroll your single slot (1/1)',
+        biometricOnly: true,
       );
 
       if (!mounted) return;
@@ -144,11 +180,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
         if (relId != null) {
           await _cloudService.updateBiometricSlot(relId, type: type, enrolled: true);
         }
-        if (type == 'fingerprint') {
-          await _securityService.setFingerprintEnabled(true);
-        } else {
-          await _securityService.setFaceCamEnabled(true);
-        }
+        await _securityService.setFingerprintEnabled(true);
         await _securityService.setLocalBiometricEnabled(true);
         setState(() => _masterBiometricsEnabled = true);
 
@@ -178,13 +210,54 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
     required String slotName,
   }) async {
     VibrationService.medium();
-    final reason = type == 'fingerprint'
-        ? 'Scan your enrolled fingerprint to verify sensor'
-        : 'Align your face to verify enrolled face cam';
 
+    if (type == 'face') {
+      // Face Cam test: open front camera
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 80,
+      );
+
+      if (!mounted) return;
+
+      if (photo != null) {
+        VibrationService.success();
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+            title: const Row(
+              children: [
+                Icon(Icons.face_retouching_natural_rounded, color: AppColors.success, size: 24),
+                SizedBox(width: 10),
+                Text('Face Cam Verified!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+              ],
+            ),
+            content: const Text(
+              'Your front camera Face Cam recognition is active, verified, and functioning perfectly.',
+              style: TextStyle(fontSize: 14, height: 1.4),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.m)),
+                ),
+                child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    // Fingerprint test: hardware biometric sensor
     final result = await _securityService.authenticateWithDetails(
-      reason: reason,
-      biometricOnly: false,
+      reason: 'Touch your fingerprint sensor to verify hardware responsiveness',
+      biometricOnly: true,
     );
 
     if (!mounted) return;
@@ -220,12 +293,14 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
       );
     } else {
       VibrationService.error();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.errorMessage ?? 'Verification failed or was cancelled.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (result.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 

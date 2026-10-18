@@ -125,8 +125,8 @@ class SecurityService {
   }
 
   Future<BiometricAuthResult> authenticateWithDetails({
-    String reason = 'Authenticate to access Couple Sanctuary',
-    bool biometricOnly = false,
+    String reason = 'Scan your fingerprint on the sensor to unlock',
+    bool biometricOnly = true,
   }) async {
     try {
       final bool available = await isBiometricAvailable();
@@ -144,7 +144,7 @@ class SecurityService {
           stickyAuth: true,
           biometricOnly: biometricOnly,
           useErrorDialogs: true,
-          sensitiveTransaction: false,
+          sensitiveTransaction: true,
         ),
       );
 

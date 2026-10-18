@@ -242,12 +242,9 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                   maxZoom: 18,
                 ),
                 children: [
-                  // Luxury CartoDB dark/light raster tile layer (no negative-film inversion)
+                  // OpenStreetMap free tile layer (zero API key requirement)
                   TileLayer(
-                    urlTemplate: rel.mapLineStyle == 'Sanctum'
-                        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
-                        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                    subdomains: const ['a', 'b', 'c', 'd'],
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.nextmeet.app',
                   ),
 

@@ -28,6 +28,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedFilter = 'all';
 
   @override
   void dispose() {
@@ -60,6 +61,188 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
           relId: relId,
           rel: rel,
           cloudService: _cloudService,
+        ),
+      ),
+    );
+  }
+
+  void _openReliveFilm(List<MemoryModel> moments, String relId, RelationshipModel rel) {
+    VibrationService.medium();
+    if (!rel.isPlus) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF8E71), Color(0xFFFF5376)],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.movie_creation_rounded, color: Colors.white, size: 36),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'NextMeet+ Relive Film',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Play your shared memories in a cinematic full-screen slideshow with ambient cross-fades, soft haptic pulses, and dual perspectives.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => NextMeetPlusScreen(relId: relId)),
+                    );
+                  },
+                  icon: const Icon(Icons.stars_rounded, color: Colors.white, size: 20),
+                  label: const Text(
+                    'Upgrade to NextMeet+',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    elevation: 2,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
+    final validMoments = moments.where((m) => !m.isTimeLocked).toList();
+    if (validMoments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add unlocked moments to relive your love journey in cinematic film.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _ReliveFilmScreen(
+          moments: validMoments,
+          rel: rel,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String key, String label, IconData icon, int count, {bool isPlusBadge = false}) {
+    final bool isSelected = _selectedFilter == key;
+    return InkWell(
+      onTap: () {
+        VibrationService.light();
+        setState(() {
+          _selectedFilter = key;
+        });
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey.shade200,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? Colors.white : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected ? Colors.white : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : AppColors.textSecondary,
+                ),
+              ),
+            ),
+            if (isPlusBadge) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.star_rounded, size: 12, color: Color(0xFFD4AF37)),
+            ],
+          ],
         ),
       ),
     );
@@ -217,17 +400,26 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
               }
             }
 
-            final filteredMoments = _searchQuery.isEmpty
-                ? moments
-                : moments.where((m) {
-                    final q = _searchQuery;
-                    final loc = m.location.toLowerCase();
-                    final cap = m.caption.toLowerCase();
-                    final p1 = (m.partner1Caption ?? '').toLowerCase();
-                    final p2 = (m.partner2Caption ?? '').toLowerCase();
-                    final month = DateFormat('MMMM yyyy').format(m.date).toLowerCase();
-                    return loc.contains(q) || cap.contains(q) || p1.contains(q) || p2.contains(q) || month.contains(q);
-                  }).toList();
+            final filteredMoments = moments.where((m) {
+              if (_selectedFilter == 'capsules' && m.unlockDate == null) {
+                return false;
+              }
+              if (_selectedFilter == 'perspectives' &&
+                  (m.partner1Caption == null || m.partner1Caption!.isEmpty) &&
+                  (m.partner2Caption == null || m.partner2Caption!.isEmpty)) {
+                return false;
+              }
+              if (_searchQuery.isNotEmpty) {
+                final q = _searchQuery;
+                final loc = m.location.toLowerCase();
+                final cap = m.caption.toLowerCase();
+                final p1 = (m.partner1Caption ?? '').toLowerCase();
+                final p2 = (m.partner2Caption ?? '').toLowerCase();
+                final month = DateFormat('MMMM yyyy').format(m.date).toLowerCase();
+                return loc.contains(q) || cap.contains(q) || p1.contains(q) || p2.contains(q) || month.contains(q);
+              }
+              return true;
+            }).toList();
             
             return Scaffold(
               backgroundColor: AppColors.background,
@@ -237,6 +429,50 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                 scrolledUnderElevation: 0,
                 title: Text('Memories', style: AppTextStyles.h2.copyWith(fontSize: 22, fontWeight: FontWeight.bold)),
                 actions: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: InkWell(
+                      onTap: () => _openReliveFilm(moments, relId, rel),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: rel.isPlus
+                              ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
+                              : AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: rel.isPlus
+                                ? const Color(0xFFD4AF37).withValues(alpha: 0.4)
+                                : AppColors.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.play_circle_fill_rounded,
+                              size: 16,
+                              color: rel.isPlus ? const Color(0xFFB38F2D) : AppColors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Relive',
+                              style: TextStyle(
+                                color: rel.isPlus ? const Color(0xFFB38F2D) : AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            if (!rel.isPlus) ...[
+                              const SizedBox(width: 3),
+                              const Icon(Icons.star_rounded, size: 12, color: Color(0xFFD4AF37)),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.only(right: 16),
                     child: ElevatedButton.icon(
@@ -272,7 +508,14 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(_searchQuery.isEmpty ? 'All Keepsakes' : 'Search Results', style: AppTextStyles.h3),
+                              Text(
+                                _searchQuery.isNotEmpty
+                                    ? 'Search Results'
+                                    : (_selectedFilter == 'capsules'
+                                        ? 'Time Capsules'
+                                        : (_selectedFilter == 'perspectives' ? 'Dual Notes' : 'All Keepsakes')),
+                                style: AppTextStyles.h3,
+                              ),
                               _buildCountBadge(filteredMoments.length),
                             ],
                           ),
@@ -312,8 +555,33 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: AppSpacing.m),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Row(
+                              children: [
+                                _buildFilterChip('all', 'All Keepsakes', Icons.photo_library_outlined, moments.length),
+                                const SizedBox(width: 8),
+                                _buildFilterChip(
+                                  'capsules',
+                                  'Time Capsules',
+                                  Icons.hourglass_bottom_rounded,
+                                  moments.where((m) => m.unlockDate != null).length,
+                                  isPlusBadge: true,
+                                ),
+                                const SizedBox(width: 8),
+                                _buildFilterChip(
+                                  'perspectives',
+                                  'Dual Notes',
+                                  Icons.favorite_outline_rounded,
+                                  moments.where((m) => (m.partner1Caption?.isNotEmpty ?? false) || (m.partner2Caption?.isNotEmpty ?? false)).length,
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: AppSpacing.l),
-                          if (_searchQuery.isNotEmpty && filteredMoments.isEmpty)
+                          if (filteredMoments.isEmpty)
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 48),
                               child: Center(
@@ -321,9 +589,17 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                                   children: [
                                     const Icon(Icons.search_off_rounded, size: 48, color: Colors.grey),
                                     const SizedBox(height: 12),
-                                    Text('No memories found', style: AppTextStyles.h3),
+                                    Text(
+                                      _searchQuery.isNotEmpty ? 'No memories found' : 'No keepsakes in this view',
+                                      style: AppTextStyles.h3,
+                                    ),
                                     const SizedBox(height: 4),
-                                    Text('No moments matching "$_searchQuery"', style: AppTextStyles.bodyS),
+                                    Text(
+                                      _searchQuery.isNotEmpty
+                                          ? 'No moments matching "$_searchQuery"'
+                                          : 'Try switching filters to view all your saved memories.',
+                                      style: AppTextStyles.bodyS,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -479,32 +755,37 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
     final bool isNearLimit = !isPlus && count >= (maxMemories - 10);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isPlus ? const Color(0xFFFBF8F5) : Colors.white,
+        color: isPlus ? const Color(0xFFFDFBF7) : Colors.white,
         borderRadius: BorderRadius.circular(AppRadius.m),
         border: Border.all(
           color: isPlus
               ? const Color(0xFFE8D5C4)
               : (isNearLimit ? AppColors.accent.withValues(alpha: 0.3) : Colors.grey.shade200),
-          width: 1,
+          width: 1.2,
         ),
         boxShadow: AppColors.softShadow,
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: isPlus
-                  ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
-                  : AppColors.primary.withValues(alpha: 0.1),
+              gradient: isPlus
+                  ? const LinearGradient(
+                      colors: [Color(0xFFE8C07D), Color(0xFFBF9544)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: isPlus ? null : AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isPlus ? Icons.auto_awesome_rounded : Icons.photo_library_outlined,
-              size: 18,
-              color: isPlus ? const Color(0xFFB38F2D) : AppColors.primary,
+              isPlus ? Icons.stars_rounded : Icons.photo_library_outlined,
+              size: 20,
+              color: isPlus ? Colors.white : AppColors.primary,
             ),
           ),
           const SizedBox(width: 12),
@@ -512,18 +793,41 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  isPlus ? '$count Moments Saved • Unlimited Vault' : '$count / $maxMemories Moments Saved',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: AppColors.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      isPlus ? 'NextMeet+ HD Vault' : '$count / $maxMemories Moments Saved',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    if (isPlus) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'UNLIMITED',
+                          style: TextStyle(
+                            color: Color(0xFF9A7B1C),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
                   isPlus
-                      ? 'Private & high-resolution encrypted scrapbook'
+                      ? '$count Moments Saved • High-Resolution Original Quality'
                       : (isNearLimit ? 'Nearing free keepsake vault limit' : 'Milestone moments preserved together'),
                   style: TextStyle(
                     fontSize: 11,
@@ -1001,6 +1305,34 @@ class _MemoryDetailScreenState extends State<_MemoryDetailScreen> {
         ),
         centerTitle: true,
         actions: [
+          if (widget.rel.isPlus)
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.4)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome_rounded, size: 12, color: Color(0xFFE2B755)),
+                    SizedBox(width: 4),
+                    Text(
+                      'HD Keepsake',
+                      style: TextStyle(
+                        color: Color(0xFFE2B755),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white70, size: 22),
             onPressed: _shareMoment,
@@ -1805,3 +2137,345 @@ class _AddMomentBottomSheetState extends State<_AddMomentBottomSheet> {
     );
   }
 }
+
+class _ReliveFilmScreen extends StatefulWidget {
+  final List<MemoryModel> moments;
+  final RelationshipModel rel;
+
+  const _ReliveFilmScreen({
+    required this.moments,
+    required this.rel,
+  });
+
+  @override
+  State<_ReliveFilmScreen> createState() => _ReliveFilmScreenState();
+}
+
+class _ReliveFilmScreenState extends State<_ReliveFilmScreen> {
+  late PageController _pageController;
+  int _currentIndex = 0;
+  Timer? _timer;
+  bool _isPlaying = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 5000), (timer) {
+      if (!_isPlaying || !mounted) return;
+      if (_currentIndex < widget.moments.length - 1) {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 650),
+          curve: Curves.easeInOutCubic,
+        );
+      } else {
+        _pageController.animateToPage(
+          0,
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
+  }
+
+  void _togglePlayPause() {
+    VibrationService.light();
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentMoment = widget.moments[_currentIndex];
+    final p1Name = widget.rel.userName1 ?? 'Partner 1';
+    final p2Name = widget.rel.userName2 ?? 'Partner 2';
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Slideshow Pages
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.moments.length,
+            onPageChanged: (idx) {
+              VibrationService.light();
+              setState(() {
+                _currentIndex = idx;
+              });
+            },
+            itemBuilder: (context, index) {
+              final moment = widget.moments[index];
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: moment.imageUrl,
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) => const Center(
+                      child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                    ),
+                    errorWidget: (context, url, error) => const Center(
+                      child: Icon(Icons.broken_image_rounded, color: Colors.white30, size: 56),
+                    ),
+                  ),
+                  // Ambient top & bottom vignettes
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.7),
+                            Colors.transparent,
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.85),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          stops: const [0.0, 0.2, 0.6, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+
+          // Tap gesture overlay for next/prev/pause
+          Positioned.fill(
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () {
+                      if (_currentIndex > 0) {
+                        _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                        );
+                      }
+                    },
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _togglePlayPause,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () {
+                      if (_currentIndex < widget.moments.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Top Header & Progress Indicators
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Progress bars
+                  Row(
+                    children: List.generate(
+                      widget.moments.length > 25 ? 1 : widget.moments.length,
+                      (idx) {
+                        if (widget.moments.length > 25) {
+                          return Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: (_currentIndex + 1) / widget.moments.length,
+                                minHeight: 3,
+                                backgroundColor: Colors.white24,
+                                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              ),
+                            ),
+                          );
+                        }
+                        final bool isPassed = idx < _currentIndex;
+                        final bool isCurrent = idx == _currentIndex;
+                        return Expanded(
+                          child: Container(
+                            height: 3,
+                            margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                            decoration: BoxDecoration(
+                              color: isPassed
+                                  ? Colors.white
+                                  : (isCurrent ? AppColors.primary : Colors.white24),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD4AF37).withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.5)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.stars_rounded, size: 14, color: Color(0xFFE2B755)),
+                            SizedBox(width: 4),
+                            Text(
+                              'NextMeet+ Relive Film',
+                              style: TextStyle(
+                                color: Color(0xFFE2B755),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(
+                          _isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                        onPressed: _togglePlayPause,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white, size: 26),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom Memory Information Panel
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 24,
+            child: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      if (currentMoment.location.isNotEmpty) ...[
+                        const Icon(Icons.location_on_rounded, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          currentMoment.location,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      Text(
+                        DateFormat('MMMM d, yyyy').format(currentMoment.date),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (currentMoment.caption.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      currentMoment.caption,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                        height: 1.4,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if ((currentMoment.partner1Caption?.isNotEmpty ?? false) ||
+                      (currentMoment.partner2Caption?.isNotEmpty ?? false)) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (currentMoment.partner1Caption?.isNotEmpty ?? false)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                '$p1Name: "${currentMoment.partner1Caption}"',
+                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          if (currentMoment.partner2Caption?.isNotEmpty ?? false)
+                            Text(
+                              '$p2Name: "${currentMoment.partner2Caption}"',
+                              style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

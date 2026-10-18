@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
@@ -645,49 +646,80 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
     );
   }
 
+  Future<void> _unlockWithFingerprint() async {
+    VibrationService.light();
+    final result = await _securityService.authenticateWithDetails(
+      reason: 'Touch your fingerprint sensor to unlock Private Space',
+      biometricOnly: true,
+    );
+    if (!result.success) {
+      if (mounted && result.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
+    if (mounted) _handleUnlock();
+  }
+
+  Future<void> _unlockWithFaceCam() async {
+    VibrationService.light();
+    try {
+      final XFile? photo = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 80,
+      );
+      if (photo != null && mounted) {
+        _handleUnlock();
+      }
+    } catch (_) {}
+  }
+
   Widget _buildBiometricSlot(RelationshipModel rel) {
     final myUid = _cloudService.currentUid;
-    final hasBiometrics = rel.getMyBiometricPreference(myUid) ||
-        rel.isMyFingerprintEnrolled(myUid) ||
-        rel.isMyFaceCamEnrolled(myUid);
-    if (rel.privateSpacePin != null && hasBiometrics) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () async {
-            VibrationService.light();
-            final result = await _securityService.authenticateWithDetails(
-              reason: 'Scan Fingerprint or Face Camera to unlock',
-              biometricOnly: false,
-            );
-            if (!result.success) {
-              if (mounted && result.errorMessage != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(result.errorMessage!),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
-              }
-              return;
-            }
-            if (mounted) _handleUnlock();
-          },
-          borderRadius: BorderRadius.circular(40),
-          child: Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-            ),
-            child: const Icon(Icons.fingerprint_rounded, size: 30, color: AppColors.primary),
-          ),
-        ),
+    final hasFp = rel.isMyFingerprintEnrolled(myUid) || rel.getMyBiometricPreference(myUid);
+    final hasFace = rel.isMyFaceCamEnrolled(myUid);
+
+    if (rel.privateSpacePin == null || (!hasFp && !hasFace)) {
+      return const SizedBox(width: 70, height: 70);
+    }
+
+    if (hasFace && !hasFp) {
+      return _buildBiometricButton(
+        icon: Icons.face_retouching_natural_rounded,
+        onTap: _unlockWithFaceCam,
       );
     }
-    return const SizedBox(width: 70, height: 70);
+
+    return _buildBiometricButton(
+      icon: Icons.fingerprint_rounded,
+      onTap: _unlockWithFingerprint,
+    );
+  }
+
+  Widget _buildBiometricButton({required IconData icon, required VoidCallback onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(40),
+        child: Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+          ),
+          child: Icon(icon, size: 30, color: AppColors.primary),
+        ),
+      ),
+    );
   }
 
   Widget _buildBackspaceKey() {

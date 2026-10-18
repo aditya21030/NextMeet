@@ -56,7 +56,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
       VibrationService.success();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Welcome to NextMeet Pro! Both of your spaces are upgraded ❤️'),
+          content: Text('🎉 Welcome to NextMeet+! Both of your spaces are upgraded ❤️'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -91,10 +91,10 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
             const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 18),
             const SizedBox(width: 8),
             Text(
-              'NEXTMEET PRO',
+              'NEXTMEET+',
               style: AppTextStyles.h3.copyWith(
-                fontSize: 14,
-                letterSpacing: 1.5,
+                fontSize: 15,
+                letterSpacing: 2,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -117,14 +117,14 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                         if (success) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Purchases restored successfully! NextMeet Pro is active.'),
+                              content: Text('Purchases restored! NextMeet+ is active ❤️'),
                               backgroundColor: AppColors.success,
                             ),
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(_subService.error ?? 'No active subscription found for this account.'),
+                              content: Text(_subService.error ?? 'No active subscription found.'),
                               backgroundColor: AppColors.error,
                             ),
                           );
@@ -159,43 +159,54 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Active Pro Dashboard (if already subscribed)
+                      // Active NextMeet+ Dashboard (if already subscribed)
                       if (isPlus && rel != null) ...[
                         _buildSubscriptionDashboard(rel, context),
                         const SizedBox(height: AppSpacing.xl),
                       ],
 
-                      // Hero Section (Clean & Native)
+                      // Hero Section (Emotional & Couple-First)
                       if (!isPlus) ...[
                         FadeInDown(
                           duration: const Duration(milliseconds: 350),
                           child: Column(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(14),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: AppColors.primary.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: const Icon(
-                                  Icons.favorite_rounded,
-                                  color: AppColors.primary,
-                                  size: 32,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.stars_rounded, color: AppColors.primary, size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'ONE PASS • BOTH PARTNERS COVERED',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.primary,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                               Text(
-                                'One Upgrade. Both Partners.',
-                                style: AppTextStyles.h1.copyWith(fontSize: 24),
+                                'One Upgrade. Both Hearts.',
+                                style: AppTextStyles.h1.copyWith(fontSize: 26),
                                 textAlign: TextAlign.center,
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 8),
                               Text(
-                                '1 single subscription covers both phones permanently.\nEverything shared is private and encrypted.',
+                                'Upgrade once to unlock unlimited memories, secret voice whispers, custom touch vibrations, and time capsules for both of you.',
                                 textAlign: TextAlign.center,
                                 style: AppTextStyles.bodyM.copyWith(
                                   color: AppColors.textSecondary,
-                                  height: 1.4,
+                                  height: 1.45,
                                 ),
                               ),
                             ],
@@ -204,7 +215,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
 
                         const SizedBox(height: AppSpacing.xl),
 
-                        // Clean Plan Selector (Annual vs Monthly)
+                        // Plan Selector (Annual vs Monthly)
                         FadeInUp(
                           duration: const Duration(milliseconds: 350),
                           child: _buildPricingSelector(),
@@ -212,7 +223,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
 
                         if (_subService.error != null)
                           Padding(
-                            padding: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.only(top: 10),
                             child: Text(
                               _subService.error!,
                               style: const TextStyle(color: AppColors.error, fontSize: 12),
@@ -223,7 +234,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                         const SizedBox(height: AppSpacing.xl),
                       ],
 
-                      // Perks List Card
+                      // Key NextMeet+ Benefits
                       FadeInUp(
                         delay: const Duration(milliseconds: 150),
                         child: Container(
@@ -246,10 +257,10 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.stars_rounded, color: AppColors.primary, size: 20),
+                                  const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 20),
                                   const SizedBox(width: 8),
                                   Text(
-                                    isPlus ? 'YOUR PRO FEATURES' : 'INCLUDED IN PRO',
+                                    isPlus ? 'YOUR NEXTMEET+ FEATURES' : 'INCLUDED WITH NEXTMEET+',
                                     style: AppTextStyles.bodyM.copyWith(
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 1.2,
@@ -261,18 +272,18 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                               const Divider(height: 24, color: AppColors.divider),
                               _buildPerkItem(
                                 icon: Icons.favorite_border_rounded,
-                                title: 'Both Partners Included',
-                                subtitle: 'Only one partner subscribes. Both phones automatically get full Pro access.',
-                              ),
-                              _buildPerkItem(
-                                icon: Icons.vibration_rounded,
-                                title: '16 Pro-Haptic Rhythms',
-                                subtitle: 'Feel each other\'s heartbeat with exclusive intimate tactile vibration rhythms.',
+                                title: 'Both Phones Included',
+                                subtitle: 'Only one partner subscribes. Both phones automatically get full NextMeet+ access.',
                               ),
                               _buildPerkItem(
                                 icon: Icons.photo_library_rounded,
                                 title: 'Unlimited HD Memories',
-                                subtitle: 'Store and preserve your full couple timeline in original full resolution.',
+                                subtitle: 'Store and preserve your full couple timeline in original uncompressed HD resolution.',
+                              ),
+                              _buildPerkItem(
+                                icon: Icons.vibration_rounded,
+                                title: '16 Signature Touch Rhythms',
+                                subtitle: 'Feel each other\'s live heartbeat with exclusive intimate tactile vibration rhythms.',
                               ),
                               _buildPerkItem(
                                 icon: Icons.mic_rounded,
@@ -286,7 +297,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                               ),
                               _buildPerkItem(
                                 icon: Icons.lock_outline_rounded,
-                                title: '150 MB Private Space Cloud Vault',
+                                title: '150 MB Private Cloud Vault',
                                 subtitle: 'Extended encrypted storage for your intimate notes and shared media.',
                                 isLast: true,
                               ),
@@ -334,7 +345,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
           title: 'Annual Plan',
           badge: 'BEST VALUE • SAVE 50%',
           price: yearlyPrice,
-          subPrice: '$monthlyEquivalent • Billed annually',
+          subPrice: '$monthlyEquivalent • Billed annually for both',
           isSelected: isYearly,
           onTap: () {
             VibrationService.light();
@@ -536,7 +547,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             PrimaryButton(
-              text: isYearly ? 'Upgrade for Both ($activePrice/yr) ❤️' : 'Upgrade for Both ($activePrice/mo) ❤️',
+              text: isYearly ? 'Unlock NextMeet+ ($activePrice/yr) ❤️' : 'Unlock NextMeet+ ($activePrice/mo) ❤️',
               isLoading: _subService.isLoading,
               onPressed: _handleUpgrade,
             ),
@@ -631,7 +642,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'NEXTMEET PRO ACTIVE',
+                      'NEXTMEET+ ACTIVE',
                       style: AppTextStyles.bodyM.copyWith(fontWeight: FontWeight.w900, letterSpacing: 1),
                     ),
                     Text(
@@ -644,7 +655,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
             ],
           ),
           const Divider(color: AppColors.divider, height: 24),
-          _buildDashboardStat('Plan', rel.premiumPlanType ?? 'NextMeet Pro Annual'),
+          _buildDashboardStat('Plan', rel.premiumPlanType ?? 'NextMeet+ Annual'),
           const SizedBox(height: 8),
           _buildDashboardStat(
             'Renewal Date',
