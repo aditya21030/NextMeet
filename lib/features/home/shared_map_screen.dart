@@ -245,7 +245,7 @@ class _SharedMapScreenState extends State<SharedMapScreen> with SingleTickerProv
                   // OpenStreetMap free tile layer (zero API key requirement)
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.nextmeet.app',
+                    userAgentPackageName: 'com.yousful.nextmeet',
                   ),
 
                   // Flight Connection Arc (Dual Polyline: Neon Ambient Glow + Sharp Laser Core)
