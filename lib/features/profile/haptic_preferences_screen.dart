@@ -31,9 +31,9 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> with 
 
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 900),
     );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.25).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
@@ -214,71 +214,68 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> with 
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: const BoxDecoration(
-          color: Color(0xFF18101E),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border(top: BorderSide(color: Color(0xFFFFB3C6), width: 1.5)),
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 48,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF5E7E), Color(0xFF845EC2)],
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF5E7E).withValues(alpha: 0.4),
-                    blurRadius: 20,
-                  ),
-                ],
               ),
-              child: const Icon(Icons.stars_rounded, color: Colors.white, size: 36),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Unlock "$patternName"',
-              style: AppTextStyles.h2.copyWith(color: Colors.white, fontSize: 20),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'NextMeet+ members get exclusive luxury tactile rhythms that turn phone vibrations into emotional connections.',
-              style: AppTextStyles.bodyM.copyWith(color: Colors.white70, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            PrimaryButton(
-              text: 'UNLOCK WITH NEXTMEET+ 👑',
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NextMeetPlusScreen(relId: widget.rel.id ?? ''),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Maybe Later', style: TextStyle(color: Colors.white38)),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.l),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.stars_rounded, color: AppColors.primary, size: 36),
+              ),
+              const SizedBox(height: AppSpacing.m),
+              Text(
+                'Unlock "$patternName"',
+                style: AppTextStyles.h2.copyWith(fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'NextMeet Pro includes 16 exclusive heartbeat rhythms and custom tactile sensations shared across both phones.',
+                style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary, height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              PrimaryButton(
+                text: 'Upgrade with NextMeet Pro ❤️',
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NextMeetPlusScreen(relId: widget.rel.id ?? ''),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.m),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Maybe Later',
+                  style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -299,390 +296,276 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> with 
         );
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0F0812),
-          body: Stack(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            title: Text(
+              'Touch & Vibration Rhythms',
+              style: AppTextStyles.h3.copyWith(fontSize: 16),
+            ),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          body: Column(
             children: [
-              // Ambient Glow
-              Positioned(
-                top: -100,
-                right: -50,
-                child: Container(
-                  width: 320,
-                  height: 320,
-                  decoration: BoxDecoration(
-                    color: isPlusUser
-                        ? const Color(0xFFFFC75F).withValues(alpha: 0.08)
-                        : AppColors.primary.withValues(alpha: 0.06),
-                    shape: BoxShape.circle,
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.m),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Tactile Preview Stage Card
+                      FadeInDown(
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppRadius.xxl),
+                            border: Border.all(color: AppColors.divider),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // Heart Pulse Button
+                              GestureDetector(
+                                onTap: () => _playAndAnimate(currentPatternObj),
+                                child: AnimatedBuilder(
+                                  animation: _pulseAnimation,
+                                  builder: (context, child) {
+                                    return Transform.scale(
+                                      scale: _isPlaying ? _pulseAnimation.value : 1.0,
+                                      child: Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: AppColors.primary,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.primary.withValues(alpha: _isPlaying ? 0.45 : 0.2),
+                                              blurRadius: _isPlaying ? 24 : 12,
+                                              spreadRadius: _isPlaying ? 3 : 0,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          _isPlaying ? Icons.vibration_rounded : (currentPatternObj['icon'] as IconData),
+                                          color: Colors.white,
+                                          size: 36,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.m),
+                              Text(
+                                _selectedPattern,
+                                style: AppTextStyles.h2.copyWith(fontSize: 18),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  currentPatternObj['cadence'] ?? 'Dual Pulse • 400ms',
+                                  style: AppTextStyles.bodyS.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap heart to feel vibration',
+                                style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                              ),
+
+                              const Divider(height: 28, color: AppColors.divider),
+
+                              // Intensity Selector
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'VIBRATION INTENSITY',
+                                    style: AppTextStyles.bodyS.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 11,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                  Text(
+                                    _selectedIntensity,
+                                    style: AppTextStyles.bodyS.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: ['Gentle', 'Balanced', 'Intense'].map((intensity) {
+                                  final isSel = _selectedIntensity == intensity;
+                                  return Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        VibrationService.light();
+                                        setState(() => _selectedIntensity = intensity);
+                                      },
+                                      child: Container(
+                                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: isSel
+                                              ? AppColors.primary.withValues(alpha: 0.1)
+                                              : AppColors.background,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isSel ? AppColors.primary : AppColors.divider,
+                                            width: isSel ? 1.5 : 1,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          intensity,
+                                          style: TextStyle(
+                                            color: isSel ? AppColors.primary : AppColors.textSecondary,
+                                            fontSize: 12,
+                                            fontWeight: isSel ? FontWeight.w900 : FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // PRO RHYTHMS
+                      Row(
+                        children: [
+                          const Icon(Icons.stars_rounded, color: AppColors.primary, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            isPlusUser ? 'PRO RHYTHMIC SUITE (UNLOCKED)' : 'PRO RHYTHMIC SUITE',
+                            style: AppTextStyles.bodyM.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      ..._plusPatterns.asMap().entries.map((entry) {
+                        return _buildPatternTile(
+                          pattern: entry.value,
+                          index: entry.key,
+                          isPlusUser: isPlusUser,
+                        );
+                      }),
+
+                      const SizedBox(height: AppSpacing.l),
+
+                      // CLASSIC RHYTHMS
+                      Text(
+                        'CLASSIC RHYTHMS',
+                        style: AppTextStyles.bodyM.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      ..._standardPatterns.asMap().entries.map((entry) {
+                        return _buildPatternTile(
+                          pattern: entry.value,
+                          index: entry.key + _plusPatterns.length,
+                          isPlusUser: isPlusUser,
+                        );
+                      }),
+
+                      const SizedBox(height: AppSpacing.xl),
+                    ],
                   ),
                 ),
               ),
 
-              CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    pinned: true,
-                    centerTitle: true,
-                    title: Text(
-                      'SIGNATURE TOUCH',
-                      style: AppTextStyles.h1.copyWith(
-                        fontSize: 17,
-                        color: Colors.white,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.w900,
-                      ),
+              // Bottom Save Bar
+              Container(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.l, AppSpacing.m, AppSpacing.l, AppSpacing.l),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: AppColors.divider.withValues(alpha: 0.8))),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, -4),
                     ),
-                    leading: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 8),
-
-                          // TACTILE STUDIO HERO STAGE
-                          FadeInDown(
-                            child: Container(
-                              padding: const EdgeInsets.all(22),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: isPlusUser
-                                      ? [
-                                          const Color(0xFF26182C),
-                                          const Color(0xFF190F1E),
-                                        ]
-                                      : [
-                                          const Color(0xFF1E1424),
-                                          const Color(0xFF120B16),
-                                        ],
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: PrimaryButton(
+                    text: 'Save Vibration Rhythm ❤️',
+                    onPressed: () async {
+                      VibrationService.success();
+                      await _cloudService.updateRelationshipDetails(
+                        widget.rel.id!,
+                        {
+                          'hapticPatternType': _selectedPattern,
+                          'hapticIntensity': _selectedIntensity,
+                        },
+                      );
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppColors.textPrimary,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            content: Row(
+                              children: [
+                                const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Vibration rhythm updated to "$_selectedPattern"!',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
                                 ),
-                                borderRadius: BorderRadius.circular(28),
-                                border: Border.all(
-                                  color: isPlusUser
-                                      ? const Color(0xFFFFC75F).withValues(alpha: 0.3)
-                                      : Colors.white12,
-                                  width: 1.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.3),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  // Animated Pulsing Heart Ring
-                                  GestureDetector(
-                                    onTap: () => _playAndAnimate(currentPatternObj),
-                                    child: AnimatedBuilder(
-                                      animation: _pulseAnimation,
-                                      builder: (context, child) {
-                                        return Transform.scale(
-                                          scale: _isPlaying ? _pulseAnimation.value : 1.0,
-                                          child: Container(
-                                            width: 76,
-                                            height: 76,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              gradient: LinearGradient(
-                                                colors: isPlusUser
-                                                    ? [const Color(0xFFFF5E7E), const Color(0xFFFFC75F)]
-                                                    : [AppColors.primary, const Color(0xFF845EC2)],
-                                              ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: (isPlusUser ? const Color(0xFFFF5E7E) : AppColors.primary)
-                                                      .withValues(alpha: _isPlaying ? 0.6 : 0.3),
-                                                  blurRadius: _isPlaying ? 28 : 16,
-                                                  spreadRadius: _isPlaying ? 4 : 0,
-                                                ),
-                                              ],
-                                            ),
-                                            child: Icon(
-                                              _isPlaying ? Icons.vibration_rounded : currentPatternObj['icon'],
-                                              color: Colors.white,
-                                              size: 34,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(height: 14),
-
-                                  // Active Name & Cadence Badge
-                                  Text(
-                                    _selectedPattern.toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      currentPatternObj['cadence'] ?? 'Tactile Touch',
-                                      style: TextStyle(
-                                        color: isPlusUser ? const Color(0xFFFFC75F) : Colors.white70,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    currentPatternObj['desc'] ?? '',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 12,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-
-                                  // Test Buttons
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          onPressed: () => _playAndAnimate(currentPatternObj),
-                                          icon: Icon(
-                                            _isPlaying ? Icons.graphic_eq_rounded : Icons.play_arrow_rounded,
-                                            size: 18,
-                                            color: isPlusUser ? const Color(0xFFFFC75F) : Colors.white,
-                                          ),
-                                          label: Text(
-                                            _isPlaying ? 'VIBRATING...' : 'FEEL NOW',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: 1,
-                                              color: isPlusUser ? const Color(0xFFFFC75F) : Colors.white,
-                                            ),
-                                          ),
-                                          style: OutlinedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(vertical: 12),
-                                            side: BorderSide(
-                                              color: isPlusUser
-                                                  ? const Color(0xFFFFC75F).withValues(alpha: 0.5)
-                                                  : Colors.white24,
-                                            ),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  // Intensity Selector for Plus Members
-                                  if (isPlusUser) ...[
-                                    const SizedBox(height: 18),
-                                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
-                                    const SizedBox(height: 14),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text(
-                                          'HAPTIC INTENSITY',
-                                          style: TextStyle(
-                                            color: Color(0xFFFFC75F),
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 1.2,
-                                          ),
-                                        ),
-                                        Text(
-                                          _selectedIntensity,
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: ['Gentle', 'Balanced', 'Intense'].map((intensity) {
-                                        final isSel = _selectedIntensity == intensity;
-                                        return Expanded(
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              VibrationService.light();
-                                              setState(() => _selectedIntensity = intensity);
-                                            },
-                                            child: Container(
-                                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                                              padding: const EdgeInsets.symmetric(vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: isSel
-                                                    ? const Color(0xFFFFC75F).withValues(alpha: 0.2)
-                                                    : Colors.white.withValues(alpha: 0.04),
-                                                borderRadius: BorderRadius.circular(12),
-                                                border: Border.all(
-                                                  color: isSel
-                                                      ? const Color(0xFFFFC75F)
-                                                      : Colors.white12,
-                                                ),
-                                              ),
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                intensity,
-                                                style: TextStyle(
-                                                  color: isSel ? const Color(0xFFFFC75F) : Colors.white60,
-                                                  fontSize: 11,
-                                                  fontWeight: isSel ? FontWeight.w900 : FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                ],
-                              ),
+                              ],
                             ),
                           ),
-
-                          const SizedBox(height: 28),
-
-                          // VIP / NEXTMEET+ RHYTHMS HEADER
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.stars_rounded,
-                                color: isPlusUser ? const Color(0xFFFFC75F) : const Color(0xFFFF5E7E),
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                isPlusUser ? 'VIP RHYTHMIC SUITE (UNLOCKED 👑)' : 'NEXTMEET+ EXCLUSIVE RHYTHMS',
-                                style: TextStyle(
-                                  color: isPlusUser
-                                      ? const Color(0xFFFFC75F)
-                                      : const Color(0xFFFFC75F).withValues(alpha: 0.9),
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 11.5,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          ..._plusPatterns.asMap().entries.map((entry) {
-                            return _buildPatternTile(
-                              pattern: entry.value,
-                              index: entry.key,
-                              isPlusUser: isPlusUser,
-                            );
-                          }),
-
-                          const SizedBox(height: 24),
-
-                          // STANDARD RHYTHMS HEADER
-                          const Text(
-                            'CLASSIC RHYTHMS',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 11.5,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          ..._standardPatterns.asMap().entries.map((entry) {
-                            return _buildPatternTile(
-                              pattern: entry.value,
-                              index: entry.key + _plusPatterns.length,
-                              isPlusUser: isPlusUser,
-                            );
-                          }),
-
-                          const SizedBox(height: 140),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // STICKY BOTTOM ACTION BAR
-              Positioned(
-                bottom: 24,
-                left: 20,
-                right: 20,
-                child: FadeInUp(
-                  delay: const Duration(milliseconds: 300),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: PrimaryButton(
-                      text: 'SAVE AS SIGNATURE TOUCH ❤️',
-                      onPressed: () async {
-                        VibrationService.success();
-                        await _cloudService.updateRelationshipDetails(
-                          widget.rel.id!,
-                          {
-                            'hapticPatternType': _selectedPattern,
-                            'hapticIntensity': _selectedIntensity,
-                          },
                         );
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: const Color(0xFF1F1426),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              content: Row(
-                                children: [
-                                  const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Signature Touch updated to "$_selectedPattern"! ✨',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                    ),
+                      }
+                    },
                   ),
                 ),
               ),
@@ -702,120 +585,99 @@ class _HapticPreferencesScreenState extends State<HapticPreferencesScreen> with 
     final bool isPlusPattern = pattern['isPlus'] == true;
     final bool isLocked = isPlusPattern && !isPlusUser;
 
-    return FadeInUp(
-      delay: Duration(milliseconds: (index * 25).clamp(0, 400)),
-      child: GestureDetector(
-        onTap: () => _onPatternTap(pattern, isPlusUser),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? (isPlusPattern
-                    ? const Color(0xFFFFC75F).withValues(alpha: 0.12)
-                    : AppColors.primary.withValues(alpha: 0.12))
-                : Colors.white.withValues(alpha: 0.03),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isSelected
-                  ? (isPlusPattern ? const Color(0xFFFFC75F) : AppColors.primary)
-                  : Colors.white.withValues(alpha: 0.06),
-              width: isSelected ? 1.8 : 1,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: (isPlusPattern ? const Color(0xFFFFC75F) : AppColors.primary)
-                          .withValues(alpha: 0.18),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? (isPlusPattern ? const Color(0xFFFFC75F) : AppColors.primary)
-                      : (isPlusPattern
-                          ? const Color(0xFFFFC75F).withValues(alpha: 0.12)
-                          : Colors.white.withValues(alpha: 0.05)),
-                  borderRadius: BorderRadius.circular(14),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.l),
+        border: Border.all(
+          color: isSelected ? AppColors.primary : AppColors.divider,
+          width: isSelected ? 1.8 : 1,
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
-                child: Icon(
-                  pattern['icon'],
-                  color: isSelected ? Colors.black87 : (isPlusPattern ? const Color(0xFFFFC75F) : Colors.white70),
-                  size: 20,
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.l),
+          onTap: () => _onPatternTap(pattern, isPlusUser),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : AppColors.background,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    pattern['icon'] as IconData,
+                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                    size: 20,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
                             pattern['name'],
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.85),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
+                            style: AppTextStyles.bodyM.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          if (isPlusPattern) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'PRO',
+                                style: TextStyle(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primary,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          pattern['cadence'] ?? '',
-                          style: TextStyle(
-                            color: isPlusPattern && isPlusUser
-                                ? const Color(0xFFFFC75F).withValues(alpha: 0.8)
-                                : Colors.white38,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      pattern['desc'],
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.45),
-                        fontSize: 11,
-                        height: 1.3,
+                          ],
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        pattern['cadence'],
+                        style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              // Play/Lock Icon
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected
-                      ? (isPlusPattern ? const Color(0xFFFFC75F).withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.2))
-                      : Colors.white.withValues(alpha: 0.04),
-                ),
-                child: Icon(
-                  isSelected
-                      ? Icons.check_circle_rounded
-                      : (isLocked ? Icons.lock_outline_rounded : Icons.play_arrow_rounded),
-                  color: isSelected
-                      ? (isPlusPattern ? const Color(0xFFFFC75F) : AppColors.primary)
-                      : (isLocked ? const Color(0xFFFFC75F).withValues(alpha: 0.6) : Colors.white30),
-                  size: 20,
-                ),
-              ),
-            ],
+                if (isLocked)
+                  const Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.textSecondary)
+                else if (isSelected)
+                  const Icon(Icons.check_circle_rounded, size: 20, color: AppColors.primary)
+                else
+                  IconButton(
+                    icon: const Icon(Icons.play_circle_outline_rounded, size: 22, color: AppColors.textSecondary),
+                    onPressed: () => _playAndAnimate(pattern),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -12,7 +12,6 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/primary_button.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import '../private_space/private_space_settings_screen.dart';
 import 'terms_policy_screen.dart';
 import '../auth/login_screen.dart';
 import '../onboarding/setup_couple_screen.dart';
@@ -521,35 +520,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  // Security & Sanctuary Section
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 350),
-                    child: Column(
-                      children: [
-                        _buildSectionHeader('SECURITY & SANCTUARY'),
-                        GlassCard(
-                          padding: const EdgeInsets.all(AppSpacing.m),
-                          child: Column(
-                            children: [
-                              _buildPreferenceRow(
-                                'Sanctuary PIN & Auto-Lock', 
-                                Icons.lock_outline_rounded, 
-                                Colors.pinkAccent,
-                                () {
-                                  Navigator.push(
-                                    context, 
-                                    MaterialPageRoute(builder: (context) => const PrivateSpaceSettingsScreen()),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: AppSpacing.xxl),
 
                   FadeInUp(

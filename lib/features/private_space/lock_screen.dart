@@ -32,38 +32,9 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
   String _enteredPin = '';
   String? _firstPin;
   bool _hasError = false;
-  bool _biometricChecked = false;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAutoBiometrics();
-    });
-  }
-
-  Future<void> _checkAutoBiometrics() async {
-    if (_biometricChecked) return;
-    _biometricChecked = true;
-    try {
-      final targetRel = widget.rel ?? await _cloudService.streamRelationship().first;
-      final myUid = _cloudService.currentUid;
-      final localEnabled = await _securityService.isLocalBiometricEnabled();
-      final myCloudPref = targetRel != null ? targetRel.getMyBiometricPreference(myUid) : false;
-      final hasSlotEnrolled = targetRel != null && (targetRel.isMyFingerprintEnrolled(myUid) || targetRel.isMyFaceCamEnrolled(myUid));
-      if (targetRel != null && localEnabled && (myCloudPref || hasSlotEnrolled) && targetRel.privateSpacePin != null) {
-        final available = await _securityService.isBiometricAvailable();
-        if (available && mounted) {
-          final result = await _securityService.authenticateWithDetails(
-            reason: 'Scan Fingerprint or Face Camera to unlock',
-            biometricOnly: false,
-          );
-          if (result.success && mounted) {
-            _handleUnlock();
-          }
-        }
-      }
-    } catch (_) {}
   }
 
   void _handleUnlock() {

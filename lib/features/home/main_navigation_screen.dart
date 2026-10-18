@@ -44,19 +44,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   final GlobalKey<SanctuaryTabState> _sanctuaryKey = GlobalKey<SanctuaryTabState>();
-
-  late final List<Widget> _screens = [
-    HomeScreen(initialSynced: widget.initialSynced),
-    const MemoriesScreen(),
-    SanctuaryTab(
-      key: _sanctuaryKey,
-      onExit: () {
-        if (mounted) setState(() => _selectedIndex = 0);
-      },
-    ),
-    const ProfileScreen(),
-  ];
-
   final CloudRelationshipService _cloudService = CloudRelationshipService();
 
   @override
@@ -80,7 +67,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           child: Scaffold(
             body: IndexedStack(
               index: _selectedIndex,
-              children: _screens,
+              children: [
+                HomeScreen(initialSynced: widget.initialSynced),
+                const MemoriesScreen(),
+                _selectedIndex == 2
+                    ? SanctuaryTab(
+                        key: _sanctuaryKey,
+                        onExit: () {
+                          if (mounted) setState(() => _selectedIndex = 0);
+                        },
+                      )
+                    : const SizedBox.shrink(),
+                const ProfileScreen(),
+              ],
             ),
           bottomNavigationBar: SafeArea(
             top: false,
