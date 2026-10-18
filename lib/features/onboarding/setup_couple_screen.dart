@@ -94,10 +94,10 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Setup Your Couple ❤️', style: AppTextStyles.h1.copyWith(fontSize: 32)),
+                        Text('Connect With Your Partner ❤️', style: AppTextStyles.h1.copyWith(fontSize: 30)),
                         const SizedBox(height: AppSpacing.s),
                         Text(
-                          'How would you like to bridge the gap with your favorite person?',
+                          'Choose how you want to set up your private couple space.',
                           style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
@@ -158,10 +158,10 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
                     child: _buildOptionCard(
                       context,
                       badgeText: _detectedCode != null ? 'CODE READY TO PAIR ✨' : 'HAVE AN INVITE CODE?',
-                      title: 'I Have a Partner Code',
-                      description: 'Partner already shared a 6-digit code? Connect your hearts and sync your worlds permanently.',
+                      title: 'I Have an Invite Code',
+                      description: 'Partner already shared a 6-digit code? Enter it to connect your shared space instantly.',
                       icon: Icons.link_rounded,
-                      actionText: 'Connect Heart',
+                      actionText: 'Enter Code',
                       isPrimary: true,
                       highlighted: _detectedCode != null,
                       onTap: () {
@@ -180,16 +180,16 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
                   ),
                   const SizedBox(height: AppSpacing.l),
 
-                  // SECONDARY OPTION: I'm Starting Our Journey (Create Code)
+                  // SECONDARY OPTION: I'm Creating Our Space (Create Code)
                   FadeInUp(
                     delay: const Duration(milliseconds: 200),
                     child: _buildOptionCard(
                       context,
                       badgeText: 'STARTING FRESH',
-                      title: "I'm Starting Our Journey",
-                      description: 'First one here? Build your couple profile and generate a love-code to invite your partner.',
+                      title: "I'm Creating Our Space",
+                      description: 'First one here? Set up your couple space and get a 6-digit invite code for your partner.',
                       icon: Icons.favorite_border_rounded,
-                      actionText: 'Create Code',
+                      actionText: 'Create Space',
                       isPrimary: false,
                       highlighted: false,
                       onTap: () {

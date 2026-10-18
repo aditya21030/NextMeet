@@ -123,12 +123,12 @@ class ConnectionSuccessScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         Text(
-                          'Souls Synced! ❤️',
+                          'Hearts Connected! ❤️',
                           style: AppTextStyles.h1.copyWith(fontSize: 32),
                         ),
                         const SizedBox(height: AppSpacing.s),
                         Text(
-                          'Your shared digital space is ready.\nWelcome to the relationship, upgraded.',
+                          'Your private couple space is live and ready.\nEverything you share is encrypted and private.',
                           textAlign: TextAlign.center,
                           style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary, height: 1.5),
                         ),
@@ -146,7 +146,9 @@ class ConnectionSuccessScreen extends StatelessWidget {
                       children: [
                         _buildBadge('Encrypted', Icons.lock_outline_rounded),
                         const SizedBox(width: AppSpacing.m),
-                        _buildBadge('Connected', Icons.sync_rounded),
+                        _buildBadge('Live Sync', Icons.sync_rounded),
+                        const SizedBox(width: AppSpacing.m),
+                        _buildBadge('Private Space', Icons.favorite_rounded),
                       ],
                     ),
                   ),
@@ -156,7 +158,7 @@ class ConnectionSuccessScreen extends StatelessWidget {
                   FadeInUp(
                     delay: const Duration(milliseconds: 1400),
                     child: PrimaryButton(
-                      text: "Enter Our World ✨",
+                      text: "Enter Our Shared Space ✨",
                       onPressed: () {
                         VibrationService.success();
                         Navigator.pushAndRemoveUntil(

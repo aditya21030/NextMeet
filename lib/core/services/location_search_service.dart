@@ -20,6 +20,8 @@ class LocationResult {
 class LocationSearchService {
   static const String _baseUrl = 'https://nominatim.openstreetmap.org/search';
 
+  Future<List<LocationResult>> searchCities(String query) => search(query);
+
   Future<List<LocationResult>> search(String query) async {
     if (query.isEmpty) return [];
 

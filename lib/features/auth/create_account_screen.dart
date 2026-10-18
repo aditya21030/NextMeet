@@ -256,8 +256,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       delay: 300,
                       type: TextInputType.emailAddress,
                       validator: (val) {
-                        if (val!.isEmpty) return 'Share your email to begin the journey ❤️';
-                        if (!RegExp(r'\S+@\S+\.\S+').hasMatch(val)) return 'Invalid love-mail format 💌';
+                        if (val!.isEmpty) return 'Please enter your email address';
+                        if (!RegExp(r'\S+@\S+\.\S+').hasMatch(val)) return 'Please enter a valid email address';
                         return null;
                       },
                     ),
@@ -275,7 +275,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                               controller: _passwordController,
                               obscureText: !_isPasswordVisible,
                               style: AppTextStyles.bodyL.copyWith(fontWeight: FontWeight.bold),
-                              validator: (val) => val!.length < 6 ? 'Keep your space extra safe with 6+ chars 🔒' : null,
+                              validator: (val) => val!.length < 6 ? 'Password must be at least 6 characters' : null,
                               decoration: AppInputs.premiumInput(
                                 'Password',
                                 icon: Icons.lock_person_rounded,

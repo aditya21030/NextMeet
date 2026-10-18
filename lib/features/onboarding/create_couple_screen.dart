@@ -26,7 +26,7 @@ class CreateCoupleScreen extends StatefulWidget {
   State<CreateCoupleScreen> createState() => _CreateCoupleScreenState();
 }
 
-class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
+class _CreateCoupleScreenState extends State<CreateCoupleScreen> with SingleTickerProviderStateMixin {
   final _partnerNameController = TextEditingController();
   final _searchController = TextEditingController();
   final CloudRelationshipService _cloudService = CloudRelationshipService();
@@ -42,8 +42,24 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
   Timer? _searchTimer;
   StreamSubscription<RelationshipModel?>? _pairingSubscription;
 
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.25).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
   @override
   void dispose() {
+    _pulseController.dispose();
     _pairingSubscription?.cancel();
     _searchTimer?.cancel();
     _partnerNameController.dispose();
@@ -84,7 +100,7 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.l),
-                      Text('Search for Your City, Town, or Village', style: AppTextStyles.h3),
+                      Text('Select Your City or Location', style: AppTextStyles.h3),
                       const SizedBox(height: AppSpacing.m),
                       TextField(
                         controller: _searchController,
@@ -92,57 +108,45 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                         onChanged: (val) {
                           if (_searchTimer?.isActive ?? false) _searchTimer!.cancel();
                           if (val.length < 2) {
-                             setModalState(() {
-                               _searchResults = [];
-                               _isSearchingLocation = false;
-                             });
-                             return;
+                            setModalState(() {
+                              _searchResults = [];
+                              _isSearchingLocation = false;
+                            });
+                            return;
                           }
-                          
                           setModalState(() => _isSearchingLocation = true);
-                          
-                          _searchTimer = Timer(const Duration(milliseconds: 600), () async {
-                            final results = await _locationSearchService.search(val);
-                            if (mounted) {
-                              setModalState(() {
-                                _searchResults = results;
-                                _isSearchingLocation = false;
-                              });
-                            }
+                          _searchTimer = Timer(const Duration(milliseconds: 300), () async {
+                            final results = await _locationSearchService.searchCities(val);
+                            setModalState(() {
+                              _searchResults = results;
+                              _isSearchingLocation = false;
+                            });
                           });
                         },
                         decoration: InputDecoration(
-                          hintText: 'e.g. New York, London, or your town...',
+                          hintText: 'Search city, town, or state...',
                           prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
-                          suffixIcon: _isSearchingLocation 
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12.0),
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                                )
-                              : null,
-                          fillColor: AppColors.background,
                           filled: true,
+                          fillColor: AppColors.background,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.m),
+                            borderRadius: BorderRadius.circular(AppRadius.l),
                             borderSide: BorderSide.none,
                           ),
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.l),
+                      const SizedBox(height: AppSpacing.m),
                       Expanded(
-                        child: _searchResults.isEmpty && _searchController.text.length >= 2 && !_isSearchingLocation
-                            ? Center(
-                                child: Text('No places found. Check spelling? ❤️', style: AppTextStyles.bodyM),
-                              )
+                        child: _isSearchingLocation
+                            ? const Center(child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2))
                             : ListView.builder(
                                 controller: scrollController,
-                                itemCount: _searchResults.isEmpty ? CityData.majorCities.length : _searchResults.length,
+                                itemCount: _searchController.text.length < 2 ? CityData.indianCities.length : _searchResults.length,
                                 itemBuilder: (context, index) {
-                                  if (_searchResults.isEmpty) {
-                                    final city = CityData.majorCities[index];
+                                  if (_searchController.text.length < 2) {
+                                    final city = CityData.indianCities[index];
                                     return ListTile(
                                       leading: const Icon(Icons.location_city_rounded, color: AppColors.textSecondary),
-                                      title: Text(city.name, style: AppTextStyles.bodyL),
+                                      title: Text(city.name, style: AppTextStyles.bodyM),
                                       onTap: () {
                                         VibrationService.light();
                                         setState(() {
@@ -183,11 +187,13 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final partnerName = _partnerNameController.text.trim().isEmpty ? 'Your Partner' : _partnerNameController.text.trim();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Premium Mesh-like Background
+          // Ambient Radial Glow
           Positioned(
             top: -100,
             right: -100,
@@ -219,23 +225,25 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.l),
-                  FadeInLeft(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Start Your Journey ✨', style: AppTextStyles.h1.copyWith(fontSize: 32)),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Fill in the magic details to sync hearts.',
-                          style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
 
                   if (!_isCreated) ...[
-                    // New "Skip for Now" option at top for extreme low friction
+                    // Pre-Creation Section: Form
+                    FadeInLeft(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Create Shared Space ❤️', style: AppTextStyles.h1.copyWith(fontSize: 30)),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Set up your couple profile and invite your partner.',
+                            style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Quick Skip Option
                     FadeInDown(
                       delay: const Duration(milliseconds: 50),
                       child: Center(
@@ -243,7 +251,7 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                           onPressed: () => _handleCreateJourney(isSkip: true),
                           icon: const Icon(Icons.bolt_rounded, color: AppColors.primary, size: 16),
                           label: Text(
-                            'SKIP & GET CODE INSTANTLY ✨',
+                            'SKIP & GET CODE INSTANTLY ⚡',
                             style: AppTextStyles.bodyS.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w900,
@@ -253,14 +261,14 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.l),
+                    const SizedBox(height: AppSpacing.m),
 
-                    // Input Section
+                    // Input Cards
                     FadeInUp(
                       delay: const Duration(milliseconds: 100),
                       child: _buildInteractiveCard(
-                        title: 'What should I call your partner?',
-                        subtitle: 'A sweet nickname just for your view ❤️',
+                        title: "Partner's Name or Nickname",
+                        subtitle: 'How your partner will appear in your space',
                         icon: Icons.favorite_outline_rounded,
                         child: TextField(
                           controller: _partnerNameController,
@@ -277,8 +285,8 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                     FadeInUp(
                       delay: const Duration(milliseconds: 200),
                       child: _buildInteractiveCard(
-                        title: 'Where are you right now?',
-                        subtitle: 'Used to calculate distance between hearts',
+                        title: 'Your City or Location',
+                        subtitle: 'Used to calculate live distance between hearts',
                         icon: Icons.location_on_outlined,
                         onTap: _showCitySearch,
                         child: Text(
@@ -293,8 +301,8 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                     FadeInUp(
                       delay: const Duration(milliseconds: 300),
                       child: _buildInteractiveCard(
-                        title: 'When did your story start?',
-                        subtitle: 'Your anniversary date',
+                        title: 'Anniversary Date',
+                        subtitle: 'When your relationship began',
                         icon: Icons.calendar_today_outlined,
                         onTap: () {
                           PremiumDatePicker.show(
@@ -307,8 +315,8 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                           );
                         },
                         child: Text(
-                          _relationshipDate == null 
-                              ? 'Tap to select date' 
+                          _relationshipDate == null
+                              ? 'Tap to select anniversary date'
                               : DateFormat('MMMM dd, yyyy').format(_relationshipDate!),
                           style: AppTextStyles.bodyL.copyWith(
                             fontWeight: FontWeight.bold,
@@ -318,143 +326,266 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxl),
+
                     FadeInUp(
                       delay: const Duration(milliseconds: 400),
                       child: PrimaryButton(
-                        text: 'Enter Our World ✨',
+                        text: 'Generate 6-Digit Love Code ✨',
                         isLoading: _isGenerating,
                         onPressed: () => _handleCreateJourney(),
                       ),
                     ),
                   ] else ...[
-                    // New Redesigned Code Display Section
-                    FadeInUp(
+                    // WAITING FOR PARTNER SCREEN
+                    FadeInDown(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(AppSpacing.xl),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(AppRadius.xxl),
-                              boxShadow: AppColors.premiumShadow,
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 24),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'It\'s a Match! ✨',
-                                      style: AppTextStyles.h3.copyWith(color: AppColors.primary),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 24),
-                                  ],
-                                ),
-                                const SizedBox(height: AppSpacing.l),
-                                Text(
-                                  'Share this secret code with\n${_partnerNameController.text}',
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.bodyL.copyWith(fontWeight: FontWeight.w700, height: 1.4),
-                                ),
-                                const SizedBox(height: AppSpacing.xl),
-                                
-                                // Enhanced Code Box with Copy
-                                GestureDetector(
-                                  onTap: () {
-                                    Clipboard.setData(ClipboardData(text: _generatedCode));
-                                    VibrationService.success();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Code copied to clipboard! ❤️'),
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                  },
+                          Text('Waiting for $partnerName ❤️', style: AppTextStyles.h1.copyWith(fontSize: 28)),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Your space is ready. Share your 6-digit code with $partnerName.',
+                            style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    FadeInUp(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.xxl),
+                          boxShadow: AppColors.premiumShadow,
+                        ),
+                        child: Column(
+                          children: [
+                            // Live Pulsing Beacon
+                            AnimatedBuilder(
+                              animation: _pulseAnimation,
+                              builder: (context, child) {
+                                return Transform.scale(
+                                  scale: _pulseAnimation.value,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                                    padding: const EdgeInsets.all(18),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.05),
-                                      borderRadius: BorderRadius.circular(AppRadius.m),
-                                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 2, style: BorderStyle.solid),
+                                      shape: BoxShape.circle,
+                                      color: AppColors.primary.withValues(alpha: 0.1),
+                                      border: Border.all(
+                                        color: AppColors.primary.withValues(alpha: 0.25),
+                                        width: 2,
+                                      ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          _generatedCode,
-                                          style: AppTextStyles.h1.copyWith(
-                                            fontSize: 32,
-                                            letterSpacing: 8,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        const Icon(Icons.copy_rounded, color: AppColors.primary, size: 20),
-                                      ],
+                                    child: const Icon(
+                                      Icons.favorite_rounded,
+                                      color: AppColors.primary,
+                                      size: 32,
                                     ),
                                   ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Real-time status note
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF10B981),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Listening for partner in real-time',
+                                    style: TextStyle(
+                                      color: const Color(0xFF065F46),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+
+                            Text(
+                              'YOUR 6-DIGIT LOVE CODE',
+                              style: AppTextStyles.bodyS.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.5,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Large 6-Digit Code Card with Tap to Copy
+                            GestureDetector(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: _generatedCode));
+                                VibrationService.success();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Code copied to clipboard! ❤️'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(AppRadius.l),
+                                  border: Border.all(
+                                    color: AppColors.primary.withValues(alpha: 0.3),
+                                    width: 2,
+                                  ),
                                 ),
-                                
-                                const SizedBox(height: AppSpacing.xl),
-                                
-                                // Social Sharing Row
-                                Text(
-                                  'SEND VIA',
-                                  style: AppTextStyles.bodyS.copyWith(fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.grey),
-                                ),
-                                const SizedBox(height: AppSpacing.m),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    _buildSocialBtn(
-                                      icon: FontAwesomeIcons.whatsapp,
-                                      color: AppColors.whatsapp,
-                                      onTap: () => _shareToSocial('whatsapp'),
+                                    Text(
+                                      _generatedCode,
+                                      style: AppTextStyles.h1.copyWith(
+                                        fontSize: 32,
+                                        letterSpacing: 8,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
-                                    _buildSocialBtn(
-                                      icon: FontAwesomeIcons.telegram,
-                                      color: AppColors.telegram,
-                                      onTap: () => _shareToSocial('telegram'),
-                                    ),
-                                    _buildSocialBtn(
-                                      icon: FontAwesomeIcons.instagram,
-                                      color: AppColors.instagram,
-                                      onTap: () => _shareToSocial('instagram'), // Note: Usually opens generic share or DM
-                                    ),
-                                    _buildSocialBtn(
-                                      icon: Icons.more_horiz_rounded,
-                                      color: Colors.grey.shade700,
-                                      onTap: () => _shareToSocial('generic'),
-                                    ),
+                                    const SizedBox(width: 14),
+                                    const Icon(Icons.copy_rounded, color: AppColors.primary, size: 22),
                                   ],
                                 ),
-                                
-                                const SizedBox(height: AppSpacing.xl),
-                                Text(
-                                  'They will enter this code to connect your hearts forever.',
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap code to copy',
+                              style: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.7), fontSize: 11),
+                            ),
+
+                            const SizedBox(height: AppSpacing.xl),
+
+                            // Social Sharing
+                            Text(
+                              'SHARE CODE VIA',
+                              style: AppTextStyles.bodyS.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.5,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.m),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildSocialBtn(
+                                  icon: FontAwesomeIcons.whatsapp,
+                                  color: AppColors.whatsapp,
+                                  label: 'WhatsApp',
+                                  onTap: () => _shareToSocial('whatsapp'),
+                                ),
+                                _buildSocialBtn(
+                                  icon: FontAwesomeIcons.telegram,
+                                  color: AppColors.telegram,
+                                  label: 'Telegram',
+                                  onTap: () => _shareToSocial('telegram'),
+                                ),
+                                _buildSocialBtn(
+                                  icon: Icons.share_rounded,
+                                  color: Colors.blueAccent,
+                                  label: 'Share',
+                                  onTap: () => _shareToSocial('generic'),
                                 ),
                               ],
                             ),
+
+                            const SizedBox(height: AppSpacing.xl),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.background,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.bolt_rounded, color: AppColors.primary, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'When $partnerName enters this code, your screens will instantly connect and celebrate! 🎉',
+                                      style: AppTextStyles.bodyS.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 11,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Primary Share Action
+                    FadeInUp(
+                      delay: const Duration(milliseconds: 200),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _shareToSocial('whatsapp'),
+                        icon: const Icon(FontAwesomeIcons.whatsapp, color: Colors.white, size: 20),
+                        label: Text(
+                          'Share Invite on WhatsApp',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.m),
+
+                    // Secondary: Explore Solo
+                    FadeInUp(
+                      delay: const Duration(milliseconds: 300),
+                      child: Center(
+                        child: TextButton(
+                          onPressed: () {
+                            VibrationService.light();
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+                              (route) => false,
+                            );
+                          },
+                          child: Text(
+                            'Explore Space Solo for now (Partner can join anytime)',
+                            style: AppTextStyles.bodyS.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          const SizedBox(height: AppSpacing.xl * 1.5),
-                          PrimaryButton(
-                            text: 'Enter Our World ✨',
-                            onPressed: () {
-                              VibrationService.success();
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-                                (route) => false,
-                              );
-                            },
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
@@ -525,17 +656,34 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
     );
   }
 
-  Widget _buildSocialBtn({required IconData icon, required Color color, required VoidCallback onTap}) {
+  Widget _buildSocialBtn({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.circle),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+            ),
+          ],
         ),
-        child: Icon(icon, color: color, size: 24),
       ),
     );
   }
@@ -573,11 +721,11 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
     try {
       final name = _partnerNameController.text.trim().isEmpty ? 'Soulmate' : _partnerNameController.text.trim();
       final anniversary = _relationshipDate ?? DateTime.now();
-      
+
       final code = await _cloudService.createJourney(
         RelationshipModel(
-          userName1: widget.userName ?? 'You', 
-          user1PartnerNickname: name, 
+          userName1: widget.userName ?? 'You',
+          user1PartnerNickname: name,
           anniversaryDate: anniversary,
           nextMeetingDate: DateTime.now().add(const Duration(days: 30)),
           distanceKm: 0,
@@ -598,8 +746,9 @@ class _CreateCoupleScreenState extends State<CreateCoupleScreen> {
           _isGenerating = false;
         });
         VibrationService.success();
+        _pulseController.repeat(reverse: true);
 
-        // Step 2.4: Real-time pairing listener
+        // Real-time snapshot listener for partner joining
         _pairingSubscription?.cancel();
         _pairingSubscription = _cloudService.streamRelationship().listen((rel) {
           if (!mounted) return;

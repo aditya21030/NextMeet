@@ -395,13 +395,13 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const SizedBox(height: 20),
               FadeInDown(
-                child: Text('Our World is Loading... ✨', style: AppTextStyles.h1.copyWith(fontSize: 32)),
+                child: Text('Waiting for Partner ❤️', style: AppTextStyles.h1.copyWith(fontSize: 28)),
               ),
               const SizedBox(height: 8),
               FadeInDown(
                 delay: const Duration(milliseconds: 100),
                 child: Text(
-                  'Waiting for ${data.getDisplayPartnerName(_cloudService.currentUid)} to join the journey.',
+                  'Waiting for ${data.getDisplayPartnerName(_cloudService.currentUid)} to connect using your invite code.',
                   style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
                 ),
               ),
