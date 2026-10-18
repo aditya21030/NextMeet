@@ -51,7 +51,7 @@ class TermsPolicyScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMetaBadge('Last Updated: October 2026 • Version 1.0.40'),
+          _buildMetaBadge('Last Updated: October 2026 • Version 1.0.41'),
           const SizedBox(height: 16),
           _buildSection(
             number: '1',
