@@ -47,6 +47,12 @@ class SubscriptionService extends ChangeNotifier {
       Purchases.addCustomerInfoUpdateListener((customerInfo) {
         _handleCustomerInfoUpdate(customerInfo);
       });
+
+      // 4. Sync current customer info on startup
+      try {
+        final initialInfo = await Purchases.getCustomerInfo();
+        _handleCustomerInfoUpdate(initialInfo);
+      } catch (_) {}
     } catch (e) {
       debugPrint('RevenueCat initialization notice: $e');
       isAvailable = false;
@@ -85,6 +91,17 @@ class SubscriptionService extends ChangeNotifier {
     }
   }
 
+  EntitlementInfo? _getActiveEntitlement(CustomerInfo customerInfo) {
+    final primary = customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
+    if (primary != null && primary.isActive) {
+      return primary;
+    }
+    for (final ent in customerInfo.entitlements.active.values) {
+      if (ent.isActive) return ent;
+    }
+    return null;
+  }
+
   Future<bool> buyProduct(bool isYearly) async {
     if (_activeRelId == null) return false;
     final relId = _activeRelId!;
@@ -103,13 +120,22 @@ class SubscriptionService extends ChangeNotifier {
     try {
       final purchaseResult = await Purchases.purchasePackage(targetPackage);
       final customerInfo = purchaseResult.customerInfo;
-      final isEntitled = customerInfo.entitlements.all[RevenueCatConfig.entitlementId]?.isActive == true;
+      final activeEntitlement = _getActiveEntitlement(customerInfo);
 
-      if (isEntitled) {
+      if (activeEntitlement != null) {
+        DateTime? expiry;
+        if (activeEntitlement.expirationDate != null) {
+          try {
+            expiry = DateTime.parse(activeEntitlement.expirationDate!);
+          } catch (_) {}
+        }
         await _deliverEntitlement(
           relId: relId,
-          isYearly: isYearly,
+          isYearly: isYearly ||
+              activeEntitlement.productIdentifier.toLowerCase().contains('year') ||
+              activeEntitlement.productIdentifier.toLowerCase().contains('annual'),
           transactionId: customerInfo.originalAppUserId,
+          expirationDate: expiry,
         );
         isLoading = false;
         notifyListeners();
@@ -149,12 +175,21 @@ class SubscriptionService extends ChangeNotifier {
     notifyListeners();
     try {
       final customerInfo = await Purchases.restorePurchases();
-      final isEntitled = customerInfo.entitlements.all[RevenueCatConfig.entitlementId]?.isActive == true;
-      if (isEntitled) {
+      final activeEntitlement = _getActiveEntitlement(customerInfo);
+      if (activeEntitlement != null) {
+        DateTime? expiry;
+        if (activeEntitlement.expirationDate != null) {
+          try {
+            expiry = DateTime.parse(activeEntitlement.expirationDate!);
+          } catch (_) {}
+        }
+        final bool isYearly = activeEntitlement.productIdentifier.toLowerCase().contains('year') ||
+            activeEntitlement.productIdentifier.toLowerCase().contains('annual');
         await _deliverEntitlement(
           relId: relId,
-          isYearly: false,
+          isYearly: isYearly,
           transactionId: customerInfo.originalAppUserId,
+          expirationDate: expiry,
         );
         isLoading = false;
         notifyListeners();
@@ -176,16 +211,25 @@ class SubscriptionService extends ChangeNotifier {
 
   void _handleCustomerInfoUpdate(CustomerInfo customerInfo) async {
     if (_activeRelId == null) return;
-    final entitlement = customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
+    final activeEntitlement = _getActiveEntitlement(customerInfo);
     
-    if (entitlement != null && entitlement.isActive) {
+    if (activeEntitlement != null) {
+      DateTime? expiry;
+      if (activeEntitlement.expirationDate != null) {
+        try {
+          expiry = DateTime.parse(activeEntitlement.expirationDate!);
+        } catch (_) {}
+      }
+      final bool isYearly = activeEntitlement.productIdentifier.toLowerCase().contains('year') ||
+          activeEntitlement.productIdentifier.toLowerCase().contains('annual');
       await _deliverEntitlement(
         relId: _activeRelId!,
-        isYearly: false,
+        isYearly: isYearly,
         transactionId: customerInfo.originalAppUserId,
+        expirationDate: expiry,
       );
-    } else if (entitlement != null && !entitlement.isActive) {
-      // Only downgrade if this couple previously had an entitlement on RevenueCat that has expired
+    } else {
+      // Only downgrade if this couple previously had an active NextMeet+ subscription that has expired
       final currentRel = await _cloudService.getRelationshipById(_activeRelId!);
       if (currentRel != null && currentRel.isPlus) {
         await _cloudService.downgradeToFree(_activeRelId!);
@@ -197,12 +241,14 @@ class SubscriptionService extends ChangeNotifier {
     required String relId,
     required bool isYearly,
     required String transactionId,
+    DateTime? expirationDate,
   }) async {
     try {
-      final String planType = isYearly ? 'Annual Sanctuary' : 'Monthly Sanctuary';
-      final DateTime renewalDate = isYearly
-          ? DateTime.now().add(const Duration(days: 365))
-          : DateTime.now().add(const Duration(days: 30));
+      final String planType = isYearly ? 'NextMeet+ Annual' : 'NextMeet+ Monthly';
+      final DateTime renewalDate = expirationDate ??
+          (isYearly
+              ? DateTime.now().add(const Duration(days: 365))
+              : DateTime.now().add(const Duration(days: 30)));
 
       await _cloudService.activateRealPremium(
         relId: relId,
