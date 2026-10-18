@@ -96,7 +96,7 @@ class HelpSupportScreen extends StatelessWidget {
               child: const Column(
                 children: [
                   Text(
-                    'Version 1.0.38 (Build 85)',
+                    'Version 1.0.40 (Build 93)',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                   ),
                   SizedBox(height: 8),

@@ -124,7 +124,7 @@ class InAppUpdateService {
               children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 SizedBox(width: 10),
-                Text('NextMeet is up to date! (v1.0.39) ❤️'),
+                Text('NextMeet is up to date! (v1.0.40) ❤️'),
               ],
             ),
             backgroundColor: const Color(0xFF10B981),
@@ -147,7 +147,7 @@ class InAppUpdateService {
               Icon(Icons.verified_rounded, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
-                child: Text('NextMeet v1.0.39 • Google Play update channel connected.'),
+                child: Text('NextMeet v1.0.40 • Google Play update channel connected.'),
               ),
             ],
           ),
