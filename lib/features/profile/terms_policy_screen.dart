@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
-import '../../core/services/vibration_service.dart';
 
-class TermsPolicyScreen extends StatefulWidget {
+class TermsPolicyScreen extends StatelessWidget {
   final String? title;
   final String? content;
   final int initialTab; // 0 for Terms, 1 for Privacy
@@ -15,34 +14,12 @@ class TermsPolicyScreen extends StatefulWidget {
   });
 
   @override
-  State<TermsPolicyScreen> createState() => _TermsPolicyScreenState();
-}
-
-class _TermsPolicyScreenState extends State<TermsPolicyScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    final tabIndex = (widget.title?.toLowerCase().contains('privacy') ?? false)
-        ? 1
-        : widget.initialTab;
-    _tabController = TabController(length: 2, vsync: this, initialIndex: tabIndex);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        VibrationService.light();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final bool isPrivacy = (title?.toLowerCase().contains('privacy') ?? false) || initialTab == 1;
+    final String displayTitle = title?.isNotEmpty == true
+        ? title!
+        : (isPrivacy ? 'Privacy Policy' : 'Terms of Service');
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -53,59 +30,17 @@ class _TermsPolicyScreenState extends State<TermsPolicyScreen> with SingleTicker
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'LEGAL & PRIVACY',
-          style: TextStyle(
+        title: Text(
+          displayTitle.toUpperCase(),
+          style: const TextStyle(
             fontWeight: FontWeight.w900,
             fontSize: 13,
             letterSpacing: 1.5,
             color: AppColors.textPrimary,
           ),
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(50),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: 6),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.pink.shade50),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textSecondary,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-              tabs: const [
-                Tab(text: 'Terms of Service'),
-                Tab(text: 'Privacy Policy'),
-              ],
-            ),
-          ),
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildTermsView(),
-          _buildPrivacyView(),
-        ],
-      ),
+      body: isPrivacy ? _buildPrivacyView() : _buildTermsView(),
     );
   }
 

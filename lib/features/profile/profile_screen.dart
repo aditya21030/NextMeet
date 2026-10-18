@@ -19,7 +19,6 @@ import '../onboarding/setup_couple_screen.dart';
 import 'package:intl/intl.dart';
 import 'nextmeet_plus_screen.dart';
 import 'haptic_preferences_screen.dart';
-import 'biometric_security_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -542,18 +541,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Navigator.push(
                                     context, 
                                     MaterialPageRoute(builder: (context) => const PrivateSpaceSettingsScreen()),
-                                  );
-                                },
-                              ),
-                              const Divider(height: 16, thickness: 0.5),
-                              _buildPreferenceRow(
-                                'Fingerprint & Face Cam Security', 
-                                Icons.fingerprint_rounded, 
-                                AppColors.primary,
-                                () {
-                                  Navigator.push(
-                                    context, 
-                                    MaterialPageRoute(builder: (context) => BiometricSecurityScreen(rel: rel)),
                                   );
                                 },
                               ),

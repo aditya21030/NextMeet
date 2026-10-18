@@ -99,6 +99,10 @@ class RelationshipModel {
   final bool useBiometrics; // Legacy / global couple flag
   final bool user1UseBiometrics; // User 1's device biometric preference
   final bool user2UseBiometrics; // User 2's device biometric preference
+  final bool user1FingerprintEnrolled; // User 1 enrolled exactly 1 fingerprint
+  final bool user1FaceCamEnrolled; // User 1 enrolled exactly 1 face cam
+  final bool user2FingerprintEnrolled; // User 2 enrolled exactly 1 fingerprint
+  final bool user2FaceCamEnrolled; // User 2 enrolled exactly 1 face cam
   final String? hapticPatternType; // 'Heartbeat', 'Warm Hug', 'Digital Touch'
   final String? mapLineColor; // Hex string for map path (Plus only)
   final String? mapLineStyle; // 'Neon', 'Solid', 'Dotted'
@@ -189,6 +193,10 @@ class RelationshipModel {
     this.useBiometrics = false,
     this.user1UseBiometrics = false,
     this.user2UseBiometrics = false,
+    this.user1FingerprintEnrolled = false,
+    this.user1FaceCamEnrolled = false,
+    this.user2FingerprintEnrolled = false,
+    this.user2FaceCamEnrolled = false,
     this.hapticPatternType = 'Standard',
     this.mapLineColor,
     this.mapLineStyle = 'Neon',
@@ -279,6 +287,8 @@ class RelationshipModel {
     return getPartnerRealName(currentUid).isNotEmpty ? getPartnerRealName(currentUid) : 'Partner';
   }
 
+  String getPartnerName(String? currentUid) => getDisplayPartnerName(currentUid);
+
   String getDisplayMyName(String? currentUid) {
     final realName = getMyRealName(currentUid);
     if (realName.isNotEmpty) return realName;
@@ -306,6 +316,30 @@ class RelationshipModel {
     if (currentUid == uid1) return user2UseBiometrics;
     if (currentUid == uid2) return user1UseBiometrics;
     return useBiometrics;
+  }
+
+  bool isMyFingerprintEnrolled(String? currentUid) {
+    if (currentUid == uid1) return user1FingerprintEnrolled;
+    if (currentUid == uid2) return user2FingerprintEnrolled;
+    return false;
+  }
+
+  bool isMyFaceCamEnrolled(String? currentUid) {
+    if (currentUid == uid1) return user1FaceCamEnrolled;
+    if (currentUid == uid2) return user2FaceCamEnrolled;
+    return false;
+  }
+
+  bool isPartnerFingerprintEnrolled(String? currentUid) {
+    if (currentUid == uid1) return user2FingerprintEnrolled;
+    if (currentUid == uid2) return user1FingerprintEnrolled;
+    return false;
+  }
+
+  bool isPartnerFaceCamEnrolled(String? currentUid) {
+    if (currentUid == uid1) return user2FaceCamEnrolled;
+    if (currentUid == uid2) return user1FaceCamEnrolled;
+    return false;
   }
 
   // Sanctuary Presence Helpers
@@ -442,6 +476,10 @@ class RelationshipModel {
       useBiometrics: map['useBiometrics'] ?? false,
       user1UseBiometrics: map['user1UseBiometrics'] ?? map['useBiometrics'] ?? false,
       user2UseBiometrics: map['user2UseBiometrics'] ?? map['useBiometrics'] ?? false,
+      user1FingerprintEnrolled: map['user1FingerprintEnrolled'] ?? false,
+      user1FaceCamEnrolled: map['user1FaceCamEnrolled'] ?? false,
+      user2FingerprintEnrolled: map['user2FingerprintEnrolled'] ?? false,
+      user2FaceCamEnrolled: map['user2FaceCamEnrolled'] ?? false,
       hapticPatternType: map['hapticPatternType'] ?? 'Standard',
       mapLineColor: map['mapLineColor'],
       mapLineStyle: map['mapLineStyle'] ?? 'Neon',
@@ -530,6 +568,10 @@ class RelationshipModel {
       'useBiometrics': useBiometrics,
       'user1UseBiometrics': user1UseBiometrics,
       'user2UseBiometrics': user2UseBiometrics,
+      'user1FingerprintEnrolled': user1FingerprintEnrolled,
+      'user1FaceCamEnrolled': user1FaceCamEnrolled,
+      'user2FingerprintEnrolled': user2FingerprintEnrolled,
+      'user2FaceCamEnrolled': user2FaceCamEnrolled,
       'hapticPatternType': hapticPatternType,
       'mapLineColor': mapLineColor,
       'mapLineStyle': mapLineStyle,
@@ -642,6 +684,10 @@ class RelationshipModel {
     bool? useBiometrics,
     bool? user1UseBiometrics,
     bool? user2UseBiometrics,
+    bool? user1FingerprintEnrolled,
+    bool? user1FaceCamEnrolled,
+    bool? user2FingerprintEnrolled,
+    bool? user2FaceCamEnrolled,
     String? hapticPatternType,
     String? mapLineColor,
     String? mapLineStyle,
@@ -728,6 +774,10 @@ class RelationshipModel {
       useBiometrics: useBiometrics ?? this.useBiometrics,
       user1UseBiometrics: user1UseBiometrics ?? this.user1UseBiometrics,
       user2UseBiometrics: user2UseBiometrics ?? this.user2UseBiometrics,
+      user1FingerprintEnrolled: user1FingerprintEnrolled ?? this.user1FingerprintEnrolled,
+      user1FaceCamEnrolled: user1FaceCamEnrolled ?? this.user1FaceCamEnrolled,
+      user2FingerprintEnrolled: user2FingerprintEnrolled ?? this.user2FingerprintEnrolled,
+      user2FaceCamEnrolled: user2FaceCamEnrolled ?? this.user2FaceCamEnrolled,
       hapticPatternType: hapticPatternType ?? this.hapticPatternType,
       mapLineColor: mapLineColor ?? this.mapLineColor,
       mapLineStyle: mapLineStyle ?? this.mapLineStyle,

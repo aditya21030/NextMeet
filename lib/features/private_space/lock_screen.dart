@@ -50,7 +50,8 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
       final myUid = _cloudService.currentUid;
       final localEnabled = await _securityService.isLocalBiometricEnabled();
       final myCloudPref = targetRel != null ? targetRel.getMyBiometricPreference(myUid) : false;
-      if (targetRel != null && localEnabled && myCloudPref && targetRel.privateSpacePin != null) {
+      final hasSlotEnrolled = targetRel != null && (targetRel.isMyFingerprintEnrolled(myUid) || targetRel.isMyFaceCamEnrolled(myUid));
+      if (targetRel != null && localEnabled && (myCloudPref || hasSlotEnrolled) && targetRel.privateSpacePin != null) {
         final available = await _securityService.isBiometricAvailable();
         if (available && mounted) {
           final result = await _securityService.authenticateWithDetails(
@@ -674,7 +675,11 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
   }
 
   Widget _buildBiometricSlot(RelationshipModel rel) {
-    if (rel.privateSpacePin != null) {
+    final myUid = _cloudService.currentUid;
+    final hasBiometrics = rel.getMyBiometricPreference(myUid) ||
+        rel.isMyFingerprintEnrolled(myUid) ||
+        rel.isMyFaceCamEnrolled(myUid);
+    if (rel.privateSpacePin != null && hasBiometrics) {
       return Material(
         color: Colors.transparent,
         child: InkWell(
