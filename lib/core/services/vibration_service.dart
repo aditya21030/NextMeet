@@ -142,6 +142,53 @@ class VibrationService {
     await HapticFeedback.selectionClick();
   }
 
+  static Future<void> passionateGallop() async {
+    // Rapid, accelerating rhythmic heartbeat pulses (gallop sensation)
+    for (int i = 0; i < 4; i++) {
+      await HapticFeedback.heavyImpact();
+      await Future.delayed(const Duration(milliseconds: 80));
+      await HapticFeedback.mediumImpact();
+      await Future.delayed(Duration(milliseconds: 160 - (i * 20)));
+    }
+  }
+
+  static Future<void> velvetRain() async {
+    // Gentle cascading droplets of micro-clicks and soft taps
+    for (int i = 0; i < 6; i++) {
+      await HapticFeedback.selectionClick();
+      await Future.delayed(const Duration(milliseconds: 65));
+      if (i % 2 == 1) {
+        await HapticFeedback.lightImpact();
+      }
+    }
+  }
+
+  static Future<void> tenderCaress() async {
+    // Silky, soothing alternating warm double-vibrations
+    await HapticFeedback.lightImpact();
+    await Future.delayed(const Duration(milliseconds: 90));
+    await HapticFeedback.mediumImpact();
+    await Future.delayed(const Duration(milliseconds: 160));
+    await HapticFeedback.lightImpact();
+    await Future.delayed(const Duration(milliseconds: 90));
+    await HapticFeedback.mediumImpact();
+  }
+
+  static Future<void> infinityPulse() async {
+    // Hypnotic continuous harmonic surge that smoothly swells and fades
+    await HapticFeedback.selectionClick();
+    await Future.delayed(const Duration(milliseconds: 70));
+    await HapticFeedback.lightImpact();
+    await Future.delayed(const Duration(milliseconds: 90));
+    await HapticFeedback.mediumImpact();
+    await Future.delayed(const Duration(milliseconds: 110));
+    await HapticFeedback.heavyImpact();
+    await Future.delayed(const Duration(milliseconds: 140));
+    await HapticFeedback.mediumImpact();
+    await Future.delayed(const Duration(milliseconds: 100));
+    await HapticFeedback.lightImpact();
+  }
+
   /// Master dispatcher to play any pattern by its saved name
   static Future<void> playPattern(String? patternName) async {
     switch (patternName) {
@@ -178,6 +225,18 @@ class VibrationService {
         break;
       case 'Secret Whisper':
         await secretWhisper();
+        break;
+      case 'Passionate Gallop':
+        await passionateGallop();
+        break;
+      case 'Velvet Rain':
+        await velvetRain();
+        break;
+      case 'Tender Caress':
+        await tenderCaress();
+        break;
+      case 'Infinity Pulse':
+        await infinityPulse();
         break;
       case 'Heartbeat':
       default:

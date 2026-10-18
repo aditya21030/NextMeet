@@ -104,6 +104,7 @@ class RelationshipModel {
   final bool user2FingerprintEnrolled; // User 2 enrolled exactly 1 fingerprint
   final bool user2FaceCamEnrolled; // User 2 enrolled exactly 1 face cam
   final String? hapticPatternType; // 'Heartbeat', 'Warm Hug', 'Digital Touch'
+  final String? hapticIntensity; // 'Gentle', 'Balanced', 'Intense' (Plus VIP feature)
   final String? mapLineColor; // Hex string for map path (Plus only)
   final String? mapLineStyle; // 'Neon', 'Solid', 'Dotted'
   
@@ -198,6 +199,7 @@ class RelationshipModel {
     this.user2FingerprintEnrolled = false,
     this.user2FaceCamEnrolled = false,
     this.hapticPatternType = 'Standard',
+    this.hapticIntensity = 'Balanced',
     this.mapLineColor,
     this.mapLineStyle = 'Neon',
     this.stats = const {},
@@ -481,6 +483,7 @@ class RelationshipModel {
       user2FingerprintEnrolled: map['user2FingerprintEnrolled'] ?? false,
       user2FaceCamEnrolled: map['user2FaceCamEnrolled'] ?? false,
       hapticPatternType: map['hapticPatternType'] ?? 'Standard',
+      hapticIntensity: map['hapticIntensity'] ?? 'Balanced',
       mapLineColor: map['mapLineColor'],
       mapLineStyle: map['mapLineStyle'] ?? 'Neon',
       stats: map['stats'] != null ? Map<String, int>.from(map['stats']) : {},
@@ -573,6 +576,7 @@ class RelationshipModel {
       'user2FingerprintEnrolled': user2FingerprintEnrolled,
       'user2FaceCamEnrolled': user2FaceCamEnrolled,
       'hapticPatternType': hapticPatternType,
+      'hapticIntensity': hapticIntensity ?? 'Balanced',
       'mapLineColor': mapLineColor,
       'mapLineStyle': mapLineStyle,
       'stats': stats,
@@ -689,6 +693,7 @@ class RelationshipModel {
     bool? user2FingerprintEnrolled,
     bool? user2FaceCamEnrolled,
     String? hapticPatternType,
+    String? hapticIntensity,
     String? mapLineColor,
     String? mapLineStyle,
     Map<String, int>? stats,
@@ -779,6 +784,7 @@ class RelationshipModel {
       user2FingerprintEnrolled: user2FingerprintEnrolled ?? this.user2FingerprintEnrolled,
       user2FaceCamEnrolled: user2FaceCamEnrolled ?? this.user2FaceCamEnrolled,
       hapticPatternType: hapticPatternType ?? this.hapticPatternType,
+      hapticIntensity: hapticIntensity ?? this.hapticIntensity,
       mapLineColor: mapLineColor ?? this.mapLineColor,
       mapLineStyle: mapLineStyle ?? this.mapLineStyle,
       stats: stats ?? this.stats,
