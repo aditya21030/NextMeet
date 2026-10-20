@@ -304,26 +304,19 @@ class _SecretPhotosScreenState extends State<SecretPhotosScreen> {
 
   Future<void> _downloadImage(String url) async {
     try {
-      // 1. Check Permissions
-      var status = await Permission.storage.status;
-      if (Platform.isAndroid) {
-        // For Android 13+, we might need specialized permissions, but Permission.storage often works or gal handles it.
-        // Let's use Gal's own permission check if possible, or just request storage.
-        if (!status.isGranted) {
-          status = await Permission.storage.request();
-        }
-      }
-
-      if (status.isPermanentlyDenied) {
-        if (mounted) {
+      // 1. Check Permissions using Gal's native access checker
+      final hasAccess = await Gal.hasAccess();
+      if (!hasAccess) {
+        final granted = await Gal.requestAccess();
+        if (!granted && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Storage permission is required to save photos. Please enable it in settings.'),
+              content: const Text('Permission is required to save photos. Please enable it in settings.'),
               action: SnackBarAction(label: 'SETTINGS', onPressed: () => openAppSettings()),
             ),
           );
+          return;
         }
-        return;
       }
 
       VibrationService.medium();

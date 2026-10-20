@@ -412,7 +412,7 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
                   child: Column(
                     children: [
                       Text(
-                        'NextMeet Private Sanctuary v1.0.41',
+                        'NextMeet Private Sanctuary v1.0.42',
                         style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 10),
                       ),
                       const SizedBox(height: 4),

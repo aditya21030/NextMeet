@@ -640,7 +640,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'NextMeet v1.0.41 (Build 94) • Intimate Digital Space for Two',
+                          'NextMeet v1.0.42 (Build 95) • Intimate Digital Space for Two',
                           style: AppTextStyles.bodyS.copyWith(
                             color: AppColors.textSecondary.withValues(alpha: 0.45),
                             fontWeight: FontWeight.w500,
@@ -1162,7 +1162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               const SizedBox(height: 16),
               Text(
-                'NextMeet v1.0.41 (Build 94) • Intimate Digital Space for Two',
+                'NextMeet v1.0.42 (Build 95) • Intimate Digital Space for Two',
                 style: AppTextStyles.bodyS.copyWith(
                   color: AppColors.textSecondary.withValues(alpha: 0.45),
                   fontWeight: FontWeight.w500,
