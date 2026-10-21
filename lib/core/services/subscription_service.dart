@@ -13,6 +13,8 @@ class SubscriptionService extends ChangeNotifier {
   Offerings? offerings;
   Package? monthlyPackage;
   Package? annualPackage;
+  StoreProduct? monthlyProduct;
+  StoreProduct? annualProduct;
   
   bool isAvailable = false;
   bool isLoading = true;
@@ -64,10 +66,81 @@ class SubscriptionService extends ChangeNotifier {
   Future<void> loadProducts() async {
     try {
       offerings = await Purchases.getOfferings();
-      if (offerings?.current != null) {
-        monthlyPackage = offerings!.current!.monthly;
-        annualPackage = offerings!.current!.annual;
+      if (offerings != null) {
+        // 1. Check designated current offering first
+        if (offerings!.current != null) {
+          monthlyPackage = offerings!.current!.monthly;
+          annualPackage = offerings!.current!.annual;
+
+          for (final pkg in offerings!.current!.availablePackages) {
+            final pkgId = pkg.identifier.toLowerCase();
+            final prodId = pkg.storeProduct.identifier.toLowerCase();
+            if (monthlyPackage == null &&
+                (pkgId.contains('month') ||
+                    pkgId == '\$rc_monthly' ||
+                    prodId.contains('month'))) {
+              monthlyPackage = pkg;
+            }
+            if (annualPackage == null &&
+                (pkgId.contains('annu') ||
+                    pkgId.contains('year') ||
+                    pkgId == '\$rc_annual' ||
+                    prodId.contains('year') ||
+                    prodId.contains('annu'))) {
+              annualPackage = pkg;
+            }
+          }
+        }
+
+        // 2. Search all offerings if current is missing or incomplete
+        if (monthlyPackage == null || annualPackage == null) {
+          for (final off in offerings!.all.values) {
+            for (final pkg in off.availablePackages) {
+              final pkgId = pkg.identifier.toLowerCase();
+              final prodId = pkg.storeProduct.identifier.toLowerCase();
+              if (monthlyPackage == null &&
+                  (pkgId.contains('month') ||
+                      pkgId == '\$rc_monthly' ||
+                      prodId.contains('month'))) {
+                monthlyPackage = pkg;
+              }
+              if (annualPackage == null &&
+                  (pkgId.contains('annu') ||
+                      pkgId.contains('year') ||
+                      pkgId == '\$rc_annual' ||
+                      prodId.contains('year') ||
+                      prodId.contains('annu'))) {
+                annualPackage = pkg;
+              }
+            }
+          }
+        }
       }
+
+      // 3. Fallback: Query Google Play StoreProducts directly if offerings/packages are missing
+      if (monthlyPackage == null || annualPackage == null) {
+        try {
+          final products = await Purchases.getProducts(
+            [
+              monthlyId,
+              yearlyId,
+              'nextmeet_plus_monthly:monthly-plus',
+              'nextmeet_plus_yearly:yearly-plus',
+            ],
+            productCategory: ProductCategory.subscription,
+          );
+          for (final p in products) {
+            if (p.identifier.contains('year') || p.identifier.contains('annual')) {
+              annualProduct = p;
+            } else if (p.identifier.contains('month')) {
+              monthlyProduct = p;
+            }
+          }
+        } catch (e) {
+          debugPrint('Purchases.getProducts direct lookup notice: $e');
+        }
+      }
+
       isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -82,10 +155,16 @@ class SubscriptionService extends ChangeNotifier {
       if (annualPackage != null) {
         return annualPackage!.storeProduct.priceString;
       }
+      if (annualProduct != null) {
+        return annualProduct!.priceString;
+      }
       return '₹499';
     } else {
       if (monthlyPackage != null) {
         return monthlyPackage!.storeProduct.priceString;
+      }
+      if (monthlyProduct != null) {
+        return monthlyProduct!.priceString;
       }
       return '₹49';
     }
@@ -106,9 +185,18 @@ class SubscriptionService extends ChangeNotifier {
     if (_activeRelId == null) return false;
     final relId = _activeRelId!;
 
+    // Re-fetch products if not loaded yet
+    if ((isYearly && annualPackage == null && annualProduct == null) ||
+        (!isYearly && monthlyPackage == null && monthlyProduct == null)) {
+      await loadProducts();
+    }
+
     final targetPackage = isYearly ? annualPackage : monthlyPackage;
-    if (targetPackage == null) {
-      error = 'Google Play billing is currently initializing. Please try again in a moment.';
+    final targetProduct = isYearly ? annualProduct : monthlyProduct;
+
+    if (targetPackage == null && targetProduct == null) {
+      error =
+          'Google Play billing is currently initializing or your account cannot access this test track. Please try again in a moment.';
       notifyListeners();
       return false;
     }
@@ -118,7 +206,12 @@ class SubscriptionService extends ChangeNotifier {
     VibrationService.medium();
 
     try {
-      final purchaseResult = await Purchases.purchasePackage(targetPackage);
+      final PurchaseResult purchaseResult;
+      if (targetPackage != null) {
+        purchaseResult = await Purchases.purchasePackage(targetPackage);
+      } else {
+        purchaseResult = await Purchases.purchaseStoreProduct(targetProduct!);
+      }
       final customerInfo = purchaseResult.customerInfo;
       final activeEntitlement = _getActiveEntitlement(customerInfo);
 
@@ -232,6 +325,11 @@ class SubscriptionService extends ChangeNotifier {
       // Only downgrade if this couple previously had an active NextMeet+ subscription that has expired
       final currentRel = await _cloudService.getRelationshipById(_activeRelId!);
       if (currentRel != null && currentRel.isPlus) {
+        // Guard: Do not downgrade prematurely if their paid subscription period is still active!
+        if (currentRel.premiumRenewalDate != null &&
+            currentRel.premiumRenewalDate!.isAfter(DateTime.now())) {
+          return;
+        }
         await _cloudService.downgradeToFree(_activeRelId!);
       }
     }
