@@ -158,7 +158,7 @@ class SubscriptionService extends ChangeNotifier {
       if (annualProduct != null) {
         return annualProduct!.priceString;
       }
-      return '₹499';
+      return '₹500';
     } else {
       if (monthlyPackage != null) {
         return monthlyPackage!.storeProduct.priceString;
@@ -166,7 +166,27 @@ class SubscriptionService extends ChangeNotifier {
       if (monthlyProduct != null) {
         return monthlyProduct!.priceString;
       }
-      return '₹49';
+      return '₹50';
+    }
+  }
+
+  double? getNumericPriceById(String productId) {
+    if (productId == yearlyId) {
+      if (annualPackage != null) {
+        return annualPackage!.storeProduct.price;
+      }
+      if (annualProduct != null) {
+        return annualProduct!.price;
+      }
+      return 500.0;
+    } else {
+      if (monthlyPackage != null) {
+        return monthlyPackage!.storeProduct.price;
+      }
+      if (monthlyProduct != null) {
+        return monthlyProduct!.price;
+      }
+      return 50.0;
     }
   }
 

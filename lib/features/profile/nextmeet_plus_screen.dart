@@ -316,17 +316,23 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
     final monthlyPrice = _subService.getPriceById(SubscriptionService.monthlyId);
 
     // Compute monthly equivalent
-    String monthlyEquivalent = '₹41 / mo';
-    try {
-      final digits = RegExp(r'\d+').allMatches(yearlyPrice).map((m) => m.group(0)).join();
-      if (digits.isNotEmpty) {
-        final val = double.tryParse(digits);
-        if (val != null) {
-          final perMo = (val / 12).round();
-          monthlyEquivalent = '₹$perMo / mo';
+    String monthlyEquivalent = '₹42 / mo';
+    final numPrice = _subService.getNumericPriceById(SubscriptionService.yearlyId);
+    if (numPrice != null && numPrice > 0) {
+      final perMo = (numPrice / 12).round();
+      monthlyEquivalent = '₹$perMo / mo';
+    } else {
+      try {
+        final match = RegExp(r'[\d,]+(?:\.\d+)?').firstMatch(yearlyPrice.replaceAll(',', ''));
+        if (match != null) {
+          final val = double.tryParse(match.group(0)!);
+          if (val != null) {
+            final perMo = (val / 12).round();
+            monthlyEquivalent = '₹$perMo / mo';
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     return Column(
       children: [
