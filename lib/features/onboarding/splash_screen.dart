@@ -209,7 +209,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 FadeIn(
                   delay: const Duration(milliseconds: 1500),
                   child: Text(
-                    'VERSION 1.0.42',
+                    'VERSION 1.0.43',
                     style: AppTextStyles.bodyS.copyWith(
                       color: AppColors.textSecondary.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w900,
