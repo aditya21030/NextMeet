@@ -147,6 +147,10 @@ class WidgetService {
 
         final logicalSize = _getWidgetLogicalSize(savedWidgetId);
 
+        // Safe pixel ratio ensuring rendered image is sharp yet stays comfortably within Android Binder 512KB IPC limit
+        final maxDimension = logicalSize.width > logicalSize.height ? logicalSize.width : logicalSize.height;
+        final safePixelRatio = (450.0 / maxDimension).clamp(1.0, 1.5);
+
         await HomeWidget.renderFlutterWidget(
           MediaQuery(
             data: MediaQueryData(size: logicalSize),
@@ -160,7 +164,7 @@ class WidgetService {
           ),
           key: 'active_widget_img',
           logicalSize: logicalSize,
-          pixelRatio: 3.0,
+          pixelRatio: safePixelRatio,
         );
       } catch (e) {
         // ignore: avoid_print
