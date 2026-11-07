@@ -203,13 +203,25 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
 
   Future<void> _syncWidgets(RelationshipModel? rel, String currentUid) async {
     if (rel == null) return;
+    final currentItem = _filteredWidgets[_selectedWidgetIndex.clamp(0, _filteredWidgets.length - 1)];
+    await _applyWidgetToHomeScreen(currentItem['id'] as String, rel, currentUid);
+  }
+
+  Future<void> _applyWidgetToHomeScreen(String widgetId, RelationshipModel? rel, String currentUid) async {
+    if (rel == null) return;
     setState(() => _isSyncing = true);
     VibrationService.medium();
-    await WidgetService.updateWidgetData(rel, currentUid);
+    await WidgetService.updateWidgetData(
+      rel,
+      currentUid,
+      activeWidgetId: widgetId,
+      palette: _selectedPalette,
+    );
     if (!mounted) return;
     setState(() => _isSyncing = false);
     VibrationService.success();
-    _showReactionFeedback('All 14 widgets synced to your phone! 📲✨');
+    final widgetTitle = _allWidgets.firstWhere((w) => w['id'] == widgetId, orElse: () => {'title': 'Widget'})['title'];
+    _showReactionFeedback('Applied "$widgetTitle" as your Home Screen Widget! ✨');
   }
 
   void _showAddWidgetSheet(BuildContext context, RelationshipModel? rel, String currentUid) {
@@ -276,7 +288,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
               _stepItem(4, 'Select "${currentItem['title']}" and place it on your screen!'),
               const SizedBox(height: 20),
               PrimaryButton(
-                text: 'Sync Widget Data Now 🔄',
+                text: 'Apply "${currentItem['title']}" to Widget ✨',
                 isLoading: _isSyncing,
                 onPressed: () {
                   Navigator.pop(ctx);
@@ -837,7 +849,16 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
                   // Dynamic State Variations Selector
                   _buildStateSelector(activeItem['id'] as String),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
+
+                  // Quick Apply Button
+                  PrimaryButton(
+                    text: 'Set "${activeItem['title']}" as Active Widget ✨',
+                    isLoading: _isSyncing,
+                    onPressed: () => _applyWidgetToHomeScreen(activeItem['id'] as String, rel, currentUid),
+                  ),
+
+                  const SizedBox(height: 24),
 
                   // Catalog Header
                   Row(

@@ -48,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Timer> _particleTimers = [];
   bool _isOffline = false;
   DateTime? _lastObservedTouchTime;
+  DateTime? _lastWidgetSyncTime;
   String? _incomingTouchBanner;
   Timer? _bannerTimer;
 
@@ -133,6 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
           lat: pos.latitude,
           lng: pos.longitude,
         );
+        if (_cloudService.currentUid != null) {
+          WidgetService.updateWidgetData(rel, _cloudService.currentUid!);
+        }
       }
     } catch (_) {}
   }
@@ -215,6 +219,17 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, snapshot) {
         final rel = snapshot.data;
         final isPaired = rel != null && rel.uid2 != null && rel.status != 'waiting';
+
+        if (isPaired && rel != null && (_lastWidgetSyncTime == null || DateTime.now().difference(_lastWidgetSyncTime!).inMinutes >= 2)) {
+          _lastWidgetSyncTime = DateTime.now();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final uid = _cloudService.currentUid;
+            if (uid != null) {
+              WidgetService.updateWidgetData(rel, uid);
+            }
+          });
+        }
 
         // Check for incoming touch from partner in real-time
         if (rel != null && rel.lastTouchTime != null && rel.lastTouchFrom != null) {
