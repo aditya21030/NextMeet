@@ -12,6 +12,7 @@ import '../../widgets/primary_button.dart';
 import '../../core/services/location_search_service.dart';
 import 'dart:async';
 import '../../core/services/auth_service.dart';
+import 'edit_location_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String relationshipId;
@@ -343,8 +344,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               FadeInUp(
                 delay: const Duration(milliseconds: 200),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _buildInputSection('LOCATION', _locController, Icons.location_on_outlined),
+                    InkWell(
+                      onTap: () async {
+                        final updated = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditLocationScreen(
+                              relationship: widget.relationship,
+                              relationshipId: widget.relationshipId,
+                            ),
+                          ),
+                        );
+                        if (updated == true && mounted) {
+                          final currentUid = AuthService().currentUid;
+                          final rel = await _cloudService.getRelationshipById(widget.relationshipId);
+                          if (rel != null && mounted) {
+                            setState(() {
+                              _locController.text = rel.getMyLocation(currentUid);
+                            });
+                          }
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Icon(Icons.my_location_rounded, size: 14, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text('Auto-detect GPS or Search Maps', style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ),
                     if (_searchResults.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -353,48 +388,51 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           shadowColor: Colors.black.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
+                            constraints: const BoxConstraints(maxHeight: 200),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
                             ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: _searchResults.map((result) => InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedResult = result;
-                                    _locController.removeListener(_onLocationChanged);
-                                    _locController.text = result.name.split(',').first.trim(); // Just show city name
-                                    _locController.addListener(_onLocationChanged);
-                                    _searchResults = [];
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    border: Border(bottom: BorderSide(color: Colors.grey.shade100, width: 0.5)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                                        child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 16),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Flexible(
-                                        child: Text(
-                                          result.name, 
-                                          style: AppTextStyles.bodyS.copyWith(fontWeight: FontWeight.w600, fontSize: 13),
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 2,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: _searchResults.map((result) => InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedResult = result;
+                                      _locController.removeListener(_onLocationChanged);
+                                      _locController.text = result.name.split(',').first.trim();
+                                      _locController.addListener(_onLocationChanged);
+                                      _searchResults = [];
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      border: Border(bottom: BorderSide(color: Colors.grey.shade100, width: 0.5)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+                                          child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 16),
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            result.name, 
+                                            style: AppTextStyles.bodyS.copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              )).toList(),
+                                )).toList(),
+                              ),
                             ),
                           ),
                         ),

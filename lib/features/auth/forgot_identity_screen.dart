@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:animate_do/animate_do.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
-import '../../widgets/primary_button.dart';
-import '../../widgets/app_inputs.dart';
 import '../../core/services/firebase_auth_service.dart';
+import '../../widgets/flat_components.dart';
+import '../../widgets/primary_button.dart';
 
+/// NextMeet Forgot Password & Reset Sent Screen
+/// Strictly following NextMeet Redesign.pdf (Pages 13 & 14)
 class ForgotIdentityScreen extends StatefulWidget {
   const ForgotIdentityScreen({super.key});
 
@@ -25,28 +26,29 @@ class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
     super.dispose();
   }
 
-  void _handleReset() async {
+  Future<void> _handleReset() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       VibrationService.medium();
-      
+
       try {
         await FirebaseAuthService().sendPasswordResetEmail(_emailController.text.trim());
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _isSent = true;
-          });
-          VibrationService.success();
-        }
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _isSent = true;
+        });
+        VibrationService.success();
       } catch (e) {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.error),
-          );
-        }
+        if (!mounted) return;
+        setState(() => _isLoading = false);
         VibrationService.error();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } else {
       VibrationService.error();
@@ -55,228 +57,279 @@ class _ForgotIdentityScreenState extends State<ForgotIdentityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isSent) {
+      return _buildCheckInboxScreen();
+    }
+    return _buildForgotPasswordScreen();
+  }
+
+  // Page 13: Forgot Password Screen
+  Widget _buildForgotPasswordScreen() {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // Background accents
-          Positioned(
-            top: -100,
-            left: -100,
-            child: FadeIn(
+      backgroundColor: AppColors.primary, // Pink canvas header
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top Bar: Back Button + "Oops, it happens" badge
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.butter,
+                      borderRadius: BorderRadius.circular(AppRadius.badge),
+                    ),
+                    child: Text(
+                      'Oops, it happens',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.butterText,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Smiling Mascot Heart (Page 13)
+            const Center(
+              child: MascotHeart(
+                color: MascotColor.pink,
+                size: 88,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Form Sheet
+            Expanded(
               child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.05),
-                      AppColors.primary.withValues(alpha: 0),
+                decoration: const BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                      Text(
+                        'Forgot your password?',
+                        style: AppTextStyles.display.copyWith(fontSize: 26),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Enter your email and we will send you a link to reset it.',
+                        style: AppTextStyles.body.copyWith(color: AppColors.muted),
+                      ),
+                      const SizedBox(height: 24),
+
+                      Text('Email', style: AppTextStyles.label.copyWith(color: AppColors.ink)),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: AppTextStyles.body,
+                        decoration: const InputDecoration(
+                          hintText: 'you@email.com',
+                          prefixIcon: Icon(Icons.mail_outline_rounded, color: AppColors.primary, size: 22),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Please enter your email';
+                          if (!val.contains('@')) return 'Enter a valid email';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      PrimaryButton(
+                        text: 'Send reset link',
+                        isLoading: _isLoading,
+                        onPressed: _handleReset,
+                      ),
+                      const SizedBox(height: 14),
+
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'Back to log in',
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    FadeInDown(
-                      duration: const Duration(milliseconds: 600),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              VibrationService.light();
-                              Navigator.pop(context);
-                            },
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 20),
-                          ),
-                          Text(
-                            'NextMeet',
-                            style: AppTextStyles.h3.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(width: 40),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 60),
-                    
-                    if (!_isSent) ...[
-                      FadeInUp(
-                        duration: const Duration(milliseconds: 800),
-                        child: Container(
-                          padding: const EdgeInsets.all(AppSpacing.xl),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: AppColors.premiumShadow,
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white,
-                                AppColors.primary.withValues(alpha: 0.05),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.fingerprint_rounded,
-                            size: 60,
-                            color: AppColors.primary.withValues(alpha: 0.8),
-                          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Page 14: Check Your Inbox Screen
+  Widget _buildCheckInboxScreen() {
+    return Scaffold(
+      backgroundColor: AppColors.butter, // Yellow header canvas (Page 14)
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 40),
+
+              // Envelope with Heart Seal
+              Center(
+                child: Container(
+                  width: 140,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
                         ),
+                        child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 18),
                       ),
-                      const SizedBox(height: AppSpacing.xl),
-                      FadeInUp(
-                        delay: const Duration(milliseconds: 200),
-                        child: Column(
-                          children: [
-                            Text('Forgot Identity? ❤️', style: AppTextStyles.h2.copyWith(fontSize: 26)),
-                            const SizedBox(height: AppSpacing.s),
-                            Text(
-                              'Enter your email to recover your digital space.',
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 60),
-                      FadeInUp(
-                        delay: const Duration(milliseconds: 400),
-                        child: _buildInputWrapper(
-                          label: 'EMAIL ADDRESS',
-                          child: TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            style: AppTextStyles.bodyL.copyWith(fontWeight: FontWeight.bold),
-                            validator: (val) {
-                              if (val!.isEmpty) return 'We need your email to find your space ❤️';
-                              if (!RegExp(r'\S+@\S+\.\S+').hasMatch(val)) return 'This doesn\'t look like a valid email 💌';
-                              return null;
-                            },
-                            decoration: AppInputs.premiumInput(
-                              'Email Address',
-                              icon: Icons.alternate_email_rounded,
-                              hint: 'Enter your email',
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      FadeInUp(
-                        delay: const Duration(milliseconds: 600),
-                        child: PrimaryButton(
-                          text: 'Recover Account',
-                          isLoading: _isLoading,
-                          onPressed: _handleReset,
-                        ),
-                      ),
-                    ] else ...[
-                      _buildSuccessState(),
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildSuccessState() {
-    final email = _emailController.text.trim();
-    return FadeInUp(
-      duration: const Duration(milliseconds: 600),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: AppColors.premiumShadow,
-            ),
-            child: const Icon(
-              Icons.mark_email_read_rounded,
-              size: 64,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text('Reset Link Sent! 💌', style: AppTextStyles.h2.copyWith(fontSize: 26)),
-          const SizedBox(height: AppSpacing.m),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'We sent a password reset link to:\n$email\n\nTap the link in your email on this phone to open NextMeet directly and set your new password.',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyM.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.5,
+              const SizedBox(height: 40),
+
+              // White Sheet
+            Container(
+              decoration: const BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Check your inbox',
+                    style: AppTextStyles.display.copyWith(fontSize: 26),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'We sent a reset link to ${_emailController.text}. It works for 30 minutes.',
+                    style: AppTextStyles.body.copyWith(color: AppColors.muted),
+                  ),
+                  const SizedBox(height: 24),
+
+                  PrimaryButton(
+                    text: 'Open email app',
+                    onPressed: () {
+                      VibrationService.light();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  GestureDetector(
+                    onTap: _handleReset,
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.pinkSoft,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Resend link',
+                        style: AppTextStyles.button.copyWith(
+                          color: AppColors.primary,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Back to log in',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Spam folder notice card (Page 14)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.partnerSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.badge),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.mail_outline_rounded, color: AppColors.partner, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Not there? Check your spam folder.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.partnerText,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 36),
-          PrimaryButton(
-            text: 'Back to Login',
-            onPressed: () {
-              VibrationService.light();
-              Navigator.pop(context);
-            },
-          ),
-          const SizedBox(height: 16),
-          TextButton.icon(
-            onPressed: _isLoading ? null : _handleReset,
-            icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.primary),
-            label: Text(
-              'Resend Reset Link',
-              style: AppTextStyles.bodyM.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildInputWrapper({required String label, required Widget child}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10, left: 4),
-          child: Text(
-            label,
-            style: AppTextStyles.bodyS.copyWith(
-              fontWeight: FontWeight.w900,
-              fontSize: 11,
-              letterSpacing: 1.2,
-              color: AppColors.textSecondary.withValues(alpha: 0.7),
-            ),
-          ),
-        ),
-        Container(
-          decoration: AppInputs.premiumInputDecoration,
-          child: child,
-        ),
-      ],
-    );
-  }
+    ),
+  );
+}
 }

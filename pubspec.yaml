@@ -73,6 +73,7 @@ dependencies:
   supabase_flutter: ^2.8.0
   flutter_image_compress: ^2.4.0
   purchases_flutter: ^10.16.0
+  flutter_svg: ^2.0.10+1
 
 dev_dependencies:
   flutter_test:
@@ -100,6 +101,8 @@ flutter:
   assets:
     - assets/images/
     - assets/images/stickers/
+    - assets/images/logo/
+    - assets/images/mascots/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -132,5 +135,5 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/app_icon.png"
   min_sdk_android: 21 # android >= 5.0
-  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_background: "#D81B6A"
   adaptive_icon_foreground: "assets/images/app_icon.png"

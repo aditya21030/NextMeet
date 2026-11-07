@@ -1,214 +1,216 @@
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
-import '../../core/services/vibration_service.dart';
+import '../../core/models/relationship_model.dart';
+import '../../widgets/flat_components.dart';
 import '../../widgets/primary_button.dart';
 import '../home/main_navigation_screen.dart';
+import '../home/memories_screen.dart';
 
+/// NextMeet Connection Success Celebration Screen
+/// Strictly following NextMeet Redesign.pdf (Page 11)
 class ConnectionSuccessScreen extends StatelessWidget {
-  const ConnectionSuccessScreen({super.key});
+  final RelationshipModel? relationship;
+
+  const ConnectionSuccessScreen({
+    super.key,
+    this.relationship,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final name1 = relationship?.userName1 ?? 'You';
+    final name2 = relationship?.userName2 ?? 'Partner';
+
+    final rel = relationship;
+    String togetherStr = '1 day';
+    String lastMetStr = 'Today';
+    String distStr = 'Together';
+    String nextMeetStr = 'Soon';
+
+    if (rel != null) {
+      final daysTogether = DateTime.now().difference(rel.anniversaryDate).inDays;
+      if (daysTogether <= 0) {
+        togetherStr = '1 day';
+      } else if (daysTogether >= 365) {
+        togetherStr = '${daysTogether ~/ 365}y ${(daysTogether % 365) ~/ 30}m';
+      } else {
+        togetherStr = '$daysTogether days';
+      }
+
+      final daysSinceMet = DateTime.now().difference(rel.lastMeetingDate).inDays;
+      if (daysSinceMet <= 0) {
+        lastMetStr = 'Today';
+      } else if (daysSinceMet < 30) {
+        lastMetStr = '${daysSinceMet}d ago';
+      } else if (daysSinceMet < 365) {
+        lastMetStr = '${daysSinceMet ~/ 30} mo ago';
+      } else {
+        lastMetStr = '${daysSinceMet ~/ 365}y ago';
+      }
+
+      final dist = rel.computedDistance > 0 ? rel.computedDistance : rel.distanceKm;
+      distStr = dist > 0 ? '${dist.round()} km' : 'Together';
+
+      final daysToNext = rel.nextMeetingDate.difference(DateTime.now()).inDays;
+      nextMeetStr = daysToNext <= 0 ? 'Today!' : '$daysToNext days';
+    }
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Background "Confetti" decorations
-          ...List.generate(6, (index) {
-            return Positioned(
-              top: 100 * (index % 3).toDouble(),
-              left: 50 * index.toDouble(),
-              child: ZoomIn(
-                delay: Duration(milliseconds: 200 * index),
-                child: Icon(
-                  Icons.favorite_rounded,
-                  color: AppColors.primary.withValues(alpha: 0.05),
-                  size: 20 + (10 * index).toDouble(),
+      backgroundColor: AppColors.primary, // Full pink celebration canvas
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 36),
+
+              // Mascots Leaning Together with Floating White Heart (Page 11)
+              Center(
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    const TwoMascotsRow(size: 110, spacing: 20),
+                    Positioned(
+                      top: -20,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 22),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            );
-          }),
 
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.xl),
+              const SizedBox(height: 28),
+
+              Text(
+                'You are connected!',
+                style: AppTextStyles.display.copyWith(
+                  color: Colors.white,
+                  fontSize: 32,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$name1 and $name2 now share a private space.',
+                style: AppTextStyles.body.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 32),
+
+              // White Bottom Card with 4 Metric Boxes (Page 11)
+            Container(
+              decoration: const BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  FadeInDown(
-                    child: Text(
-                      'NextMeet',
-                      style: AppTextStyles.h3.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
+                  // 2x2 Metric Grid
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _metricCard('Together for', togetherStr),
                       ),
-                    ),
-                  ),
-                  const Spacer(),
-                  
-                  // Central Connection Animation
-                  FadeInUp(
-                    duration: const Duration(seconds: 1),
-                    child: Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Pulse(
-                            infinite: true,
-                            child: Container(
-                              width: 240,
-                              height: 240,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.primary.withValues(alpha: 0.03),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: 180,
-                            height: 180,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              boxShadow: AppColors.premiumShadow,
-                            ),
-                            child: ClipOval(
-                              child: Stack(
-                                children: [
-                                  Positioned(
-                                    left: 20,
-                                    top: 40,
-                                    child: FadeInLeft(
-                                      delay: const Duration(milliseconds: 400),
-                                      child: const CircleAvatar(
-                                        radius: 40,
-                                        backgroundColor: AppColors.primary,
-                                        child: Icon(Icons.person, color: Colors.white, size: 40),
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    right: 20,
-                                    bottom: 40,
-                                    child: FadeInRight(
-                                      delay: const Duration(milliseconds: 600),
-                                      child: CircleAvatar(
-                                        radius: 40,
-                                        backgroundColor: AppColors.accent.withValues(alpha: 0.8),
-                                        child: const Icon(Icons.person, color: Colors.white, size: 40),
-                                      ),
-                                    ),
-                                  ),
-                                  Center(
-                                    child: ZoomIn(
-                                      delay: const Duration(milliseconds: 800),
-                                      child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 40),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _metricCard('Last met', lastMetStr),
                       ),
-                    ),
+                    ],
                   ),
-                  
-                  const SizedBox(height: AppSpacing.xxl),
-                  
-                  // Text Content
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 1000),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Hearts Connected! ❤️',
-                          style: AppTextStyles.h1.copyWith(fontSize: 32),
-                        ),
-                        const SizedBox(height: AppSpacing.s),
-                        Text(
-                          'Your private couple space is live and ready.\nEverything you share is encrypted and private.',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary, height: 1.5),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _metricCard('Distance', distStr),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _metricCard('Next meetup', nextMeetStr),
+                      ),
+                    ],
                   ),
-                  
-                  const SizedBox(height: AppSpacing.xl),
-                  
-                  // Badges
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 1200),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildBadge('Encrypted', Icons.lock_outline_rounded),
-                        const SizedBox(width: AppSpacing.m),
-                        _buildBadge('Live Sync', Icons.sync_rounded),
-                        const SizedBox(width: AppSpacing.m),
-                        _buildBadge('Private Space', Icons.favorite_rounded),
-                      ],
-                    ),
+
+                  const SizedBox(height: 28),
+
+                  PrimaryButton(
+                    text: 'Go to Home',
+                    onPressed: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+                        (route) => false,
+                      );
+                    },
                   ),
-                  
-                  const Spacer(),
-                  
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 1400),
-                    child: PrimaryButton(
-                      text: "Enter Our Shared Space ✨",
+                  const SizedBox(height: 12),
+
+                  Center(
+                    child: TextButton(
                       onPressed: () {
-                        VibrationService.success();
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
                           (route) => false,
                         );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const MemoriesScreen()),
+                        );
                       },
-                    ),
-                  ),
-                  
-                  const SizedBox(height: AppSpacing.l),
-                  FadeIn(
-                    delay: const Duration(milliseconds: 1600),
-                    child: Text(
-                      'ESTABLISHED • ${DateTime.now().year}',
-                      style: AppTextStyles.bodyS.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
-                        color: AppColors.textSecondary.withValues(alpha: 0.4),
+                      child: Text(
+                        'Add your first memory',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildBadge(String text, IconData icon) {
+  Widget _metricCard(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.l),
-        border: Border.all(color: AppColors.divider),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.border, width: 1.5),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: AppColors.primary),
-          const SizedBox(width: 8),
+          Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
+          const SizedBox(height: 4),
           Text(
-            text,
-            style: AppTextStyles.bodyS.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
+            value,
+            style: AppTextStyles.title2.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
             ),
           ),
         ],

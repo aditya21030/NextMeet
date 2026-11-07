@@ -1,194 +1,165 @@
-# NextMeet Design System & UI/UX Guidelines
-**Project:** NextMeet (Intimate Couple Digital Space) • **Version:** `1.0.38+85`  
+# NextMeet Design System & UI/UX Specifications
+**Project:** NextMeet (Intimate Couple Digital Space) • **Version:** `1.1.0`  
 **Configuration File:** `design.md`  
-**Typography Core:** `GoogleFonts.outfit`  
-**Design Philosophy:** Romantic Warmth, Tactile Intimacy, Calm Clarity, and Zero-Friction Ergonomics
+**Design Reference:** `NextMeet Redesign.pdf` (86 Pages) & `NextMeet-logo/`  
+**Typography Core:** `GoogleFonts.nunito` (Weights: 600 SemiBold & 800 ExtraBold)  
+**Design Philosophy:** Modern Flat, Cute and Clean, Zero Elevation, Border-Structured Tactility, Romantic Warmth
 
 ---
 
-## 1. Design Philosophy & Romantic Principles
-
-NextMeet is not a utility dashboard or a cold social media feed; it is an intimate digital sanctuary for two people in love. Every screen, animation, and color choice must reflect:
-* **Romantic Tactility:** Physical metaphors like digital hand-holding ("Heart Sync"), digital touches, and Polaroid scrapbooks must feel tactile through calibrated haptics and gentle physics.
-* **Intimate Delight over System Alerts:** Intimate moments should never be acknowledged with generic system banners (`SnackBar`). Intimate actions trigger floating particle bursts, ambient screen glows, and gentle vibrations.
-* **Effortless Thumb Ergonomics:** High-frequency daily actions (Chat, Mood, Touch) must sit comfortably within the natural one-handed thumb zone on modern 6.5"+ mobile screens.
-* **Inclusive Readability (WCAG AA):** Intimate emotional text must remain crisp, clear, and high-contrast in direct sunlight, on AMOLED screens, and on budget displays.
-
----
-
-## 2. Color Palette & Accessibility Tokens
+## 1. Brand Identity & Mascot Foundations
 
 ```mermaid
 graph LR
-    P[Primary: Rose Pink #FF5E7D] --- S[Accent: Modern Indigo #6366F1]
-    P --- BG[Canvas Background: #F8FAFC]
-    P --- SN[Sanctum Vault: #FDEEF1]
-    BG --- T1[Text Primary: #0F172A]
-    BG --- T2[Text Secondary: #64748B]
+    P[Pink Heart #FF5C9E<br><i>You</i>] ---|Lean into each other| V[Violet Heart #7B5CF0<br><i>Partner</i>]
+    P --- G[Small Gap: Whole & Close]
+    V --- G
+    G --- W[Wordmark: Nunito ExtraBold<br>Primary Pink #D81B6A]
 ```
 
-### 2.1 Brand & Emotion Palette
-| Token | Hex Value | Purpose & Psychological Impact |
-| :--- | :--- | :--- |
-| `primary` | `#FF5E7D` | **Signature Love Pink:** Warm, vibrant, affectionate. Used for CTAs, active heart states, and key highlights. |
-| `primaryLight` | `#FF859B` | Gradient highlight and badge backgrounds. |
-| `primaryDark` | `#E04362` | Pressed button states and active indicators. |
-| `accent` | `#6366F1` | **Indigo Companion:** Deep, calming modern accent for partner distinctions and secondary features. |
-| `success` | `#10B981` | Emerald green for connected states, matched codes, and synced checks. |
-| `error` | `#EF4444` | Soft rose-red for input validation warnings. |
-| `warning` | `#F59E0B` | Warm amber for "Streak at Risk" and reminder states. |
+* **The Two Hearts Concept:** Two hearts lean into each other. Pink is you, violet is your partner. A small deliberate gap keeps both whole, just like two people who are far apart and close at heart.
+* **Alternate Mascot Colors:** Butter (`#FFD66B`) and Mint (`#6FCFA0`) for custom looks/themes.
+* **Mascot Sizes:** `24px` (inline/badges), `40px` (avatars/chips), `64px` (cards/prompts), `96px` (hero headers/milestones).
+* **Mascot Accessories:** None, Party Hat, Cap, Golden Crown (unlocked via couple levels or NextMeet+).
+* **Wordmark:** *Nunito ExtraBold*, converted to outlines in vector assets. Main brand color: `#D81B6A`.
 
-### 2.2 Surface & Canvas Architecture
-| Token | Hex Value | Usage Rule |
-| :--- | :--- | :--- |
-| `background` | `#F8FAFC` | **Global Standard Canvas:** Cool, clean slate white used across 95% of screens. |
-| `surface` | `#FFFFFF` | Card containers, bottom sheets, and elevated dialogs. |
-| `sanctumSurface`| `#FDEEF1` | **Vault Exclusive:** Reserved *exclusively* for the Private Sanctum tab to visually signal a private vault. |
-| `divider` | `#E2E8F0` | Subtle hairline borders (`1px`) between list items and card dividers. |
+---
 
-### 2.3 Typography & Contrast Rules (WCAG AA Compliance)
+## 2. Core Design Principles
+
+1. **Flat & Clean:** Solid colour fills, **1.5px borders** (`#F8D8E6`), **no drop shadows**, and **no gradients**.
+2. **Cute, Not Childish:** Friendly rounded shapes, sweet expressive mascots, clean typography, and tactile micro-interactions.
+3. **Two Hearts Semantics:** Pink (`#FF5C9E` / `#D81B6A`) is always **You**; Violet (`#7B5CF0`) is always **Partner**.
+4. **Warm and Close:** Short heartfelt copy, big prominent numbers, soft tints.
+5. **Tight and Tidy:** `16px` page horizontal padding, `10px` card gaps, `12px` section gaps.
+
+---
+
+## 3. Complete Color System Tokens
+
+### 3.1 Brand & You
+| Token Name | Hex Value | Flutter Constant | Usage |
+| :--- | :--- | :--- | :--- |
+| **Primary** | `#D81B6A` | `AppColors.primary` | Main brand color, primary CTAs, active highlights |
+| **Primary Dark** | `#B0145A` | `AppColors.primaryDark` | Pressed button states, high contrast emphasis |
+| **You** | `#FF5C9E` | `AppColors.you` | Your mascot heart, your action bubbles & chips |
+| **Pink Light** | `#FFC2D9` | `AppColors.pinkLight` | Secondary action backgrounds, tag fills |
+| **Pink Soft** | `#FFE0ED` | `AppColors.pinkSoft` | Soft button backgrounds, card highlights |
+| **Background (Blush)** | `#FFF4F8` | `AppColors.background` | Global app canvas background |
+
+### 3.2 Partner & Connection
+| Token Name | Hex Value | Flutter Constant | Usage |
+| :--- | :--- | :--- | :--- |
+| **Partner** | `#7B5CF0` | `AppColors.partner` | Partner mascot heart, partner cards & indicators |
+| **Partner Light** | `#9B87F5` | `AppColors.partnerLight` | Partner accent highlights, secondary pills |
+| **Partner Tint** | `#C9B8FF` | `AppColors.partnerTint` | Partner soft tag borders and backgrounds |
+| **Partner Soft** | `#EDE4FF` | `AppColors.partnerSoft` | Partner speech bubbles, quote containers |
+| **Partner Text** | `#4B3A8C` | `AppColors.partnerText` | High-contrast readable text on partner soft surfaces |
+
+### 3.3 Accents
+| Token Name | Hex Value | Flutter Constant | Usage |
+| :--- | :--- | :--- | :--- |
+| **Butter** | `#FFD66B` | `AppColors.butter` | Reverse wordmark accent, streaks, trophies, stars |
+| **Butter Soft** | `#FFE7A3` | `AppColors.butterSoft` | Warm streak cards, celebration banners |
+| **Butter Text** | `#7A5200` | `AppColors.butterText` | High-contrast text on butter backgrounds |
+| **Mint** | `#6FCFA0` | `AppColors.mint` | Success confirmations, connected states, checkmarks |
+| **Mint Soft** | `#E3F6EC` | `AppColors.mintSoft` | Success containers, active status chips |
+| **Mint Text** | `#1F7A4F` | `AppColors.mintText` | High-contrast text on mint surfaces |
+| **Blue** | `#3F5FA8` | `AppColors.blue` | Travel indicators, flights, map flight lines |
+| **Coral** | `#FF8A6B` | `AppColors.coral` | Sunset tags, warmth indicators |
+
+### 3.4 Neutrals & Structure
+| Token Name | Hex Value | Flutter Constant | Usage |
+| :--- | :--- | :--- | :--- |
+| **Ink** | `#2B1B26` | `AppColors.ink` | Primary headings, dark buttons, wordmark text |
+| **Muted** | `#7A6672` | `AppColors.muted` | Secondary descriptions, timestamps, inactive icons |
+| **Border** | `#F8D8E6` | `AppColors.border` | Standard 1.5px card & input borders |
+| **Border Strong** | `#E7B9CE` | `AppColors.borderStrong` | Focused containers, active selected chips |
+| **Card (White)** | `#FFFFFF` | `AppColors.card` | Elevated card surfaces and sheets |
+| **Danger** | `#D13A4F` | `AppColors.danger` | Error states, cancel & unpair buttons |
+
+---
+
+## 4. Typography Scale (`GoogleFonts.nunito`)
+
+| Style Token | Size | Weight | Tracking | Flutter Specification | Example Usage |
+| :--- | :---: | :---: | :---: | :--- | :--- |
+| **Display** | `32px` | `800` (ExtraBold) | `-0.5px` | `AppTypography.display` | "Hello, you", "1000 days" |
+| **Title 1** | `26px` | `800` (ExtraBold) | `-0.3px` | `AppTypography.title1` | "You are connected!", "Plan a trip" |
+| **Title 2** | `20px` | `800` (ExtraBold) | `-0.2px` | `AppTypography.title2` | "Reunion in Chennai", "Tic-tac-toe" |
+| **Heading** | `17px` | `800` (ExtraBold) | `0.0px` | `AppTypography.heading` | "Next meetup", "Our memories" |
+| **Body** | `15px` | `600` (SemiBold) | `0.0px` | `AppTypography.body` | "A private space for just the two of you." |
+| **Label** | `12px` | `800` (ExtraBold) | `1.0px` | `AppTypography.label` | "TOGETHER SINCE", "NEXT TRIP" (Uppercase) |
+| **Caption** | `13px` | `600` (SemiBold) | `0.0px` | `AppTypography.caption` | "Rahul felt it 2 min ago", "Online now" |
+
+---
+
+## 5. Spacing, Radii & Surface Architecture
+
+### 5.1 Spacing Tokens (`AppSpacing`)
+* **Page Padding:** `16.0` (Consistent left/right padding across all screens)
+* **Card Gap:** `10.0` (Between adjacent cards or list rows)
+* **Section Gap:** `12.0` (Between headers and content blocks)
+* **Item Spacing Scale:** `4.0` (xs), `8.0` (s), `10.0` (m), `16.0` (l), `24.0` (xl), `32.0` (xxl)
+
+### 5.2 Corner Radii Tokens (`AppRadius`)
+* **Badge / Chip:** `12.0`
+* **Text Input:** `18.0`
+* **Standard Card:** `22.0`
+* **Hero Banner Card:** `28.0`
+* **Button Pill:** `27.0` (Full rounded pill shape for 54px buttons)
+* **Circle / Mascot:** `100.0`
+
+### 5.3 Elevation & Border Rules (Strict Flat Protocol)
 > [!IMPORTANT]
-> **STRICT ACCESSIBILITY RULE:**  
-> Never render secondary text with low opacity (`alpha: 0.4` or `alpha: 0.5`). On `#F8FAFC`, low opacity drops the contrast ratio below **2.5:1**, making text unreadable. Use solid Slate tints instead:
-
-* **`textPrimary` (`#0F172A` - Slate 900):** Headings, active values, button labels. Contrast ratio: **15.2:1** (AAA).
-* **`textSecondary` (`#64748B` - Slate 500):** Subtitles, timestamps, captions, field labels. Contrast ratio: **4.6:1** (Passes WCAG AA).
-* **`textMuted` (`#94A3B8` - Slate 400):** Form placeholder hints only.
-
----
-
-## 3. Typography Scale (`GoogleFonts.outfit`)
-
-```
-H1: 32px Bold        ──► "Our World ✨"
-H2: 24px Bold        ──► "Next Meeting"
-H3: 20px Bold        ──► "Memories & Moments"
-Body L: 16px Medium  ──► "How would you like to bridge the gap?"
-Body M: 14px Medium  ──► "124 Days Together • Mumbai to London"
-Body S: 12px Semi    ──► "SYNCED 2 MINS AGO"
-Button: 16px Extra   ──► "ENTER OUR WORLD ✨"
-```
-
-### Typography Specification Table
-| Style Token | Size | Weight | Tracking (Letter Spacing) | Line Height |
-| :--- | :---: | :---: | :---: | :---: |
-| `AppTextStyles.h1` | `32px` | `FontWeight.w800` | `-0.5px` | `1.2` |
-| `AppTextStyles.h2` | `24px` | `FontWeight.w700` | `-0.3px` | `1.3` |
-| `AppTextStyles.h3` | `20px` | `FontWeight.w700` | `0.0px` | `1.3` |
-| `AppTextStyles.bodyL` | `16px` | `FontWeight.w500` | `0.0px` | `1.4` |
-| `AppTextStyles.bodyM` | `14px` | `FontWeight.w500` | `0.1px` | `1.4` |
-| `AppTextStyles.bodyS` | `12px` | `FontWeight.w600` | `0.4px` (Caps: `1.2px`) | `1.3` |
-| `AppTextStyles.button` | `16px` | `FontWeight.w800` | `0.5px` | `1.0` |
+> **ZERO SHADOWS OR GRADIENTS:**  
+> The redesign strictly eliminates standard box shadows and gradients.  
+> Every card is built with:
+> - Background: `AppColors.card` (`#FFFFFF`) or tinted container
+> - Border: `Border.all(color: AppColors.border, width: 1.5)` (`#F8D8E6`)
+> - Active/Focus: `Border.all(color: AppColors.primary, width: 2.0)` (`#D81B6A`)
+> - Elevation: `0.0` (Always flat)
 
 ---
 
-## 4. Spacing, Radii & Elevation Tokens
+## 6. Global Navigation Hierarchy
 
-### 4.1 Spacing Scale (`AppSpacing`)
-```dart
-static const double xs  = 4.0;
-static const double s   = 8.0;
-static const double m   = 16.0;
-static const double l   = 24.0;
-static const double xl  = 32.0;
-static const double xxl = 48.0;
+The redesigned app features a unified **5-Tab Bottom Navigation Bar**:
 ```
-
-### 4.2 Corner Radii (`AppRadius`)
-* **Small (`12.0`):** Badges, tag chips, reaction pills.
-* **Medium (`16.0`):** Text fields, PIN input boxes, secondary buttons.
-* **Large (`24.0`):** Standard cards, bottom sheet dialogs, list items.
-* **Extra Large (`32.0`):** Hero cards (Next Meeting card, Heart Sync card).
-* **Circle (`100.0`):** Floating action buttons, avatar circles, touch buttons.
-
-### 4.3 Shadow Elevation Tokens
-```dart
-// Soft ambient card elevation
-static const List<BoxShadow> softShadow = [
-  BoxShadow(color: Color(0x060F172A), blurRadius: 24, offset: Offset(0, 8)),
-];
-
-// High-fidelity romantic rose glow for primary actions
-static const List<BoxShadow> premiumShadow = [
-  BoxShadow(color: Color(0x14FF5E7D), blurRadius: 36, offset: Offset(0, 16), spreadRadius: -8),
-  BoxShadow(color: Color(0x060F172A), blurRadius: 10, offset: Offset(0, 4)),
-];
-
-// Interactive button press shadow
-static const List<BoxShadow> buttonShadow = [
-  BoxShadow(color: Color(0x40FF5E7D), blurRadius: 20, offset: Offset(0, 8), spreadRadius: -4),
-];
+┌────────────────────────────────────────────────────────┐
+│  [🏠 Home]    [🎮 Games]    [📅 Plan]    [🔒 Vault]    [👤 Me]  │
+└────────────────────────────────────────────────────────┘
 ```
+1. **Home (`HomeScreen`):** Partner hero status card (battery %, online status, timezone difference), 3-metric quick chips, distance flight arc, Heartbeat sync button, recent memories carousel.
+2. **Games (`GamesHubScreen`):** Couple challenge hub (Tic-Tac-Toe, Quiz, Truth or Dare, Draw Together, Memory Match, Would You Rather), Level & XP bar, Badges.
+3. **Plan (`PlanHubScreen`):** Next meetup countdown, weekly calendar strip, upcoming events, Bucket List, and full Trips Hub (Itinerary, Packing, Budget/Expense split, Flight tracker).
+4. **Vault (`SanctumVaultScreen`):** Encrypted private space with PIN / biometric unlock, Secret photos, Love Letters (sealed & scheduled), Voice Whispers player & recorder.
+5. **Me (`MeProfileScreen`):** Couple overview, days together, streak, NextMeet+ paywall & management, profile editor, partner details, haptics, quiet hours, app customizer (hats & themes).
 
 ---
 
-## 5. Micro-Interactions & Emotional Feedback Patterns
+## 7. Component Library Blueprint
 
-### 5.1 The `FloatingParticleOverlay` (Replacing `SnackBar`)
-> [!TIP]
-> Intimate couple actions must never summon a grey rectangular system bar that covers the navigation. Instead, spawn lightweight, upward-drifting floating emoji particles:
+### 7.1 Buttons (`PrimaryButton`, `SoftButton`, `DarkButton`)
+* **Primary:** Pill shape (height `54dp`, radius `27dp`), filled `#D81B6A`, white Nunito 800 text.
+* **Soft:** Pill shape, filled `#FFE0ED`, text `#D81B6A`.
+* **Dark:** Pill shape, filled `#2B1B26`, text `#FFFFFF`.
+* **White:** Pill shape, filled `#FFFFFF`, border `1.5px #F8D8E6`, text `#2B1B26`.
+* **Disabled:** Fill `#F5EEF2`, text `#BBAAB5`.
 
-* **Miss You Action (`miss`):**
-  * Spawns 6–8 heart particles (`❤️`, `💖`, `✨`) drifting upward with subtle sinusoidal horizontal sway.
-  * Duration: `1200ms`, easing: `Curves.easeOutCubic`.
-  * Haptic: Medium double pulse (`VibrationService.medium()`).
-* **Virtual Hug Action (`hug`):**
-  * Spawns hug emojis (`🤗`, `💕`) + a 300ms ambient rose edge glow around the screen.
-  * Haptic: Calibrated long warm hug vibration (`VibrationService.hugVibration()`).
-* **Digital Touch (`touch`):**
-  * Expanding radial ripple wave centered on the button.
-  * Haptic: High-frequency digital pulse.
+### 7.2 Form Inputs (`AppTextInput`, `AppPinInput`)
+* **Container:** Height `54dp`, fill `#FFFFFF`, border `1.5px #F8D8E6`, radius `18dp`.
+* **Focus State:** Border `2.0px #D81B6A`.
+* **Error State:** Border `1.5px #D13A4F`, helper text in `#D13A4F`.
+* **PIN Input (6-digit / 4-digit):** Square-rounded boxes `50x54dp`, radius `14dp`, border `1.5px #F8D8E6`, bold text `22px #D81B6A`.
 
-### 5.2 "Heart Sync" (Holding Hands) Interaction Spec
-* **Gesture Filter:** Requires holding for at least **250ms** before engaging. This prevents accidental triggers while the user is vertically scrolling through their feed.
-* **Visual Charging Ring:** While holding, an animated circular progress ring fills around the central heart.
-* **Partner Detection:**
-  * When solo holding: Pulsing rose aura + text: *"Wait for [Partner] to join..."*
-  * When simultaneous hold detected: Double heartbeat haptic rhythm every 1.5s + text: *"HOLDING HANDS! ✨"* with dual sparkle bursts.
+### 7.3 Cards & Chips
+* **Hero Card:** Filled `#D81B6A` or `#7B5CF0` or `#FFF4F8`, radius `28dp`, border `1.5px`.
+* **Metric Card:** Filled `#FFFFFF`, radius `22dp`, border `1.5px #F8D8E6`, displays large bold number + uppercase label.
+* **Chips / Tags:** Pill shape (height `32dp`, radius `16dp`), border `1.0px`, soft tint fills (`#FFE0ED` for you, `#EDE4FF` for partner, `#FFE7A3` for streak).
+* **Empty State Card:** Filled `#FFF4F8`, radius `22dp`, cute heart mascot illustration, one clear action CTA.
 
----
-
-## 6. Ergonomics & One-Handed Thumb Zones
-
-```
-┌─────────────────────────────────┐  ▲
-│  [Profile]       [NextMeet]     │  │  Top Dead Zone (Hard to reach)
-│                                 │  │  Place read-only headers here
-│  ┌───────────────────────────┐  │  ▼
-│  │   Next Meeting Card       │  │
-│  └───────────────────────────┘  │
-│                                 │  ▲
-│  ┌───────────────────────────┐  │  │  Natural Thumb Zone
-│  │  [Miss You]     [Hug]     │  │  │  (Easy one-handed reach)
-│  │  [Touch ⚡]               │  │  │  Place daily interaction
-│  └───────────────────────────┘  │  │  buttons and Quick Chat here
-│                                 │  │
-│  [💖 Home] [📸] [🔒] [⚙️] (💬)  │  ▼
-└─────────────────────────────────┘
-```
-
-* **Quick-Chat Ergonomics:** In addition to the top icon, provide a thumb-friendly Quick Chat button or prominent nav item in the lower half of tall smartphone screens.
-* **Touch Target Sizing:** Every interactive icon, button, and avatar has a minimum hit target of **44x44 dp** to eliminate mis-taps.
-
----
-
-## 7. Component Library Specifications
-
-### 7.1 Primary Action Button (`PrimaryButton`)
-* **Height:** `54dp`
-* **Border Radius:** `AppRadius.m` (`16dp`)
-* **Background:** `LinearGradient(colors: [Color(0xFFFF5E7D), Color(0xFFFF3D68)])`
-* **Typography:** `AppTextStyles.button` (White, 16px, Extra-Bold)
-* **Loading State:** `CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white)`
-
-### 7.2 PIN Input Theme (`Pinput`)
-* **Box Size:** Width `48dp`, Height `54dp`
-* **Border:** `1.5dp` solid `#E2E8F0` (Default), `#FF5E7D` (Focused)
-* **Fill:** `#FFFFFF` (Surface)
-* **Text Style:** `AppTextStyles.h2` (22px, Bold, `#FF5E7D`)
-* **Haptics:** Light impact on every digit entry.
-
-### 7.3 Unpaired State Badges
-* When a user is not yet paired with a partner, navigation tabs for **Memories** and **Sanctuary** display a clean lock badge:
-  * Icon: `Icons.lock_rounded` (Size `12dp`, Color: `#94A3B8`).
-  * Behavior: Tapping displays a warm invitation card encouraging the user to share their love code.
+### 7.4 Micro-Interactions & Haptics
+* **Heartbeat Sync:** Dual hold detector with live ECG pulse wave, synchronized haptic rhythm (`VibrationService`), and live dual BPM display.
+* **Virtual Hug & Miss You:** Spawn lightweight floating heart particles drifting upward with subtle sine wave oscillation.
+* **Custom Numeric Keypad:** Tactile haptic click on each numeric button press with instant visual bounce.

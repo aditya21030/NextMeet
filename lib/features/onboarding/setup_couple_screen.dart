@@ -1,12 +1,15 @@
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
-import 'create_couple_screen.dart';
+import '../../widgets/flat_components.dart';
+import '../../widgets/primary_button.dart';
+import 'tell_us_about_you_screen.dart';
 import 'join_couple_screen.dart';
 
+/// NextMeet Setup Couple Screen
+/// Flat, accessible, zero-friction pairing hub
 class SetupCoupleScreen extends StatefulWidget {
   final String? creatorName;
   final String? initialInviteCode;
@@ -43,298 +46,196 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Fallback to Auth display name if not passed from registration
     final String? resolvedName = widget.creatorName ?? AuthService().currentUser?.displayName;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // Background decorations
-          Positioned(
-            top: -100,
-            right: -100,
-            child: FadeIn(
-              duration: const Duration(seconds: 2),
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.08),
-                      AppColors.primary.withValues(alpha: 0),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 12),
+              // Top Bar
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const TwoMascotsRow(size: 26, spacing: 3),
+                      const SizedBox(width: 8),
+                      Text(
+                        'NextMeet',
+                        style: AppTextStyles.title2.copyWith(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ],
                   ),
-                ),
+                  TagChip(
+                    label: 'For two',
+                    backgroundColor: AppColors.pinkSoft,
+                  ),
+                ],
               ),
-            ),
-          ),
 
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FadeInDown(
-                    child: IconButton(
-                      onPressed: () {
-                        VibrationService.light();
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.l),
-                  FadeInLeft(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Connect With Your Partner ❤️', style: AppTextStyles.h1.copyWith(fontSize: 30)),
-                        const SizedBox(height: AppSpacing.s),
-                        Text(
-                          'Choose how you want to set up your private couple space.',
-                          style: AppTextStyles.bodyL.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: 24),
 
-                  // Detected invite code banner
-                  if (_detectedCode != null)
-                    FadeInDown(
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: AppSpacing.l),
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.m),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1F3),
-                          borderRadius: BorderRadius.circular(AppRadius.l),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
-                          boxShadow: AppColors.softShadow,
-                        ),
-                        child: Row(
+              // Mascots Leaning Header
+              const Center(
+                child: TwoMascotsRow(size: 92, spacing: 16),
+              ),
+
+              const SizedBox(height: 20),
+
+              Text(
+                'Connect with\nyour partner',
+                style: AppTextStyles.display.copyWith(fontSize: 30, height: 1.15),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Choose how you want to set up your private couple space.',
+                style: AppTextStyles.body.copyWith(color: AppColors.muted),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 24),
+
+              // Clipboard Banner (if detected)
+              if (_detectedCode != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.butterSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    border: Border.all(color: AppColors.butter, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.stars_rounded, color: AppColors.butterText, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
+                            Text(
+                              'Code Detected: $_detectedCode',
+                              style: AppTextStyles.heading.copyWith(
+                                color: AppColors.butterText,
+                                fontSize: 15,
                               ),
-                              child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 18),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Partner Code Detected: $_detectedCode ✨',
-                                    style: AppTextStyles.bodyM.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Tap "I Have a Partner Code" below to pair in 1 tap!',
-                                    style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary),
-                                  ),
-                                ],
-                              ),
+                            Text(
+                              'Tap below to connect instantly!',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.butterText),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  
-                  // PRIMARY OPTION: I Have a Partner Code (Eliminates drop-off confusion)
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 100),
-                    child: _buildOptionCard(
-                      context,
-                      badgeText: _detectedCode != null ? 'CODE READY TO PAIR ✨' : 'HAVE AN INVITE CODE?',
-                      title: 'I Have an Invite Code',
-                      description: 'Partner already shared a 6-digit code? Enter it to connect your shared space instantly.',
-                      icon: Icons.link_rounded,
-                      actionText: 'Enter Code',
-                      isPrimary: true,
-                      highlighted: _detectedCode != null,
-                      onTap: () {
-                        VibrationService.medium();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => JoinCoupleScreen(
-                              userName: resolvedName,
-                              initialCode: _detectedCode,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.l),
+                ),
+                const SizedBox(height: 16),
+              ],
 
-                  // SECONDARY OPTION: I'm Creating Our Space (Create Code)
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 200),
-                    child: _buildOptionCard(
-                      context,
-                      badgeText: 'STARTING FRESH',
-                      title: "I'm Creating Our Space",
-                      description: 'First one here? Set up your couple space and get a 6-digit invite code for your partner.',
-                      icon: Icons.favorite_border_rounded,
-                      actionText: 'Create Space',
-                      isPrimary: false,
-                      highlighted: false,
-                      onTap: () {
-                        VibrationService.medium();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => CreateCoupleScreen(userName: resolvedName)),
-                        );
-                      },
+              // Option 1: I Have a Partner Code
+              NextMeetCard(
+                borderColor: _detectedCode != null ? AppColors.primary : AppColors.border,
+                borderWidth: _detectedCode != null ? 2.0 : 1.5,
+                color: _detectedCode != null ? AppColors.pinkSoft.withValues(alpha: 0.3) : AppColors.card,
+                onTap: () {
+                  VibrationService.light();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => JoinCoupleScreen(
+                        userName: resolvedName,
+                        initialCode: _detectedCode,
+                      ),
                     ),
-                  ),
-                  
-                  const SizedBox(height: AppSpacing.xxl),
-                  FadeIn(
-                    delay: const Duration(milliseconds: 500),
-                    child: Center(
+                  );
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: AppColors.pinkSoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.key_rounded, color: AppColors.primary, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.verified_user_rounded, color: AppColors.success.withValues(alpha: 0.6), size: 16),
-                          const SizedBox(height: 4),
+                          Text('I have an invite code', style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                          const SizedBox(height: 2),
                           Text(
-                            'ENCRYPTED & PRIVATE COUPLING',
-                            style: AppTextStyles.bodyS.copyWith(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                              color: AppColors.textMuted,
-                            ),
+                            'Enter the 6-digit code your partner shared with you.',
+                            style: AppTextStyles.caption.copyWith(fontSize: 12),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOptionCard(
-    BuildContext context, {
-    required String badgeText,
-    required String title,
-    required String description,
-    required IconData icon,
-    required String actionText,
-    required VoidCallback onTap,
-    required bool isPrimary,
-    required bool highlighted,
-  }) {
-    final cardBg = isPrimary ? const Color(0xFF1E1E2C) : Colors.white;
-    final titleColor = isPrimary ? Colors.white : AppColors.textPrimary;
-    final descColor = isPrimary ? Colors.white70 : AppColors.textSecondary;
-    final actionColor = isPrimary ? Colors.white : AppColors.primary;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(AppRadius.xxl),
-          boxShadow: isPrimary ? AppColors.deepShadow : AppColors.premiumShadow,
-          border: highlighted
-              ? Border.all(color: AppColors.primary, width: 2)
-              : (isPrimary ? null : Border.all(color: AppColors.divider.withValues(alpha: 0.7))),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.m),
-                  decoration: BoxDecoration(
-                    color: isPrimary ? Colors.white.withValues(alpha: 0.08) : AppColors.primary.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    color: isPrimary ? Colors.white : AppColors.primary,
-                    size: 26,
-                  ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.muted, size: 16),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isPrimary
-                        ? (highlighted ? AppColors.primary : Colors.white.withValues(alpha: 0.12))
-                        : AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    badgeText,
-                    style: TextStyle(
-                      color: isPrimary ? Colors.white : AppColors.primary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.8,
+              ),
+
+              const SizedBox(height: 14),
+
+              // Option 2: I'm Starting Our Journey
+              NextMeetCard(
+                onTap: () {
+                  VibrationService.light();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TellUsAboutYouScreen(
+                        initialName: resolvedName,
+                      ),
                     ),
-                  ),
+                  );
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: AppColors.partnerSoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.favorite_rounded, color: AppColors.partner, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("I'm starting our journey", style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Set up our story and get a code to invite your partner.',
+                            style: AppTextStyles.caption.copyWith(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.muted, size: 16),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.l),
-            Text(
-              title,
-              style: AppTextStyles.h2.copyWith(
-                color: titleColor,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
               ),
-            ),
-            const SizedBox(height: AppSpacing.s),
-            Text(
-              description,
-              style: AppTextStyles.bodyM.copyWith(
-                color: descColor,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            Row(
-              children: [
-                Text(
-                  actionText,
-                  style: TextStyle(
-                    color: actionColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 16,
-                  color: actionColor,
-                ),
-              ],
-            ),
-          ],
+
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );

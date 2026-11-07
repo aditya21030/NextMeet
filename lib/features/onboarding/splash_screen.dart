@@ -1,18 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:animate_do/animate_do.dart';
+import 'package:flutter/services.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/constants.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/models/relationship_model.dart';
+import '../../widgets/flat_components.dart';
 import '../home/main_navigation_screen.dart';
-import '../auth/login_screen.dart';
 import 'setup_couple_screen.dart';
-import 'package:flutter/services.dart';
-import '../../core/services/subscription_service.dart';
+import 'welcome_screen.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/in_app_update_service.dart';
 
+/// NextMeet Splash Screen
+/// Strictly following NextMeet Redesign.pdf (Page 2)
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -29,21 +30,20 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _navigateToNext() async {
     try {
-      // 1. Min splash animation time (reduced from 2500ms to 1200ms for fast launch)
-      final animationFuture = Future.delayed(const Duration(milliseconds: 1200));
-      
-      // 2. Wait for auth service to determine auth state with timeout
+      // 1. Splash display duration
+      final animationFuture = Future.delayed(const Duration(milliseconds: 1400));
+
+      // 2. Auth state resolution with timeout
       final authFuture = AuthService()
           .authStateChanges
           .first
           .timeout(const Duration(seconds: 4), onTimeout: () => null);
-      
+
       final result = await Future.wait([animationFuture, authFuture]);
       final AppUser? user = result[1] as AppUser?;
 
       if (!mounted) return;
 
-      // Non-blocking in-app update check
       _checkForUpdates();
 
       // Inspect clipboard for 6-digit partner invite code
@@ -58,7 +58,6 @@ class _SplashScreenState extends State<SplashScreen> {
       } catch (_) {}
 
       if (user != null) {
-        // Fetch relationship with timeout to avoid infinite freeze
         RelationshipModel? relationship;
         try {
           relationship = await CloudRelationshipService()
@@ -68,11 +67,10 @@ class _SplashScreenState extends State<SplashScreen> {
         } catch (e) {
           debugPrint('Relationship stream timeout/error: $e');
         }
-        
+
         if (!mounted) return;
-        
+
         if (relationship != null) {
-          // Register FCM token asynchronously in background
           NotificationService().getToken().then((token) {
             if (token != null && relationship?.id != null) {
               CloudRelationshipService().updateFcmToken(relationship!.id!, token);
@@ -86,7 +84,6 @@ class _SplashScreenState extends State<SplashScreen> {
             MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
           );
         } else {
-          // User exists but has no couple yet - send to setup with detected code
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -98,7 +95,7 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => LoginScreen(initialInviteCode: detectedCode),
+            builder: (context) => WelcomeScreen(initialInviteCode: detectedCode),
           ),
         );
       }
@@ -107,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          MaterialPageRoute(builder: (context) => const WelcomeScreen()),
         );
       }
     }
@@ -120,170 +117,164 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.primary,
       body: Stack(
         children: [
-          // Background Gradient (Elegant Depth)
-          Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.center,
-                radius: 1.2,
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.12),
-                  AppColors.background.withValues(alpha: 0.9),
-                  AppColors.background,
-                ],
-                stops: const [0.0, 0.6, 1.0],
+          // Background ambient circles & sprinkles matching Page 2
+          Positioned(
+            top: -60,
+            right: -40,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
           ),
-          
-          // Subtle Particle-like background (Optional, using icons for simplicity)
           Positioned(
-            top: -50,
-            right: -50,
-            child: FadeIn(
-              delay: const Duration(milliseconds: 1500),
-              child: Icon(Icons.favorite_rounded, color: AppColors.primary.withValues(alpha: 0.04), size: 300),
+            bottom: -80,
+            left: -60,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
             ),
           ),
-          
+
+          // Star / Butter Confetti Sprinkles
+          Positioned(
+            top: 140,
+            left: 50,
+            child: Transform.rotate(
+              angle: 0.3,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: AppColors.butter,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 210,
+            right: 70,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: const BoxDecoration(
+                color: AppColors.butter,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 130,
+            right: 90,
+            child: const Icon(Icons.star_rate_rounded, color: Colors.white, size: 16),
+          ),
+          Positioned(
+            bottom: 230,
+            right: 60,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: AppColors.pinkLight.withValues(alpha: 0.6),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 280,
+            left: 70,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: const BoxDecoration(
+                color: AppColors.butter,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+
+          // Center: Leaning Mascots, NextMeet Wordmark, Tagline
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FadeInDown(
-                  duration: const Duration(milliseconds: 1000),
-                  child: SizedBox(
-                    width: 140,
-                    height: 140,
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/app_icon.png',
-                        fit: BoxFit.contain,
+                const TwoMascotsRow(size: 96, spacing: 14),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'NextMeet',
+                      style: AppTextStyles.display.copyWith(
+                        color: Colors.white,
+                        fontSize: 44,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 32),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 500),
-                  child: Column(
-                    children: [
-                      Text(
-                        'NextMeet',
-                        style: AppTextStyles.h1.copyWith(
-                          color: AppColors.primary,
-                          fontSize: 40,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Where Hearts Connect ❤️',
-                        style: AppTextStyles.bodyL.copyWith(
-                          color: AppColors.textSecondary,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 12),
+                Text(
+                  'Close, even when you are apart.',
+                  style: AppTextStyles.body.copyWith(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
           ),
-          
-          // Bottom Indicator & Version
+
+          // Bottom 3 Dots Indicator (Page 2)
           Positioned(
-            bottom: 60,
+            bottom: 40,
             left: 0,
             right: 0,
-            child: Column(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FadeInUp(
-                  delay: const Duration(milliseconds: 1200),
-                  child: const HeartPulseLoader(),
-                ),
-                const SizedBox(height: 32),
-                FadeIn(
-                  delay: const Duration(milliseconds: 1500),
-                  child: Text(
-                    'VERSION 1.0.43',
-                    style: AppTextStyles.bodyS.copyWith(
-                      color: AppColors.textSecondary.withValues(alpha: 0.5),
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 3,
-                      fontSize: 10,
-                    ),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(height: 8),
-                FadeIn(
-                  delay: const Duration(milliseconds: 1800),
-                  child: Text(
-                    '© 2026 NEXTMEET',
-                    style: AppTextStyles.bodyS.copyWith(
-                      color: AppColors.textSecondary.withValues(alpha: 0.3),
-                      fontSize: 8,
-                      letterSpacing: 2,
-                    ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    shape: BoxShape.circle,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class HeartPulseLoader extends StatefulWidget {
-  const HeartPulseLoader({super.key});
-
-  @override
-  State<HeartPulseLoader> createState() => _HeartPulseLoaderState();
-}
-
-class _HeartPulseLoaderState extends State<HeartPulseLoader> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.8, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _animation,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Icon(
-            Icons.favorite_rounded,
-            color: AppColors.primary.withValues(alpha: 0.2),
-            size: 32,
-          ),
-          const Icon(
-            Icons.favorite_rounded,
-            color: AppColors.primary,
-            size: 20,
           ),
         ],
       ),

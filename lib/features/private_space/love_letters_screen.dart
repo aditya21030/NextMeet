@@ -1,15 +1,18 @@
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../core/services/auth_service.dart';
+import 'package:intl/intl.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/models/relationship_model.dart';
+import '../../widgets/flat_components.dart';
 import '../../widgets/primary_button.dart';
-import '../../widgets/app_inputs.dart';
-import 'letter_detail_screen.dart';
+import 'new_letter_screen.dart';
+import 'letter_reader_screen.dart';
 
+/// NextMeet Love Letters Hub Screen
+/// Strictly following NextMeet Redesign.pdf (Pages 62-64)
 class LoveLettersScreen extends StatefulWidget {
   const LoveLettersScreen({super.key});
 
@@ -19,395 +22,427 @@ class LoveLettersScreen extends StatefulWidget {
 
 class _LoveLettersScreenState extends State<LoveLettersScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
-  final String? _currentUserId = AuthService().currentUid;
-  final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
-  String _searchQuery = '';
+  int _selectedTabIndex = 0;
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Color _getSealColor(String? sealName) {
+    switch (sealName) {
+      case 'Imperial Violet':
+        return AppColors.partner;
+      case 'Golden Sun':
+        return AppColors.butterText;
+      case 'Blush Rose':
+      default:
+        return AppColors.primary;
+    }
   }
 
-  void _addLetter(String relId) {
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
-    final promptChips = ['To my soulmate ✨', 'Just thinking of you 💭', 'A promise ❤️', 'Forever & always 💍'];
-    VibrationService.medium();
+  @override
+  Widget build(BuildContext context) {
+    final currentUid = AuthService().currentUser?.uid;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-            left: AppSpacing.xl,
-            right: AppSpacing.xl,
-            top: AppSpacing.xl,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
-          ),
-          child: SingleChildScrollView(
+    return StreamBuilder<RelationshipModel?>(
+      stream: _cloudService.streamRelationship(),
+      builder: (context, relSnapshot) {
+        final rel = relSnapshot.data;
+        final relId = rel?.id;
+        final partnerName = rel?.getPartnerName(currentUid) ?? 'Partner';
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                const SizedBox(height: 12),
+                // Top Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
+                        ),
+                      ),
+                      Text('Love Letters', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                      GestureDetector(
+                        onTap: () {
+                          VibrationService.light();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NewLetterScreen(
+                                relId: relId,
+                                partnerName: partnerName,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+
                 const SizedBox(height: 16),
-                Text('Write a Love Letter 📖', style: AppTextStyles.h3),
-                const SizedBox(height: 8),
-                Text('Choose a prompt or write your own title:', style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11)),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: promptChips.map((prompt) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ActionChip(
-                          label: Text(prompt, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
-                          onPressed: () {
-                            VibrationService.light();
-                            setModalState(() {
-                              titleController.text = prompt;
-                            });
+
+                // Real Letters Stream
+                Expanded(
+                  child: relId == null
+                      ? _buildEmptyState(relId, partnerName)
+                      : StreamBuilder<QuerySnapshot>(
+                          stream: _cloudService.streamLoveLetters(relId),
+                          builder: (context, lettersSnapshot) {
+                            if (lettersSnapshot.connectionState == ConnectionState.waiting &&
+                                !lettersSnapshot.hasData) {
+                              return const Center(
+                                child: CircularProgressIndicator(color: AppColors.primary),
+                              );
+                            }
+
+                            final docs = lettersSnapshot.data?.docs ?? [];
+                            final now = DateTime.now();
+
+                            final inboxDocs = <QueryDocumentSnapshot>[];
+                            final sentDocs = <QueryDocumentSnapshot>[];
+                            final lockedDocs = <QueryDocumentSnapshot>[];
+
+                            for (final d in docs) {
+                              final data = d.data() as Map<String, dynamic>;
+                              final senderId = data['senderId'] as String?;
+                              final unlockTs = data['unlockDate'] as Timestamp?;
+                              final unlockDate = unlockTs?.toDate();
+
+                              final isLocked = unlockDate != null && unlockDate.isAfter(now);
+                              if (isLocked) {
+                                lockedDocs.add(d);
+                              } else if (senderId != null && senderId == currentUid) {
+                                sentDocs.add(d);
+                              } else {
+                                inboxDocs.add(d);
+                              }
+                            }
+
+                            final tabs = [
+                              'Inbox (${inboxDocs.length})',
+                              'Sent (${sentDocs.length})',
+                              'Locked (${lockedDocs.length})',
+                            ];
+
+                            final currentDocs = _selectedTabIndex == 0
+                                ? inboxDocs
+                                : _selectedTabIndex == 1
+                                    ? sentDocs
+                                    : lockedDocs;
+
+                            return Column(
+                              children: [
+                                // Tab Selector
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                                  child: Row(
+                                    children: tabs.asMap().entries.map((entry) {
+                                      final idx = entry.key;
+                                      final label = entry.value;
+                                      final isSelected = _selectedTabIndex == idx;
+
+                                      return Expanded(
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            VibrationService.light();
+                                            setState(() => _selectedTabIndex = idx);
+                                          },
+                                          child: Container(
+                                            margin: EdgeInsets.only(right: idx < tabs.length - 1 ? 8 : 0),
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            decoration: BoxDecoration(
+                                              color: isSelected ? AppColors.primary : Colors.white,
+                                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                                              border: Border.all(
+                                                color: isSelected ? AppColors.primary : AppColors.border,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                label,
+                                                style: AppTextStyles.heading.copyWith(
+                                                  fontSize: 12,
+                                                  color: isSelected ? Colors.white : AppColors.ink,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                Expanded(
+                                  child: currentDocs.isEmpty
+                                      ? _buildEmptyState(relId, partnerName)
+                                      : SingleChildScrollView(
+                                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: [
+                                              // If locked letters exist and on inbox or locked tab, show hero banner
+                                              if (lockedDocs.isNotEmpty && _selectedTabIndex != 1)
+                                                _buildLockedHeroBanner(lockedDocs.first),
+
+                                              Text(
+                                                _selectedTabIndex == 0
+                                                    ? 'Received Letters'
+                                                    : _selectedTabIndex == 1
+                                                        ? 'Sent Letters'
+                                                        : 'Time-Locked Letters',
+                                                style: AppTextStyles.heading.copyWith(fontSize: 16),
+                                              ),
+                                              const SizedBox(height: 10),
+
+                                              ...currentDocs.map((doc) => _buildLetterCard(doc, currentUid)),
+                                              const SizedBox(height: 24),
+                                            ],
+                                          ),
+                                        ),
+                                ),
+                              ],
+                            );
                           },
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.l),
-                TextField(
-                  controller: titleController,
-                  decoration: AppInputs.premiumInput('Title (e.g. To my soulmate)'),
-                ),
-                const SizedBox(height: AppSpacing.m),
-                TextField(
-                  controller: contentController,
-                  maxLines: 5,
-                  decoration: AppInputs.premiumInput('Pour your heart out...'),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                PrimaryButton(
-                  text: 'SEND LETTER',
-                  onPressed: () async {
-                    final title = titleController.text.trim();
-                    final content = contentController.text.trim();
-                    if (title.isNotEmpty && content.isNotEmpty) {
-                      await _cloudService.addLoveLetter(relId, title, content);
-                      VibrationService.success();
-                      if (mounted) Navigator.pop(context);
-                    } else {
-                      VibrationService.error();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please enter a title and message first! 💌')),
-                      );
-                    }
-                  },
                 ),
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLockedHeroBanner(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final unlockTs = data['unlockDate'] as Timestamp?;
+    final unlockDate = unlockTs?.toDate();
+    final daysLeft = unlockDate != null ? unlockDate.difference(DateTime.now()).inDays : 0;
+    final timeStr = daysLeft > 1 ? 'In $daysLeft days' : (daysLeft == 1 ? 'Tomorrow' : 'Opens soon');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.pinkSoft.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(AppRadius.hero),
+        border: Border.all(color: AppColors.border, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Text('💌', style: TextStyle(fontSize: 28)),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.butter,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Text(
+                        'SEALED 🔒',
+                        style: AppTextStyles.label.copyWith(color: AppColors.butterText, fontSize: 9),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(timeStr, style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  data['title']?.toString() ?? 'Sealed Letter',
+                  style: AppTextStyles.heading.copyWith(fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLetterCard(QueryDocumentSnapshot doc, String? currentUid) {
+    final data = doc.data() as Map<String, dynamic>;
+    final title = data['title']?.toString() ?? 'Love Letter';
+    final content = data['content']?.toString() ?? '';
+    final senderName = data['senderName']?.toString() ?? 'Partner';
+    final senderId = data['senderId'] as String?;
+    final sealName = data['sealColor'] as String?;
+    final sealColor = _getSealColor(sealName);
+    final isMe = senderId != null && senderId == currentUid;
+
+    final unlockTs = data['unlockDate'] as Timestamp?;
+    final unlockDate = unlockTs?.toDate();
+    final isLocked = unlockDate != null && unlockDate.isAfter(DateTime.now());
+
+    final ts = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final dateStr = DateFormat('dd MMM yyyy').format(ts);
+
+    return GestureDetector(
+      onTap: () {
+        VibrationService.light();
+        if (isLocked) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Sealed with $sealName wax until ${DateFormat("dd MMM yyyy").format(unlockDate)}! 🔒💌'),
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => LetterReaderScreen(
+                title: title,
+                content: content,
+                date: dateStr,
+                sender: isMe ? 'You' : senderName,
+                sealColor: sealColor,
+              ),
+            ),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(color: AppColors.border, width: 1.5),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: sealColor,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(
+                  isLocked ? Icons.lock_outline_rounded : Icons.mail_outline_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isMe ? 'Sent by You' : 'From $senderName',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        dateStr,
+                        style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: AppTextStyles.heading.copyWith(fontSize: 15),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isLocked ? 'Sealed until ${DateFormat("dd MMM yyyy").format(unlockDate)} 🔒' : content,
+                    style: AppTextStyles.body.copyWith(color: AppColors.muted, fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<RelationshipModel?>(
-      stream: _cloudService.streamRelationship(),
-      builder: (context, relSnapshot) {
-        final relId = relSnapshot.data?.id;
-
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppBar(
-            leading: IconButton(
-              onPressed: () => Navigator.pop(context), 
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
+  Widget _buildEmptyState(String? relId, String partnerName) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const MascotHeart(color: MascotColor.pink, size: 72),
+            const SizedBox(height: 16),
+            Text(
+              'No letters yet',
+              style: AppTextStyles.title2.copyWith(fontSize: 20),
             ),
-            title: _isSearching
-                ? TextField(
-                    controller: _searchController,
-                    autofocus: true,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    decoration: InputDecoration(
-                      hintText: 'Search love letters...',
-                      border: InputBorder.none,
-                      hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.6)),
-                    ),
-                    onChanged: (val) {
-                      setState(() {
-                        _searchQuery = val.trim().toLowerCase();
-                      });
-                    },
-                  )
-                : Text('Love Letters ❤️', style: AppTextStyles.h3),
-            centerTitle: !_isSearching,
-            actions: [
-              if (_isSearching)
-                IconButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                      _isSearching = false;
-                    });
-                  },
-                  icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary, size: 20),
-                )
-              else
-                IconButton(
-                  onPressed: () {
-                    VibrationService.light();
-                    setState(() {
-                      _isSearching = true;
-                    });
-                  },
-                  icon: const Icon(Icons.search, color: AppColors.textPrimary, size: 20),
-                  tooltip: 'Search Letters',
-                ),
-            ],
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-          ),
-          body: relId == null 
-            ? const Center(child: CircularProgressIndicator())
-            : StreamBuilder<QuerySnapshot>(
-              stream: _cloudService.streamLoveLetters(relId),
-              builder: (context, snapshot) {
-                final allLetters = snapshot.data?.docs ?? [];
-                final letters = _searchQuery.isEmpty
-                    ? allLetters
-                    : allLetters.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final t = (data['title'] ?? '').toString().toLowerCase();
-                        final c = (data['content'] ?? '').toString().toLowerCase();
-                        final s = (data['senderName'] ?? '').toString().toLowerCase();
-                        return t.contains(_searchQuery) || c.contains(_searchQuery) || s.contains(_searchQuery);
-                      }).toList();
-
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.l),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      FadeInLeft(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(_searchQuery.isEmpty ? 'Recent Letters' : 'Search Results', style: AppTextStyles.h2),
-                            _buildCountBadge('${letters.length} ${letters.length == 1 ? 'Letter' : 'Letters'}'),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.l),
-                      if (allLetters.isEmpty)
-                        Center(
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 100),
-                              const Icon(Icons.edit_note_rounded, size: 64, color: AppColors.divider),
-                              const SizedBox(height: 16),
-                              Text('No letters yet. Start writing!', style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary)),
-                            ],
-                          ),
-                        )
-                      else if (_searchQuery.isNotEmpty && letters.isEmpty)
-                        Center(
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 80),
-                              const Icon(Icons.search_off_rounded, size: 56, color: AppColors.divider),
-                              const SizedBox(height: 16),
-                              Text('No letters found', style: AppTextStyles.h3),
-                              const SizedBox(height: 4),
-                              Text('No letters matching "$_searchQuery"', style: AppTextStyles.bodyS),
-                            ],
-                          ),
-                        )
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: letters.length,
-                          itemBuilder: (context, index) {
-                            final doc = letters[index];
-                            return FadeInUp(
-                              delay: Duration(milliseconds: index * 100),
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: AppSpacing.l),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    final data = doc.data() as Map<String, dynamic>;
-                                    final bool isMine = data['senderId'] == _currentUserId;
-                                    final timestamp = data['timestamp'] as Timestamp?;
-                                    String dateStr = timestamp != null ? '${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year}' : 'Recently';
-                                    
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => LetterDetailScreen(
-                                          title: data['title'] ?? '',
-                                          content: data['content'] ?? '',
-                                          date: dateStr,
-                                          sender: isMine ? 'You' : (data['senderName'] ?? 'Partner'),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  onLongPress: () => _deleteLetter(relId, doc.id),
-                                  child: _buildLetterCard(doc),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      const SizedBox(height: 100),
-                    ],
+            const SizedBox(height: 8),
+            Text(
+              'Pour your heart out in a sealed letter with custom stationery and wax seal.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            PrimaryButton(
+              text: '+ Write Love Letter',
+              height: 44,
+              onPressed: () {
+                VibrationService.light();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NewLetterScreen(relId: relId, partnerName: partnerName),
                   ),
                 );
               },
             ),
-          floatingActionButton: relId == null ? null : FloatingActionButton.extended(
-            onPressed: () => _addLetter(relId),
-            backgroundColor: AppColors.primary,
-            elevation: 8,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
-            label: const Text('Write Letter', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-          ),
-        );
-      }
-    );
-  }
-
-  Widget _buildCountBadge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0x1FFF5E7D),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x1AFF5E7D)),
-      ),
-      child: Text(
-        text, 
-        style: const TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.w900),
+          ],
+        ),
       ),
     );
-  }
-
-  Widget _buildLetterCard(QueryDocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    final timestamp = data['timestamp'] as Timestamp?;
-    final senderId = data['senderId'];
-    final bool isMine = senderId == _currentUserId;
-    
-    String dateStr = 'Recently';
-    if (timestamp != null) {
-      final date = timestamp.toDate();
-      dateStr = '${date.day}/${date.month}/${date.year}';
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.l),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: AppColors.softShadow,
-        border: Border.all(color: const Color(0x0DFF5252)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(data['title'] ?? '', style: AppTextStyles.h3),
-              if (isMine) _buildBadge('SENT'),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s),
-          Text(
-            data['content'] ?? '',
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary, height: 1.5),
-          ),
-          const SizedBox(height: AppSpacing.l),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.person_rounded, size: 14, color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(isMine ? 'You' : (data['senderName'] ?? 'Partner'), style: AppTextStyles.bodyS.copyWith(fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
-                ],
-              ),
-              Text(dateStr, style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBadge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: AppColors.buttonShadow,
-      ),
-      child: Text(
-        text, 
-        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.5),
-      ),
-    );
-  }
-
-  Future<void> _deleteLetter(String relId, String letterId) async {
-    VibrationService.medium();
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Love Letter?'),
-        content: const Text('Are you sure you want to permanently delete this letter?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true), 
-            child: const Text('DELETE', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await _cloudService.deleteLoveLetter(relId, letterId);
-      VibrationService.success();
-    }
   }
 }

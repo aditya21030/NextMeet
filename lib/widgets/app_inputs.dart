@@ -2,33 +2,52 @@ import 'package:flutter/material.dart';
 import '../core/constants.dart';
 
 class AppInputs {
-  static InputDecoration premiumInput(String label, {IconData? icon, String? hint}) {
+  static InputDecoration premiumInput(
+    String label, {
+    IconData? icon,
+    String? hint,
+    Widget? suffixIcon,
+    Color? fillColor,
+  }) {
     return InputDecoration(
-      hintText: hint ?? label,
-      prefixIcon: icon != null ? Icon(icon, color: AppColors.primary.withValues(alpha: 0.8), size: 20) : null,
-      labelStyle: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-      hintStyle: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary.withValues(alpha: 0.35)),
+      labelText: label,
+      hintText: hint,
+      prefixIcon: icon != null ? Icon(icon, color: AppColors.muted, size: 20) : null,
+      suffixIcon: suffixIcon,
+      labelStyle: AppTextStyles.body.copyWith(
+        color: AppColors.muted,
+        fontWeight: FontWeight.w600,
+      ),
+      hintStyle: AppTextStyles.caption.copyWith(
+        color: AppColors.muted.withValues(alpha: 0.6),
+      ),
       filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      fillColor: fillColor ?? AppColors.card,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.m),
-        borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: AppColors.border, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.m),
-        borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: AppColors.border, width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.m),
-        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2.0),
       ),
-      floatingLabelBehavior: FloatingLabelBehavior.never,
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderSide: const BorderSide(color: AppColors.danger, width: 2.0),
+      ),
     );
   }
 
   static BoxDecoration premiumInputDecoration = BoxDecoration(
-    borderRadius: BorderRadius.circular(AppRadius.m),
-    boxShadow: AppColors.inputShadow,
+    borderRadius: BorderRadius.circular(AppRadius.input),
   );
 }

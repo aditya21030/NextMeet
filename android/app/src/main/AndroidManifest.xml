@@ -25,7 +25,8 @@
     <application
         android:label="NextMeet"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:roundIcon="@mipmap/launcher_icon">
 
         <!-- AdMob Application ID (Prevents native IllegalStateException startup crash) -->
         <meta-data

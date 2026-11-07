@@ -119,4 +119,7 @@ class AuthErrorHandler {
 
     return 'Could not start your couple journey right now. Please check your connection and try again ❤️';
   }
+
+  /// Friendly message for pairing codes
+  static String getPairingErrorMessage(dynamic error) => getJourneyErrorMessage(error);
 }

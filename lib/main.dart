@@ -67,14 +67,18 @@ class _NextMeetAppState extends State<NextMeetApp> {
   @override
   void initState() {
     super.initState();
-    _authSubscription =
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        appNavigatorKey.currentState?.push(
-          MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
-        );
-      }
-    });
+    try {
+      _authSubscription =
+          Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+        if (data.event == AuthChangeEvent.passwordRecovery) {
+          appNavigatorKey.currentState?.push(
+            MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint('Supabase auth state listener skipped: $e');
+    }
   }
 
   @override
@@ -90,6 +94,9 @@ class _NextMeetAppState extends State<NextMeetApp> {
       title: 'NextMeet',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      ),
       home: const SplashScreen(),
     );
   }

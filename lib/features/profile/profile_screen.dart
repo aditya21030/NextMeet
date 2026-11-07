@@ -18,6 +18,7 @@ import '../onboarding/setup_couple_screen.dart';
 import 'package:intl/intl.dart';
 import 'nextmeet_plus_screen.dart';
 import 'haptic_preferences_screen.dart';
+import 'widgets_showcase_screen.dart';
 import '../../core/services/in_app_update_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -544,6 +545,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Icons.cleaning_services_rounded, 
                                   Colors.orange,
                                   _handleClearCache,
+                                ),
+                                const Divider(height: 16, thickness: 0.5),
+                                _buildPreferenceRow(
+                                  'Couple Home Widgets 📲', 
+                                  Icons.widgets_rounded, 
+                                  AppColors.primary,
+                                  () {
+                                    VibrationService.medium();
+                                    Navigator.push(
+                                      context, 
+                                      MaterialPageRoute(builder: (context) => const WidgetsShowcaseScreen()),
+                                    );
+                                  },
                                 ),
                                 if (rel.isPlus) ...[
                                   const Divider(height: 16, thickness: 0.5),

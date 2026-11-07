@@ -13,6 +13,7 @@ import 'vibration_service.dart';
 import '../cities.dart';
 import '../constants.dart';
 import 'image_compression_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth_service.dart';
 
@@ -35,6 +36,7 @@ class CloudRelationshipService {
   static final StreamController<RelationshipModel?> _relationshipStreamController =
       StreamController<RelationshipModel?>.broadcast();
   static RelationshipModel? _cachedRelationship;
+  RelationshipModel? get cachedRelationship => _cachedRelationship;
   static RealtimeChannel? _relationshipChannel;
   static String? _subscribedRelUid;
 
@@ -58,6 +60,50 @@ class CloudRelationshipService {
       relId,
       () => StreamController<List<CalendarEventModel>>.broadcast(),
     );
+  }
+
+  Future<void> createMemory(
+    String relId,
+    String title,
+    DateTime date,
+    String location, {
+    File? imageFile,
+    String emotion = 'Happy',
+    bool isPrivate = false,
+  }) async {
+    if (isPrivate && imageFile != null) {
+      await uploadPrivatePhotoFile(relId, imageFile, category: emotion);
+      return;
+    }
+    if (imageFile != null) {
+      await addMemory(relId, imageFile, title, location);
+    } else {
+      final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
+      final memory = MemoryModel(
+        id: tempId,
+        imageUrl: '',
+        caption: title,
+        location: location,
+        date: date,
+      );
+      final currentList = _cachedMemoriesMap[relId] ?? [];
+      final updatedList = [memory, ...currentList];
+      _cachedMemoriesMap[relId] = updatedList;
+      _getMemoriesController(relId).add(List.from(updatedList));
+
+      try {
+        await _firestore.collection('relationships').doc(relId).collection('memories').add({
+          'imageUrl': '',
+          'caption': title,
+          'location': location,
+          'emotion': emotion,
+          'date': Timestamp.fromDate(date),
+          'addedBy': _currentUid,
+        });
+      } catch (_) {}
+      await logActivity(relId, 'memory', 'New memory saved: $title');
+      await incrementStat(relId, 'memories');
+    }
   }
 
   // Upload a memory with image
@@ -606,6 +652,26 @@ class CloudRelationshipService {
     return null;
   }
 
+  Future<void> unpairRelationship(String relId) async {
+    try {
+      await _relationships.doc(relId).update({
+        'status': 'unpaired',
+        'unpairedAt': FieldValue.serverTimestamp(),
+      });
+      try {
+        await _supabase.from('relationships').update({
+          'status': 'unpaired',
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', relId);
+      } catch (_) {}
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cached_relationship_id');
+    } catch (e) {
+      debugPrint('Error unpairing relationship: $e');
+      rethrow;
+    }
+  }
+
   Stream<RelationshipModel?> streamRelationship() async* {
     final uid = _currentUid;
     if (uid == null) {
@@ -782,6 +848,17 @@ class CloudRelationshipService {
     await logActivity(relId, 'nudge', logTitle);
   }
 
+  City? _findMajorCity(String? name) {
+    if (name == null || name.trim().isEmpty) return null;
+    final clean = name.toLowerCase().trim();
+    for (final c in CityData.majorCities) {
+      if (clean.contains(c.name.toLowerCase()) || c.name.toLowerCase().contains(clean)) {
+        return c;
+      }
+    }
+    return null;
+  }
+
   Future<void> updateMyStatus(String relId, RelationshipModel data, {String? mood, String? city, double? lat, double? lng}) async {
     if (_currentUid == null) return;
     final isMe1 = _currentUid == data.uid1;
@@ -813,10 +890,29 @@ class CloudRelationshipService {
       }
       await logActivity(relId, 'location', 'Location Updated: $cityTrimmed 📍');
     }
-    final l1Lat = isMe1 ? lat : data.user1Lat; 
-    final l1Lng = isMe1 ? lng : data.user1Lng;
-    final l2Lat = isMe1 ? data.user2Lat : lat; 
-    final l2Lng = isMe1 ? data.user2Lng : lng;
+    double? l1Lat = isMe1 ? lat : data.user1Lat; 
+    double? l1Lng = isMe1 ? lng : data.user1Lng;
+    double? l2Lat = isMe1 ? data.user2Lat : lat; 
+    double? l2Lng = isMe1 ? data.user2Lng : lng;
+
+    if (l1Lat == null || l1Lng == null || (l1Lat == 0.0 && l1Lng == 0.0)) {
+      final loc = isMe1 ? city : data.userLocation1;
+      final c = _findMajorCity(loc);
+      if (c != null) {
+        l1Lat = c.lat;
+        l1Lng = c.lng;
+        if (isMe1) { updates['user1Lat'] = c.lat; updates['user1Lng'] = c.lng; }
+      }
+    }
+    if (l2Lat == null || l2Lng == null || (l2Lat == 0.0 && l2Lng == 0.0)) {
+      final loc = isMe1 ? data.userLocation2 : city;
+      final c = _findMajorCity(loc);
+      if (c != null) {
+        l2Lat = c.lat;
+        l2Lng = c.lng;
+        if (!isMe1) { updates['user2Lat'] = c.lat; updates['user2Lng'] = c.lng; }
+      }
+    }
 
     if (l1Lat != null && l1Lng != null && l2Lat != null && l2Lng != null) {
       final distance = CityData.calculateDistance(l1Lat, l1Lng, l2Lat, l2Lng);
@@ -966,11 +1062,12 @@ class CloudRelationshipService {
   Stream<QuerySnapshot> streamTasks(String relId) => _relationships.doc(relId).collection('tasks').orderBy('createdAt', descending: false).snapshots();
   Future<void> deleteTask(String relId, String taskId) async => _relationships.doc(relId).collection('tasks').doc(taskId).delete();
 
-  Future<void> addPackingItem(String relId, String title, {String? assignedTo}) async {
+  Future<void> addPackingItem(String relId, String title, {String? assignedTo, String? category}) async {
     await _relationships.doc(relId).collection('packing_list').add({
       'title': title, 
       'isCompleted': false, 
       'assignedTo': assignedTo,
+      'category': category ?? 'Essentials',
       'createdAt': FieldValue.serverTimestamp()
     });
   }
@@ -1028,6 +1125,26 @@ class CloudRelationshipService {
     final updates = <String, dynamic>{};
     if (name1 != null) updates['userName1'] = name1; if (loc1 != null) updates['userLocation1'] = loc1; if (photo1 != null) updates['userPhoto1'] = photo1; if (nick1 != null) updates['user1PartnerNickname'] = nick1; if (lat1 != null) updates['user1Lat'] = lat1; if (lng1 != null) updates['user1Lng'] = lng1;
     if (name2 != null) updates['userName2'] = name2; if (loc2 != null) updates['userLocation2'] = loc2; if (photo2 != null) updates['userPhoto2'] = photo2; if (nick2 != null) updates['user2PartnerNickname'] = nick2; if (lat2 != null) updates['user2Lat'] = lat2; if (lng2 != null) updates['user2Lng'] = lng2;
+
+    double? u1Lat = lat1;
+    double? u1Lng = lng1;
+    double? u2Lat = lat2;
+    double? u2Lng = lng2;
+
+    if (u1Lat == null && loc1 != null) {
+      final c = _findMajorCity(loc1);
+      if (c != null) { u1Lat = c.lat; u1Lng = c.lng; updates['user1Lat'] = c.lat; updates['user1Lng'] = c.lng; }
+    }
+    if (u2Lat == null && loc2 != null) {
+      final c = _findMajorCity(loc2);
+      if (c != null) { u2Lat = c.lat; u2Lng = c.lng; updates['user2Lat'] = c.lat; updates['user2Lng'] = c.lng; }
+    }
+
+    if (u1Lat != null && u1Lng != null && u2Lat != null && u2Lng != null) {
+      final dist = CityData.calculateDistance(u1Lat, u1Lng, u2Lat, u2Lng);
+      updates['distanceKm'] = double.parse(dist.toStringAsFixed(1));
+    }
+
     if (updates.isNotEmpty) await _updateRelationshipData(relId, updates);
   }
 
@@ -1120,7 +1237,7 @@ class CloudRelationshipService {
     await updateSketchpadData(relId, null);
   }
 
-  Future<void> addVoiceWhisper(String relId, File audioFile) async {
+  Future<void> uploadVoiceWhisperFile(String relId, File audioFile) async {
     if (_currentUid == null) return;
     final String fileName = 'whisper_${DateTime.now().millisecondsSinceEpoch}.m4a';
     final ref = _storage.ref().child('relationships/$relId/whispers/$fileName');
@@ -1139,10 +1256,24 @@ class CloudRelationshipService {
     return _relationships.doc(relId).collection('whispers').orderBy('timestamp', descending: true).snapshots();
   }
 
-  Future<void> deleteVoiceWhisper(String relId, String whisperId, String url) async {
+  Future<void> addVoiceWhisper(String relId, String title, String duration, {String? audioUrl}) async {
+    final uid = _currentUid;
+    await _relationships.doc(relId).collection('whispers').add({
+      'title': title,
+      'duration': duration,
+      'audioUrl': audioUrl ?? '',
+      'senderUid': uid,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    await logActivity(relId, 'whisper', 'Sent a voice whisper: "$title" 🎙️');
+  }
+
+  Future<void> deleteVoiceWhisper(String relId, String whisperId, [String? url]) async {
     if (_currentUid == null) return;
     await _relationships.doc(relId).collection('whispers').doc(whisperId).delete();
-    try { await _storage.refFromURL(url).delete(); } catch (_) {}
+    if (url != null && url.isNotEmpty) {
+      try { await _storage.refFromURL(url).delete(); } catch (_) {}
+    }
   }
 
   Future<void> clearPrivateSpaceData(String relId) async {
@@ -1210,6 +1341,67 @@ class CloudRelationshipService {
     } catch (_) {}
   }
 
+  Future<String> uploadPrivatePhotoFile(String relId, File imageFile, {String category = 'Us'}) async {
+    final bytes = await imageFile.readAsBytes();
+    final compressedBytes = await ImageCompressionService.compressBytesToWebp(bytes);
+    final fileName = 'private_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    String url = '';
+    try {
+      await _supabase.storage.from('memories').uploadBinary(
+        'private/$fileName',
+        compressedBytes,
+        fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+      );
+      url = _supabase.storage.from('memories').getPublicUrl('private/$fileName');
+    } catch (_) {
+      final ref = _storage.ref().child('relationships').child(relId).child('private_photos').child(fileName);
+      final uploadTask = await ref.putData(compressedBytes, SettableMetadata(contentType: 'image/jpeg'));
+      url = await uploadTask.ref.getDownloadURL();
+    }
+    await _relationships.doc(relId).collection('private_photos').add({
+      'url': url,
+      'category': category,
+      'sizeBytes': compressedBytes.length,
+      'uploadedBy': _currentUid,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    await _relationships.doc(relId).set({
+      'privateSpaceStorageBytes': FieldValue.increment(compressedBytes.length),
+    }, SetOptions(merge: true));
+    return url;
+  }
+
+  Future<void> addCoupleXp(String relId, int xp) async {
+    try {
+      await _relationships.doc(relId).set({
+        'coupleXp': FieldValue.increment(xp),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error adding couple XP: $e');
+    }
+  }
+
+  Future<void> setTripPlan(
+    String relId, {
+    required String destination,
+    required DateTime startDate,
+    required DateTime endDate,
+    required double budget,
+    String? tripType,
+    bool trackTransit = true,
+  }) async {
+    await _updateRelationshipData(relId, {
+      'tripDestination': destination,
+      'tripDate': Timestamp.fromDate(startDate),
+      'tripStartDate': Timestamp.fromDate(startDate),
+      'tripEndDate': Timestamp.fromDate(endDate),
+      'tripBudget': budget,
+      'tripType': tripType,
+      'trackTransit': trackTransit,
+    });
+    await logActivity(relId, 'trip', 'New trip to $destination planned ✈️');
+  }
+
   Stream<QuerySnapshot> streamPrivateNotes(String relId) => _relationships.doc(relId).collection('private_notes').orderBy('timestamp', descending: true).snapshots();
   Future<void> addPrivateNote(String relId, String title, String content, String category) async {
     try {
@@ -1234,12 +1426,19 @@ class CloudRelationshipService {
   }
 
   Stream<QuerySnapshot> streamLoveLetters(String relId) => _relationships.doc(relId).collection('love_letters').orderBy('timestamp', descending: true).snapshots();
-  Future<void> addLoveLetter(String relId, String title, String content) async {
+  Future<void> addLoveLetter(
+    String relId,
+    String title,
+    String content, {
+    String? sealColor,
+    DateTime? unlockDate,
+  }) async {
+    final senderName = _currentUid != null ? 'Partner' : 'You';
     try {
       await _supabase.from('love_letters').insert({
         'relationship_id': relId,
         'sender_id': _currentUid ?? 'partner',
-        'sender_name': 'Partner',
+        'sender_name': senderName,
         'title': title,
         'content': content,
         'created_at': DateTime.now().toIso8601String(),
@@ -1247,7 +1446,16 @@ class CloudRelationshipService {
     } catch (e) {
       debugPrint('Supabase addLoveLetter notice: $e');
     }
-    await _relationships.doc(relId).collection('love_letters').add({'title': title, 'content': content, 'senderId': _currentUid, 'senderName': 'Partner', 'timestamp': FieldValue.serverTimestamp()});
+    await _relationships.doc(relId).collection('love_letters').add({
+      'title': title,
+      'content': content,
+      'senderId': _currentUid,
+      'senderName': senderName,
+      'sealColor': sealColor,
+      'unlockDate': unlockDate != null ? Timestamp.fromDate(unlockDate) : null,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    await logActivity(relId, 'letter', 'A sealed love letter was sent 💌');
   }
   Future<void> deleteLoveLetter(String relId, String letterId) async {
     try {
@@ -1769,5 +1977,24 @@ class CloudRelationshipService {
     await _updateRelationshipData(relId, {
       'dailyScratchNotes': scratchMap,
     });
+  }
+
+  Stream<QuerySnapshot> streamMoments(String relId) =>
+      _relationships.doc(relId).collection('moments').orderBy('timestamp', descending: true).snapshots();
+
+  Future<void> sendMoment(String relId, String caption, String frame, {String? imageUrl}) async {
+    final uid = _currentUid;
+    await _relationships.doc(relId).collection('moments').add({
+      'caption': caption,
+      'frame': frame,
+      'imageUrl': imageUrl ?? '',
+      'senderUid': uid,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    await logActivity(relId, 'moment', 'Shared a new moment: "$caption" 📸');
+  }
+
+  Future<void> deleteMoment(String relId, String momentId) async {
+    await _relationships.doc(relId).collection('moments').doc(momentId).delete();
   }
 }

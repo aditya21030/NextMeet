@@ -398,7 +398,8 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFFDEEF1),
         body: SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             children: [
               // Top App Bar
               Padding(
@@ -433,7 +434,7 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
                 ),
               ),
 
-                const Spacer(flex: 2),
+                const SizedBox(height: 16),
 
                 // Security Icon
                 FadeInDown(
@@ -491,7 +492,7 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
                   child: _buildPinDots(),
                 ),
 
-                const Spacer(flex: 3),
+                const SizedBox(height: 20),
 
                 // On-Screen Numeric Dialpad
                 FadeInUp(
@@ -549,7 +550,8 @@ class _PrivateSpaceLockScreenState extends State<PrivateSpaceLockScreen> {
             ),
           ),
         ),
-      );
+      ),
+    );
   }
 
   Widget _buildPinDots() {

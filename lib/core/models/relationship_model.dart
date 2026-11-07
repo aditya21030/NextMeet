@@ -118,6 +118,7 @@ class RelationshipModel {
   final String status; // 'waiting' or 'active'
   final Map<String, dynamic> dailyAnswers;
   final Map<String, dynamic> dailyScratchNotes;
+  final int coupleXp;
 
   RelationshipModel({
     this.id,
@@ -207,6 +208,7 @@ class RelationshipModel {
     this.status = 'active',
     this.dailyAnswers = const {},
     this.dailyScratchNotes = const {},
+    this.coupleXp = 0,
   });
 
   // Battery Helpers
@@ -300,6 +302,13 @@ class RelationshipModel {
   String getMyLocation(String? currentUid) => currentUid == uid1 ? (userLocation1 ?? '') : (userLocation2 ?? '');
   String getPartnerLocation(String? currentUid) => currentUid == uid1 ? (userLocation2 ?? '') : (userLocation1 ?? '');
 
+  double? getMyLat(String? currentUid) => currentUid == uid1 ? user1Lat : user2Lat;
+  double? getMyLng(String? currentUid) => currentUid == uid1 ? user1Lng : user2Lng;
+  double? getPartnerLat(String? currentUid) => currentUid == uid1 ? user2Lat : user1Lat;
+  double? getPartnerLng(String? currentUid) => currentUid == uid1 ? user2Lng : user1Lng;
+  int getPartnerTimezoneOffset(String? currentUid) => currentUid == uid1 ? (user2TimezoneOffset ?? 60) : (user1TimezoneOffset ?? 330);
+  int getMyTimezoneOffset(String? currentUid) => currentUid == uid1 ? (user1TimezoneOffset ?? 330) : (user2TimezoneOffset ?? 60);
+
   String getMyPhoto(String? currentUid) => currentUid == uid1 ? (userPhoto1 ?? '') : (userPhoto2 ?? '');
   String getPartnerPhoto(String? currentUid) => currentUid == uid1 ? (userPhoto2 ?? '') : (userPhoto1 ?? '');
 
@@ -359,12 +368,43 @@ class RelationshipModel {
     return isMyPressing(currentUid) && isPartnerPressing(currentUid);
   }
 
-  double get computedDistance {
-    if (user1Lat == null || user1Lng == null || user2Lat == null || user2Lng == null ||
-        user1Lat == 0.0 || user1Lng == 0.0 || user2Lat == 0.0 || user2Lng == 0.0) {
-      return distanceKm;
+  City? _findMajorCity(String? name) {
+    if (name == null || name.trim().isEmpty) return null;
+    final clean = name.toLowerCase().trim();
+    for (final c in CityData.majorCities) {
+      if (clean.contains(c.name.toLowerCase()) || c.name.toLowerCase().contains(clean)) {
+        return c;
+      }
     }
-    return CityData.calculateDistance(user1Lat!, user1Lng!, user2Lat!, user2Lng!);
+    return null;
+  }
+
+  double get computedDistance {
+    double? lat1 = user1Lat;
+    double? lng1 = user1Lng;
+    double? lat2 = user2Lat;
+    double? lng2 = user2Lng;
+
+    if (lat1 == null || lng1 == null || lat1 == 0.0 || lng1 == 0.0) {
+      final c1 = _findMajorCity(userLocation1);
+      if (c1 != null) {
+        lat1 = c1.lat;
+        lng1 = c1.lng;
+      }
+    }
+    if (lat2 == null || lng2 == null || lat2 == 0.0 || lng2 == 0.0) {
+      final c2 = _findMajorCity(userLocation2);
+      if (c2 != null) {
+        lat2 = c2.lat;
+        lng2 = c2.lng;
+      }
+    }
+
+    if (lat1 != null && lng1 != null && lat2 != null && lng2 != null &&
+        (lat1 != 0.0 || lng1 != 0.0) && (lat2 != 0.0 || lng2 != 0.0)) {
+      return CityData.calculateDistance(lat1, lng1, lat2, lng2);
+    }
+    return distanceKm;
   }
 
   String get widgetDistance {
@@ -477,6 +517,7 @@ class RelationshipModel {
       status: map['status'] ?? 'active',
       dailyAnswers: map['dailyAnswers'] is Map ? Map<String, dynamic>.from(map['dailyAnswers'] as Map) : const {},
       dailyScratchNotes: map['dailyScratchNotes'] is Map ? Map<String, dynamic>.from(map['dailyScratchNotes'] as Map) : const {},
+      coupleXp: (map['coupleXp'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -568,6 +609,7 @@ class RelationshipModel {
       'status': status,
       'dailyAnswers': dailyAnswers,
       'dailyScratchNotes': dailyScratchNotes,
+      'coupleXp': coupleXp,
     };
   }
 
@@ -683,6 +725,7 @@ class RelationshipModel {
     String? status,
     Map<String, dynamic>? dailyAnswers,
     Map<String, dynamic>? dailyScratchNotes,
+    int? coupleXp,
   }) {
     return RelationshipModel(
       id: id ?? this.id,
@@ -772,6 +815,7 @@ class RelationshipModel {
       status: status ?? this.status,
       dailyAnswers: dailyAnswers ?? this.dailyAnswers,
       dailyScratchNotes: dailyScratchNotes ?? this.dailyScratchNotes,
+      coupleXp: coupleXp ?? this.coupleXp,
     );
   }
 }

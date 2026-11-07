@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:animate_do/animate_do.dart';
 import '../../core/constants.dart';
 import '../../core/services/firebase_auth_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/vibration_service.dart';
+import '../../widgets/flat_components.dart';
 import '../../widgets/primary_button.dart';
-import '../../widgets/app_inputs.dart';
 import '../home/main_navigation_screen.dart';
 import '../onboarding/setup_couple_screen.dart';
 
+/// NextMeet Reset Password Screen
+/// Strictly following NextMeet Redesign.pdf (Page 15)
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
 
@@ -30,8 +31,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
+  bool get _hasMin8Chars => _newPasswordController.text.length >= 8;
+  bool get _hasNumber => RegExp(r'\d').hasMatch(_newPasswordController.text);
+  bool get _hasSymbol => RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_newPasswordController.text);
+
+  bool get _passwordsMatch =>
+      _newPasswordController.text.isNotEmpty &&
+      _newPasswordController.text == _confirmPasswordController.text;
+
   Future<void> _handleUpdatePassword() async {
-    if (!_formKey.currentState!.validate()) {
+    if (!_formKey.currentState!.validate() || !_passwordsMatch) {
       VibrationService.error();
       return;
     }
@@ -47,11 +56,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password updated successfully! Welcome back ❤️'),
-          backgroundColor: AppColors.success,
+          backgroundColor: AppColors.mint,
         ),
       );
 
-      // Check relationship status and navigate
       final rel = await CloudRelationshipService()
           .streamRelationship()
           .first
@@ -78,8 +86,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       VibrationService.error();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to update password: ${e.toString()}'),
-          backgroundColor: AppColors.error,
+          content: Text('Failed to update password: $e'),
+          backgroundColor: AppColors.danger,
         ),
       );
     }
@@ -88,200 +96,176 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // Background ambient light
-          Positioned(
-            top: -100,
-            left: -100,
-            child: FadeIn(
+      backgroundColor: AppColors.partner, // Violet header canvas (Page 15)
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Smiling Mascot Heart
+            const Center(
+              child: MascotHeart(
+                color: MascotColor.pink,
+                size: 88,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Form Sheet
+            Expanded(
               child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.08),
-                      AppColors.primary.withValues(alpha: 0),
-                    ],
+                decoration: const BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Create a new password',
+                          style: AppTextStyles.display.copyWith(fontSize: 26),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Make it something only you know.',
+                          style: AppTextStyles.body.copyWith(color: AppColors.muted),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // New password
+                        Text('New password', style: AppTextStyles.label.copyWith(color: AppColors.ink)),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _newPasswordController,
+                          obscureText: !_isPasswordVisible,
+                          style: AppTextStyles.body,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'At least 8 characters',
+                            prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 22),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: AppColors.muted,
+                              ),
+                              onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                            ),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.length < 8) return 'Must be at least 8 characters';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Confirm password
+                        Text('Confirm password', style: AppTextStyles.label.copyWith(color: AppColors.ink)),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          obscureText: !_isPasswordVisible,
+                          style: AppTextStyles.body,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'Type it again',
+                            prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 22),
+                            suffixIcon: _passwordsMatch
+                                ? const Icon(Icons.check_rounded, color: AppColors.mint, size: 22)
+                                : null,
+                          ),
+                          validator: (val) {
+                            if (val != _newPasswordController.text) return 'Passwords do not match';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Password Strength Indicators (Page 15)
+                        Text(
+                          'Strong password',
+                          style: AppTextStyles.heading.copyWith(fontSize: 14, color: AppColors.mintText),
+                        ),
+                        const SizedBox(height: 8),
+
+                        _strengthItem('At least 8 characters', _hasMin8Chars),
+                        const SizedBox(height: 6),
+                        _strengthItem('A number', _hasNumber),
+                        const SizedBox(height: 6),
+                        _strengthItem('A symbol (optional)', _hasSymbol, isOptional: true),
+
+                        const SizedBox(height: 28),
+
+                        PrimaryButton(
+                          text: 'Save password',
+                          isLoading: _isLoading,
+                          onPressed: _handleUpdatePassword,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            VibrationService.light();
-                            Navigator.pop(context);
-                          },
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                              color: AppColors.textPrimary, size: 20),
-                        ),
-                        Text(
-                          'NextMeet',
-                          style: AppTextStyles.h3.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(width: 40),
-                      ],
-                    ),
-                    const SizedBox(height: 50),
-                    FadeInUp(
-                      child: Container(
-                        padding: const EdgeInsets.all(AppSpacing.xl),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: AppColors.premiumShadow,
-                        ),
-                        child: const Icon(
-                          Icons.lock_reset_rounded,
-                          size: 56,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 200),
-                      child: Column(
-                        children: [
-                          Text('Set New Password 🔒',
-                              style: AppTextStyles.h2.copyWith(fontSize: 26)),
-                          const SizedBox(height: AppSpacing.s),
-                          Text(
-                            'Choose a strong password to protect your shared space.',
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.bodyL
-                                .copyWith(color: AppColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    // New Password Field
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 300),
-                      child: _buildInputWrapper(
-                        label: 'NEW PASSWORD',
-                        child: TextFormField(
-                          controller: _newPasswordController,
-                          obscureText: !_isPasswordVisible,
-                          style: AppTextStyles.bodyL
-                              .copyWith(fontWeight: FontWeight.bold),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return 'Please enter your new password';
-                            }
-                            if (val.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
-                          decoration: AppInputs.premiumInput(
-                            'New Password',
-                            icon: Icons.lock_outline_rounded,
-                            hint: '••••••••',
-                          ).copyWith(
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _isPasswordVisible
-                                    ? Icons.visibility_off_rounded
-                                    : Icons.visibility_rounded,
-                                size: 20,
-                                color: AppColors.textSecondary,
-                              ),
-                              onPressed: () {
-                                setState(() =>
-                                    _isPasswordVisible = !_isPasswordVisible);
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    // Confirm Password Field
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 400),
-                      child: _buildInputWrapper(
-                        label: 'CONFIRM PASSWORD',
-                        child: TextFormField(
-                          controller: _confirmPasswordController,
-                          obscureText: !_isPasswordVisible,
-                          style: AppTextStyles.bodyL
-                              .copyWith(fontWeight: FontWeight.bold),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return 'Please confirm your new password';
-                            }
-                            if (val != _newPasswordController.text) {
-                              return 'Passwords do not match';
-                            }
-                            return null;
-                          },
-                          decoration: AppInputs.premiumInput(
-                            'Confirm Password',
-                            icon: Icons.lock_clock_outlined,
-                            hint: '••••••••',
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 500),
-                      child: PrimaryButton(
-                        text: 'Save & Enter Space',
-                        isLoading: _isLoading,
-                        onPressed: _handleUpdatePassword,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInputWrapper({required String label, required Widget child}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _strengthItem(String label, bool isSatisfied, {bool isOptional = false}) {
+    return Row(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10, left: 4),
-          child: Text(
-            label,
-            style: AppTextStyles.bodyS.copyWith(
-              fontWeight: FontWeight.w900,
-              fontSize: 11,
-              letterSpacing: 1.2,
-              color: AppColors.textSecondary.withValues(alpha: 0.7),
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: isSatisfied ? AppColors.primary : AppColors.card,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isSatisfied ? AppColors.primary : AppColors.border,
+              width: 1.5,
             ),
           ),
+          child: isSatisfied
+              ? const Icon(Icons.check_rounded, color: Colors.white, size: 14)
+              : null,
         ),
-        Container(
-          decoration: AppInputs.premiumInputDecoration,
-          child: child,
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: isSatisfied ? AppColors.ink : AppColors.muted,
+            fontWeight: isSatisfied ? FontWeight.w700 : FontWeight.w600,
+          ),
         ),
       ],
     );
