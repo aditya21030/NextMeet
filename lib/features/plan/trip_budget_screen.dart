@@ -141,7 +141,10 @@ class _TripBudgetScreenState extends State<TripBudgetScreen> {
           },
         );
       },
-    );
+    ).then((_) {
+      titleController.dispose();
+      amountController.dispose();
+    });
   }
 
   @override
@@ -158,9 +161,36 @@ class _TripBudgetScreenState extends State<TripBudgetScreen> {
         final totalBudget = rel?.tripBudget ?? 50000.0;
 
         if (relId == null) {
-          return const Scaffold(
+          return Scaffold(
             backgroundColor: AppColors.background,
-            body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink, size: 18),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text('Trip Budget', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const MascotHeart(color: MascotColor.violet, size: 54),
+                    const SizedBox(height: 14),
+                    Text('No shared trip budget yet', style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Connect with your partner to track expenses, split costs, and plan your reunion getaway!',
+                      style: AppTextStyles.caption,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 

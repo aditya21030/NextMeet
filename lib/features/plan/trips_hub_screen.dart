@@ -35,9 +35,16 @@ class TripsHubScreen extends StatelessWidget {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: Column(
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              backgroundColor: Colors.white,
+              onRefresh: () async {
+                VibrationService.light();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 12),
@@ -288,7 +295,8 @@ class TripsHubScreen extends StatelessWidget {
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }

@@ -65,7 +65,7 @@ class _PlanHubScreenState extends State<PlanHubScreen> {
           ),
         ],
       ),
-    );
+    ).then((_) => controller.dispose());
   }
 
   @override
@@ -82,249 +82,325 @@ class _PlanHubScreenState extends State<PlanHubScreen> {
 
         final now = DateTime.now();
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 12),
-                  // Top Bar: "Plan" + Add Button
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('Plan', style: AppTextStyles.display.copyWith(fontSize: 28)),
-                      ),
-                      Row(
-                        children: [
-                          // Link to Milestones (Page 37)
-                          GestureDetector(
-                            onTap: () {
-                              VibrationService.light();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const MilestonesScreen()),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.butterSoft,
-                                borderRadius: BorderRadius.circular(AppRadius.badge),
-                              ),
-                              child: Text(
-                                'Goals 🏆',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.butterText,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Link to Trips Hub (Page 39)
-                          GestureDetector(
-                            onTap: () {
-                              VibrationService.light();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const TripsHubScreen()),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.pinkSoft,
-                                borderRadius: BorderRadius.circular(AppRadius.badge),
-                              ),
-                              child: Text(
-                                'Trips ✈️',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              VibrationService.light();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => NewEventScreen(relationshipId: relId)),
-                              );
-                            },
-                            child: Container(
-                              width: 38,
-                              height: 38,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+        return StreamBuilder<List<CalendarEventModel>>(
+          stream: relId != null ? _cloudService.streamCalendarEvents(relId) : const Stream.empty(),
+          builder: (context, calSnapshot) {
+            final events = calSnapshot.data ?? [];
 
-                  const SizedBox(height: 16),
-
-                  // Hero Meetup Countdown Card (Page 34)
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                      border: Border.all(color: AppColors.border, width: 1.5),
-                    ),
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: SafeArea(
+                child: RefreshIndicator(
+                  color: AppColors.primary,
+                  backgroundColor: Colors.white,
+                  onRefresh: () async {
+                    VibrationService.light();
+                    if (mounted) setState(() {});
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        const SizedBox(height: 12),
+                        // Top Bar: "Plan" + Add Button
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Next meetup', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.mintSoft,
-                                borderRadius: BorderRadius.circular(AppRadius.badge),
-                              ),
-                              child: Text(
-                                nextMeetDays > 0 ? 'Countdown live' : 'Today! 🎉',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.mintText,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11,
-                                ),
-                              ),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Plan', style: AppTextStyles.display.copyWith(fontSize: 28)),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '$nextMeetDaysStr ',
-                                style: AppTextStyles.display.copyWith(
-                                  fontSize: 34,
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'days, ${DateFormat("EEE d MMM").format(nextMeetDate)}',
-                                style: AppTextStyles.title2.copyWith(
-                                  color: AppColors.ink,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Mascots Connected by Airplane Trail
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const MascotHeart(color: MascotColor.pink, size: 44, leanRight: true),
-                            Expanded(
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Row(
-                                    children: List.generate(
-                                      18,
-                                      (index) => Expanded(
-                                        child: Container(
-                                          height: 2,
-                                          margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                          color: index % 2 == 0 ? AppColors.primary : Colors.transparent,
-                                        ),
+                            Row(
+                              children: [
+                                // Link to Milestones (Page 37)
+                                GestureDetector(
+                                  onTap: () {
+                                    VibrationService.light();
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const MilestonesScreen()),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.butterSoft,
+                                      borderRadius: BorderRadius.circular(AppRadius.badge),
+                                    ),
+                                    child: Text(
+                                      'Goals 🏆',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: AppColors.butterText,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                   ),
-                                  Transform.rotate(
-                                    angle: 0.1,
-                                    child: const Icon(Icons.send_rounded, color: AppColors.ink, size: 18),
+                                ),
+                                const SizedBox(width: 8),
+                                // Link to Trips Hub (Page 39)
+                                GestureDetector(
+                                  onTap: () {
+                                    VibrationService.light();
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const TripsHubScreen()),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.pinkSoft,
+                                      borderRadius: BorderRadius.circular(AppRadius.badge),
+                                    ),
+                                    child: Text(
+                                      'Trips ✈️',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: () {
+                                    VibrationService.light();
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => NewEventScreen(relationshipId: relId)),
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const MascotHeart(color: MascotColor.violet, size: 44, leanLeft: true),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
 
-                  const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                  // Calendar Strip: Horizontal Week Strip (Page 34)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                      border: Border.all(color: AppColors.border, width: 1.5),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: List.generate(7, (i) {
-                        final dayDate = now.add(Duration(days: i - now.weekday + 1));
-                        final dayName = DateFormat('E').format(dayDate);
-                        final isSelected = _selectedDay == dayDate.day;
-                        return _weekDayColumn(
-                          dayName,
-                          dayDate.day,
-                          isSelected: isSelected,
-                          hasDot: i == 4,
-                        );
-                      }),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Section: Coming up
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Coming up', style: AppTextStyles.heading),
-                      GestureDetector(
-                        onTap: () {
-                          VibrationService.light();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => CalendarScreen(relationshipId: relId)),
-                          );
-                        },
-                        child: Text(
-                          'See calendar',
-                          style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                        // Hero Meetup Countdown Card (Page 34)
+                        GestureDetector(
+                          onTap: () async {
+                            if (relId == null) return;
+                            VibrationService.light();
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: nextMeetDate,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 730)),
+                              builder: (context, child) => Theme(
+                                data: ThemeData.light().copyWith(
+                                  colorScheme: const ColorScheme.light(
+                                    primary: AppColors.primary,
+                                    onPrimary: Colors.white,
+                                    surface: Colors.white,
+                                    onSurface: AppColors.ink,
+                                  ),
+                                ),
+                                child: child!,
+                              ),
+                            );
+                            if (picked != null) {
+                              await _cloudService.updateNextMeetingDate(relId, picked);
+                              if (context.mounted) {
+                                VibrationService.success();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Reunion date set for ${DateFormat("d MMM yyyy").format(picked)}! 🎉'),
+                                    backgroundColor: AppColors.primary,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: AppColors.card,
+                              borderRadius: BorderRadius.circular(AppRadius.card),
+                              border: Border.all(color: AppColors.border, width: 1.5),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text('Next meetup', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700)),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.edit_calendar_outlined, size: 14, color: AppColors.muted),
+                                      ],
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.mintSoft,
+                                        borderRadius: BorderRadius.circular(AppRadius.badge),
+                                      ),
+                                      child: Text(
+                                        nextMeetDays > 0 ? 'Countdown live' : 'Today! 🎉',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.mintText,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: '$nextMeetDaysStr ',
+                                        style: AppTextStyles.display.copyWith(
+                                          fontSize: 34,
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: 'days, ${DateFormat("EEE d MMM").format(nextMeetDate)}',
+                                        style: AppTextStyles.title2.copyWith(
+                                          color: AppColors.ink,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                // Mascots Connected by Airplane Trail
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const MascotHeart(color: MascotColor.pink, size: 44, leanRight: true),
+                                    Expanded(
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Row(
+                                            children: List.generate(
+                                              18,
+                                              (index) => Expanded(
+                                                child: Container(
+                                                  height: 2,
+                                                  margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                                  color: index % 2 == 0 ? AppColors.primary : Colors.transparent,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Transform.rotate(
+                                            angle: 0.1,
+                                            child: const Icon(Icons.send_rounded, color: AppColors.ink, size: 18),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const MascotHeart(color: MascotColor.violet, size: 44, leanLeft: true),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
 
-                  if (relId == null)
-                    const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                  else
-                    StreamBuilder<List<CalendarEventModel>>(
-                      stream: _cloudService.streamCalendarEvents(relId),
-                      builder: (context, calSnapshot) {
-                        final events = calSnapshot.data ?? [];
-                        if (events.isEmpty) {
-                          return Container(
+                        const SizedBox(height: 16),
+
+                        // Calendar Strip: Horizontal Week Strip (Page 34)
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(AppRadius.card),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: List.generate(7, (i) {
+                              final dayDate = now.add(Duration(days: i - now.weekday + 1));
+                              final dayName = DateFormat('E').format(dayDate);
+                              final isSelected = _selectedDay == dayDate.day;
+                              final hasEvent = events.any((e) =>
+                                  e.date.year == dayDate.year &&
+                                  e.date.month == dayDate.month &&
+                                  e.date.day == dayDate.day);
+                              return _weekDayColumn(
+                                dayName,
+                                dayDate.day,
+                                isSelected: isSelected,
+                                hasDot: hasEvent,
+                              );
+                            }),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Section: Coming up
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Coming up', style: AppTextStyles.heading),
+                            GestureDetector(
+                              onTap: () {
+                                VibrationService.light();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => CalendarScreen(relationshipId: relId)),
+                                );
+                              },
+                              child: Text(
+                                'See calendar',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        if (relId == null)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.card,
+                              borderRadius: BorderRadius.circular(AppRadius.card),
+                              border: Border.all(color: AppColors.border, width: 1.5),
+                            ),
+                            child: Row(
+                              children: [
+                                const MascotHeart(color: MascotColor.pink, size: 36),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Connect to schedule events', style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                                      const SizedBox(height: 2),
+                                      Text('Pair your partner to sync date nights and calls!', style: AppTextStyles.caption),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (events.isEmpty)
+                          Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: AppColors.card,
@@ -336,32 +412,33 @@ class _PlanHubScreenState extends State<PlanHubScreen> {
                                 const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 24),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: Text('No upcoming events scheduled', style: AppTextStyles.caption),
+                                  child: Text('No upcoming events scheduled. Tap + to add one!', style: AppTextStyles.caption),
                                 ),
                               ],
                             ),
-                          );
-                        }
+                          )
+                        else
+                          Column(
+                            children: () {
+                              final selectedDayEvents = events.where((e) => e.date.day == _selectedDay && e.date.month == now.month).toList();
+                              final displayEvents = selectedDayEvents.isNotEmpty ? selectedDayEvents : events.take(3).toList();
+                              return displayEvents.map((e) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _eventRow(
+                                    icon: e.type == 'Call'
+                                        ? Icons.call_rounded
+                                        : (e.type == 'Flight' ? Icons.flight_takeoff_rounded : Icons.favorite_rounded),
+                                    iconColor: e.type == 'Flight' ? AppColors.partner : AppColors.primary,
+                                    title: e.title,
+                                    subtitle: '${DateFormat('EEE d MMM').format(e.date)} at ${DateFormat('h:mm a').format(e.date)}',
+                                  ),
+                                );
+                              }).toList();
+                            }(),
+                          ),
 
-                        return Column(
-                          children: events.take(3).map((e) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _eventRow(
-                                icon: e.type == 'Call'
-                                    ? Icons.call_rounded
-                                    : (e.type == 'Flight' ? Icons.flight_takeoff_rounded : Icons.favorite_rounded),
-                                iconColor: e.type == 'Flight' ? AppColors.partner : AppColors.primary,
-                                title: e.title,
-                                subtitle: '${DateFormat('EEE d MMM').format(e.date)} at ${DateFormat('h:mm a').format(e.date)}',
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-
-                  const SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
                   // Section: Bucket list from Cloud Stream
                   if (relId != null)
@@ -490,15 +567,18 @@ class _PlanHubScreenState extends State<PlanHubScreen> {
                       },
                     ),
 
-                  const SizedBox(height: 24),
-                ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
+          );
+        },
+      );
+    },
+  );
+}
 
   Widget _weekDayColumn(String day, int date, {bool isSelected = false, bool hasDot = false}) {
     return GestureDetector(

@@ -56,9 +56,36 @@ class _TripPackingScreenState extends State<TripPackingScreen> {
         final filters = ['All', 'Mine', "$partnerName's", 'Shared'];
 
         if (relId == null) {
-          return const Scaffold(
+          return Scaffold(
             backgroundColor: AppColors.background,
-            body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink, size: 18),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text('Packing Checklist', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const MascotHeart(color: MascotColor.pink, size: 54),
+                    const SizedBox(height: 14),
+                    Text('No active couple trip yet', style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Connect with your partner to share packing lists and checklists together!',
+                      style: AppTextStyles.caption,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 

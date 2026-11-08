@@ -131,7 +131,11 @@ class _TripDetailHubScreenState extends State<TripDetailHubScreen> {
           },
         );
       },
-    );
+    ).then((_) {
+      titleController.dispose();
+      timeController.dispose();
+      locController.dispose();
+    });
   }
 
   @override
@@ -371,7 +375,30 @@ class _TripDetailHubScreenState extends State<TripDetailHubScreen> {
 
                         // Real Day Activities Timeline
                         if (relId == null)
-                          const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(AppRadius.card),
+                              border: Border.all(color: AppColors.border, width: 1.5),
+                            ),
+                            child: Row(
+                              children: [
+                                const MascotHeart(color: MascotColor.pink, size: 36),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Connect to plan your trip', style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                                      const SizedBox(height: 2),
+                                      Text('Pair your partner to sync itineraries and activities together!', style: AppTextStyles.caption),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
                         else
                           StreamBuilder<QuerySnapshot>(
                             stream: _cloudService.streamItinerary(relId),
