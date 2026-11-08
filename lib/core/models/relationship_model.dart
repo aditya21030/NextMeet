@@ -216,6 +216,7 @@ class RelationshipModel {
   bool isPartnerCharging(String? currentUid) => currentUid == uid1 ? (user2IsCharging ?? false) : (user1IsCharging ?? false);
   int? getMyBattery(String? currentUid) => currentUid == uid1 ? user1Battery : user2Battery;
   bool isMyCharging(String? currentUid) => currentUid == uid1 ? (user1IsCharging ?? false) : (user2IsCharging ?? false);
+  DateTime? getPartnerLastActive(String? currentUid) => currentUid == uid1 ? user2LastActive : user1LastActive;
 
   // Daily Scratch Notes Helpers
   String? getPartnerCustomScratchNote(String? currentUid, String dateKey) {

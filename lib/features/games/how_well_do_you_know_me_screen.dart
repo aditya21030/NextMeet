@@ -137,13 +137,13 @@ class _HowWellDoYouKnowMeScreenState extends State<HowWellDoYouKnowMeScreen> {
     }
   }
 
-  void _nextQuestion(String? relId, int currentIndex, int s1, int s2) async {
+  void _nextQuestion(String? relId, int currentIndex, int s1, int s2, {bool incrementScore1 = false, bool incrementScore2 = false}) async {
     VibrationService.light();
     final nextIdx = currentIndex + 1;
 
     if (nextIdx < _questions.length) {
       if (_isOnlineMode && relId != null) {
-        await _gameService.nextQuizQuestion(relId, nextIdx);
+        await _gameService.nextQuizQuestion(relId, nextIdx, incrementScore1: incrementScore1, incrementScore2: incrementScore2);
       } else {
         setState(() {
           _localQuestionIndex = nextIdx;
@@ -486,7 +486,20 @@ class _HowWellDoYouKnowMeScreenState extends State<HowWellDoYouKnowMeScreen> {
                   if (bothAnswered)
                     PrimaryButton(
                       text: currentIndex < _questions.length - 1 ? 'Next Question →' : 'See Final Results 🏆',
-                      onPressed: () => _nextQuestion(relId, currentIndex, isUser1 ? score1 : score2, isUser1 ? score2 : score1),
+                      onPressed: () {
+                        final myCorrect = myAnswer == correctIdx;
+                        final partnerCorrect = partnerAnswer == correctIdx;
+                        final incScore1 = isUser1 ? myCorrect : partnerCorrect;
+                        final incScore2 = isUser1 ? partnerCorrect : myCorrect;
+                        _nextQuestion(
+                          relId,
+                          currentIndex,
+                          isUser1 ? score1 : score2,
+                          isUser1 ? score2 : score1,
+                          incrementScore1: incScore1,
+                          incrementScore2: incScore2,
+                        );
+                      },
                     ),
 
                   const SizedBox(height: 24),

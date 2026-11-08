@@ -545,6 +545,7 @@ class CoupleGameService {
     required String type, // 'truth' or 'dare'
     required String prompt,
     required String senderName,
+    String? senderUid,
     required String tag,
     required String emoji,
   }) async {
@@ -557,6 +558,7 @@ class CoupleGameService {
       'type': type,
       'prompt': prompt,
       'senderName': senderName,
+      'senderUid': senderUid,
       'tag': tag,
       'emoji': emoji,
       'status': 'sent',

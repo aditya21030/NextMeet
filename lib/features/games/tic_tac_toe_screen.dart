@@ -246,8 +246,8 @@ class _TicTacToeScreenState extends State<TicTacToeScreen> {
           final rawBoard = data['board'] as List<dynamic>?;
           board = rawBoard != null ? rawBoard.map((e) => e.toString()).toList() : List.filled(9, '');
           currentTurnUid = data['currentTurn'] as String? ?? myUid;
-          scoreYou = (data['scoreU1'] as num?)?.toInt() ?? 0;
-          scorePartner = (data['scoreU2'] as num?)?.toInt() ?? 0;
+          scoreYou = isUser1 ? ((data['scoreU1'] as num?)?.toInt() ?? 0) : ((data['scoreU2'] as num?)?.toInt() ?? 0);
+          scorePartner = isUser1 ? ((data['scoreU2'] as num?)?.toInt() ?? 0) : ((data['scoreU1'] as num?)?.toInt() ?? 0);
           winner = data['winner'] as String?;
 
           final onlineReaction = data['lastReaction'] as String?;

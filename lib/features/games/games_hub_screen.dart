@@ -66,175 +66,206 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
         final allGames = _buildAllGamesList(relId, myName, partnerName, partnerUid);
         final filteredGames = _filterGames(allGames);
 
+        final isPaired = rel != null && rel.uid2 != null && rel.status != 'waiting';
+        final partnerLastActive = rel?.getPartnerLastActive(myUid);
+        final bool isOnline = isPaired &&
+            partnerLastActive != null &&
+            DateTime.now().difference(partnerLastActive).inMinutes < 5;
+        final bool isRecent = isPaired &&
+            partnerLastActive != null &&
+            DateTime.now().difference(partnerLastActive).inMinutes < 60;
+
+        final Color statusDotColor = !isPaired
+            ? AppColors.partner
+            : (isOnline ? AppColors.mint : (isRecent ? AppColors.butter : AppColors.primary));
+        final String statusTitle = !isPaired
+            ? 'Pair with Partner'
+            : (isOnline
+                ? '$partnerName is online'
+                : (isRecent ? '$partnerName active recently' : 'Challenge $partnerName'));
+        final String statusSubtitle = !isPaired
+            ? 'Connect to play 20 live games together!'
+            : (isOnline
+                ? 'Ready for a real-time game clash!'
+                : (isRecent ? 'Send a game move to their phone!' : 'Play live 2-player or local clash!'));
+
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 12),
-                  // Top Bar: "Games" + Level Pill + XP Badge (Page 47)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Games',
-                            style: AppTextStyles.display.copyWith(fontSize: 28),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
-                              borderRadius: BorderRadius.circular(AppRadius.badge),
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              backgroundColor: Colors.white,
+              onRefresh: () async {
+                VibrationService.light();
+                if (mounted) setState(() {});
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 12),
+                    // Top Bar: "Games" + Level Pill + XP Badge (Page 47)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Games',
+                              style: AppTextStyles.display.copyWith(fontSize: 28),
                             ),
-                            child: Text(
-                              '20 Games',
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w800,
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(AppRadius.badge),
+                              ),
+                              child: Text(
+                                '20 Games',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                VibrationService.light();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CoupleLevelScreen(
+                                      coupleLevel: coupleLevel,
+                                      coupleXp: coupleXp,
+                                      relId: relId,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.partnerSoft,
+                                  borderRadius: BorderRadius.circular(AppRadius.badge),
+                                ),
+                                child: Text(
+                                  'Level $coupleLevel',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.partnerText,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                VibrationService.light();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const BadgesScreen()),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.butterSoft,
+                                  borderRadius: BorderRadius.circular(AppRadius.badge),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.star_rounded, color: AppColors.butterText, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '$coupleXp',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: AppColors.butterText,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Card 1: Partner Waiting Prompt Card
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        borderRadius: BorderRadius.circular(AppRadius.card),
+                        border: Border.all(color: AppColors.border, width: 1.5),
                       ),
-                      Row(
+                      child: Row(
                         children: [
+                          const MascotHeart(color: MascotColor.violet, size: 40),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: statusDotColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(statusTitle, style: AppTextStyles.heading.copyWith(fontSize: 15)),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(statusSubtitle, style: AppTextStyles.caption),
+                              ],
+                            ),
+                          ),
                           GestureDetector(
                             onTap: () {
                               VibrationService.light();
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => CoupleLevelScreen(
-                                    coupleLevel: coupleLevel,
-                                    coupleXp: coupleXp,
+                                  builder: (context) => TicTacToeScreen(
                                     relId: relId,
+                                    partnerName: partnerName,
+                                    partnerUid: partnerUid,
                                   ),
                                 ),
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                               decoration: BoxDecoration(
-                                color: AppColors.partnerSoft,
-                                borderRadius: BorderRadius.circular(AppRadius.badge),
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(AppRadius.pill),
                               ),
                               child: Text(
-                                'Level $coupleLevel',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.partnerText,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              VibrationService.light();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const BadgesScreen()),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.butterSoft,
-                                borderRadius: BorderRadius.circular(AppRadius.badge),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.star_rounded, color: AppColors.butterText, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '$coupleXp',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.butterText,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
+                                'Play Live',
+                                style: AppTextStyles.button.copyWith(fontSize: 14),
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Card 1: Partner Waiting Prompt Card
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                      border: Border.all(color: AppColors.border, width: 1.5),
                     ),
-                    child: Row(
-                      children: [
-                        const MascotHeart(color: MascotColor.violet, size: 40),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.mint,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text('$partnerName is online', style: AppTextStyles.heading.copyWith(fontSize: 15)),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text('Ready for a real-time game clash!', style: AppTextStyles.caption),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            VibrationService.light();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => TicTacToeScreen(
-                                  relId: relId,
-                                  partnerName: partnerName,
-                                  partnerUid: partnerUid,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(AppRadius.pill),
-                            ),
-                            child: Text(
-                              'Play Live',
-                              style: AppTextStyles.button.copyWith(fontSize: 14),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
 
                   const SizedBox(height: 14),
 
@@ -370,10 +401,11 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
               ),
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   List<_GameItem> _filterGames(List<_GameItem> all) {
     if (_selectedCategory == 'All') return all;

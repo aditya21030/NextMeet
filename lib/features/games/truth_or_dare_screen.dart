@@ -110,16 +110,19 @@ class _TruthOrDareScreenState extends State<TruthOrDareScreen> {
     if (widget.relId == null) return;
     VibrationService.heavy();
     final myName = AuthService().currentUser?.displayName ?? 'You';
+    final myUid = _cloudService.currentUid ?? AuthService().currentUid;
 
     await _gameService.sendTruthOrDareChallenge(
       widget.relId!,
       type: _isTruthMode ? 'Truth' : 'Dare',
       prompt: item['prompt']!,
       senderName: myName,
+      senderUid: myUid,
       tag: item['tag']!,
       emoji: item['emoji']!,
     );
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Challenge dispatched to ${widget.partnerName ?? 'Partner'}! 🚀'),
@@ -135,6 +138,7 @@ class _TruthOrDareScreenState extends State<TruthOrDareScreen> {
     final item = list[_currentPromptIndex % list.length];
     final relId = widget.relId;
     final pName = widget.partnerName ?? 'Partner';
+    final currentUid = _cloudService.currentUid ?? AuthService().currentUid ?? 'u1';
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: relId != null ? _gameService.streamTruthOrDare(relId) : const Stream.empty(),
@@ -142,12 +146,15 @@ class _TruthOrDareScreenState extends State<TruthOrDareScreen> {
         final data = snapshot.data?.data();
         final incomingPrompt = data?['prompt'] as String?;
         final incomingSender = data?['senderName'] as String?;
+        final incomingSenderUid = data?['senderUid'] as String?;
         final incomingType = data?['type'] as String? ?? 'Dare';
         final incomingStatus = data?['status'] as String?;
         final isIncomingActive = incomingPrompt != null &&
             incomingStatus == 'sent' &&
-            incomingSender != null &&
-            incomingSender != (AuthService().currentUser?.displayName ?? 'You');
+            ((incomingSenderUid != null && incomingSenderUid != currentUid) ||
+                (incomingSenderUid == null &&
+                    incomingSender != null &&
+                    incomingSender != (AuthService().currentUser?.displayName ?? 'You')));
 
         return Scaffold(
           backgroundColor: AppColors.background,

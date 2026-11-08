@@ -125,7 +125,8 @@ class _EmojiCipherScreenState extends State<EmojiCipherScreen> {
     final clean = answer.replaceAll(' ', '');
     final chars = clean.split('');
     const extra = ['E', 'A', 'R', 'T', 'O', 'S', 'L', 'N'];
-    final pool = [...chars, ...extra.take(12 - chars.length)]..shuffle();
+    final needed = (12 - chars.length).clamp(0, extra.length);
+    final pool = [...chars, ...extra.take(needed)]..shuffle();
     return pool;
   }
 
