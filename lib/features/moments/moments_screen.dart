@@ -22,15 +22,29 @@ class MomentsScreen extends StatefulWidget {
 class _MomentsScreenState extends State<MomentsScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
 
-  final List<Map<String, dynamic>> _weekReel = [
-    {'day': 'M', 'done': true},
-    {'day': 'T', 'done': true},
-    {'day': 'W', 'done': true},
-    {'day': 'T', 'done': true},
-    {'day': 'F', 'done': true},
-    {'day': 'S', 'done': true},
-    {'day': 'S', 'done': false, 'isToday': true},
-  ];
+  List<Map<String, dynamic>> _buildWeekReel(List<QueryDocumentSnapshot> docs) {
+    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final now = DateTime.now();
+    final todayWeekday = now.weekday; // 1 = Monday, 7 = Sunday
+
+    return List.generate(7, (i) {
+      final dayIndex = i + 1;
+      final isToday = dayIndex == todayWeekday;
+      final isPast = dayIndex < todayWeekday;
+      final hasMoment = docs.any((d) {
+        final data = d.data() as Map<String, dynamic>;
+        final ts = (data['timestamp'] as Timestamp?)?.toDate();
+        if (ts == null) return false;
+        return ts.weekday == dayIndex && now.difference(ts).inDays.abs() < 7;
+      });
+
+      return {
+        'day': days[i],
+        'done': hasMoment || (isPast && docs.isNotEmpty),
+        'isToday': isToday,
+      };
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,67 +81,75 @@ class _MomentsScreenState extends State<MomentsScreen> {
                 final myCaption = latestMyMoment?['caption'] ?? 'Coffee time thinking of you ☕';
                 final partnerCaption = latestPartnerMoment?['caption'] ?? 'Walking in autumn leaves 🍂';
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 12),
-                      // Top Bar
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppColors.border, width: 1.5),
-                              ),
-                              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
-                            ),
-                          ),
-                          Text('Moments', style: AppTextStyles.title2.copyWith(fontSize: 18)),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.butterSoft,
-                              borderRadius: BorderRadius.circular(AppRadius.pill),
-                              border: Border.all(color: AppColors.butter, width: 1.5),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('🔥', style: TextStyle(fontSize: 14)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$streak days',
-                                  style: AppTextStyles.heading.copyWith(fontSize: 12, color: AppColors.butterText),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                final weekReel = _buildWeekReel(momentDocs);
 
-                      const SizedBox(height: 16),
-
-                      // 7-Day Circular Streak Reel (Page 26)
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppRadius.card),
-                          border: Border.all(color: AppColors.border, width: 1.5),
-                        ),
-                        child: Row(
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () async {
+                    if (mounted) setState(() {});
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 12),
+                        // Top Bar
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: _weekReel.map((item) {
-                            final isDone = item['done'] as bool;
-                            final isToday = item['isToday'] == true;
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.border, width: 1.5),
+                                ),
+                                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
+                              ),
+                            ),
+                            Text('Moments', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.butterSoft,
+                                borderRadius: BorderRadius.circular(AppRadius.pill),
+                                border: Border.all(color: AppColors.butter, width: 1.5),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🔥', style: TextStyle(fontSize: 14)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$streak days',
+                                    style: AppTextStyles.heading.copyWith(fontSize: 12, color: AppColors.butterText),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 7-Day Circular Streak Reel (Page 26)
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppRadius.card),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: weekReel.map((item) {
+                              final isDone = item['done'] as bool;
+                              final isToday = item['isToday'] == true;
 
                             return Column(
                               children: [
@@ -434,7 +456,8 @@ class _MomentsScreenState extends State<MomentsScreen> {
                       const SizedBox(height: 24),
                     ],
                   ),
-                );
+                ),
+              );
               },
             ),
           ),

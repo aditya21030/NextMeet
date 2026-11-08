@@ -94,7 +94,7 @@ class _WrappedStoryScreenState extends State<WrappedStoryScreen> {
         final myCity = rel?.getMyLocation(currentUid) ?? 'Here';
         final partnerCity = rel?.getPartnerLocation(currentUid) ?? 'There';
         final distanceKm = (rel?.computedDistance ?? 0) > 0 ? rel!.computedDistance : (rel?.distanceKm ?? 0);
-        final streak = rel?.streakCount ?? 42;
+        final streak = rel?.streakCount ?? 0;
 
         return Scaffold(
           backgroundColor: Colors.black,

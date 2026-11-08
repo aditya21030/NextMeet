@@ -306,27 +306,53 @@ class _MomentsCameraScreenState extends State<MomentsCameraScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
               child: _isCaptured
-                  ? GestureDetector(
-                      onTap: _sendMoment,
-                      child: Container(
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Send to ${widget.partnerName}'s Widget",
-                              style: AppTextStyles.button.copyWith(color: Colors.white),
+                  ? Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            VibrationService.light();
+                            setState(() => _isCaptured = false);
+                          },
+                          child: Container(
+                            height: 56,
+                            width: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
                             ),
-                          ],
+                            child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 24),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: _sendMoment,
+                            child: Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(AppRadius.pill),
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      "Send to ${widget.partnerName}'s Widget",
+                                      style: AppTextStyles.button.copyWith(color: Colors.white),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     )
                   : GestureDetector(
                       onTap: _capturePhoto,

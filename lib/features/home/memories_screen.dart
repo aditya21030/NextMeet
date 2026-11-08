@@ -268,23 +268,30 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
       }
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page, vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              children: leftCol.map((m) => _memoryCard(m)).toList(),
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () async {
+        if (mounted) setState(() {});
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page, vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                children: leftCol.map((m) => _memoryCard(m)).toList(),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              children: rightCol.map((m) => _memoryCard(m)).toList(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                children: rightCol.map((m) => _memoryCard(m)).toList(),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

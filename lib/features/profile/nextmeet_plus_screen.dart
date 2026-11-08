@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
+import '../../core/services/cloud_relationship_service.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/flat_components.dart';
 import 'plus_welcome_screen.dart';
@@ -51,18 +52,30 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
     },
   ];
 
-  void _subscribe() {
+  Future<void> _subscribe() async {
     VibrationService.heavy();
     setState(() => _isProcessing = true);
 
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
-      setState(() => _isProcessing = false);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const PlusWelcomeScreen()),
-      );
-    });
+    try {
+      final targetRelId = widget.relId ?? CloudRelationshipService().cachedRelationship?.id;
+      if (targetRelId != null && targetRelId.isNotEmpty) {
+        final plan = _isYearly ? 'yearly' : 'monthly';
+        final expiry = DateTime.now().add(_isYearly ? const Duration(days: 365) : const Duration(days: 30));
+        await CloudRelationshipService().activateRealPremium(
+          relId: targetRelId,
+          planType: plan,
+          renewalDate: expiry,
+          transactionId: 'nm_${DateTime.now().millisecondsSinceEpoch}',
+        );
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const PlusWelcomeScreen()),
+    );
   }
 
   @override

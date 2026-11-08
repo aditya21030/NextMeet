@@ -41,7 +41,7 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
         final currentUid = _cloudService.currentUid;
         final myName = rel?.getMyName(currentUid) ?? 'You';
         final partnerName = rel?.getPartnerName(currentUid) ?? 'Partner';
-        final streak = rel?.streakCount ?? 42;
+        final streak = rel?.streakCount ?? 0;
         final currentRel = rel ??
             RelationshipModel(
               uid1: _cloudService.currentUid ?? 'u1',
@@ -69,9 +69,15 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: Column(
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () async {
+                if (mounted) setState(() {});
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 12),
@@ -414,7 +420,8 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }

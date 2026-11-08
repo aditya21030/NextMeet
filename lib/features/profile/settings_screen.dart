@@ -454,7 +454,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Version 1.1.0 • Build 97',
+                          'Version 1.0.43',
                           style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
                         ),
                       ],
