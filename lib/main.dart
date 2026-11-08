@@ -8,6 +8,8 @@ import 'core/theme.dart';
 import 'features/onboarding/splash_screen.dart';
 import 'features/auth/reset_password_screen.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/widget_service.dart';
+import 'package:home_widget/home_widget.dart';
 
 void main() async {
   // Ensure binding is initialized in root zone
@@ -36,6 +38,13 @@ void main() async {
     );
   } catch (e) {
     debugPrint('Supabase initialization warning: $e');
+  }
+
+  // Register HomeWidget interactivity background callback for widgets
+  try {
+    HomeWidget.registerInteractivityCallback(homeWidgetBackgroundCallback);
+  } catch (e) {
+    debugPrint('HomeWidget interactivity registration warning: $e');
   }
 
   // Mount UI immediately so the user sees the Splash screen without delay

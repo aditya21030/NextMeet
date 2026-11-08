@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:home_widget/home_widget.dart';
 import '../models/relationship_model.dart';
+import 'cloud_relationship_service.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../../widgets/couple_widgets/couple_widgets.dart';
 
@@ -92,6 +94,8 @@ class WidgetService {
       final distStr = dist > 0 ? '${NumberFormat("#,###").format(dist.round())} km' : "1,506 km";
 
       // Save Data to HomeWidget
+      await HomeWidget.saveWidgetData<String>('relId', rel.id ?? '');
+      await HomeWidget.saveWidgetData<String>('myUid', currentUid);
       await HomeWidget.saveWidgetData<String>('partnerName', partnerName);
       await HomeWidget.saveWidgetData<String>('partnerMood', partnerMood);
       await HomeWidget.saveWidgetData<String>('distance', distStr);
@@ -365,4 +369,39 @@ class WidgetService {
         return const Size(358, 174);
     }
   }
+}
+
+/// Headless background callback for interactive widget touches (miss, hug, touch, sync)
+@pragma('vm:entry-point')
+Future<void> homeWidgetBackgroundCallback(Uri? uri) async {
+  if (uri == null) return;
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {}
+
+  final type = uri.queryParameters['type'] ?? 'touch';
+  final relId = await HomeWidget.getWidgetData<String>('relId');
+  final partnerName = (await HomeWidget.getWidgetData<String>('partnerName')) ?? 'Partner';
+
+  if (relId != null && relId.isNotEmpty) {
+    try {
+      final cloudService = CloudRelationshipService();
+      await cloudService.sendTouch(relId, type);
+    } catch (_) {}
+  }
+
+  String feedback = 'Sent Love to $partnerName! ❤️';
+  if (type == 'miss') feedback = 'Sent Miss You to $partnerName! ❤️';
+  if (type == 'hug') feedback = 'Sent Warm Hug to $partnerName! 🤗';
+  if (type == 'touch') feedback = 'Sent Touch to $partnerName! ⚡';
+  if (type == 'sync' || type == 'heartbeat') feedback = 'Heartbeat Synced! 💓';
+
+  await HomeWidget.saveWidgetData<String>('lastFeedback', feedback);
+  await HomeWidget.saveWidgetData<int>('lastFeedbackTime', DateTime.now().millisecondsSinceEpoch);
+  await HomeWidget.updateWidget(
+    name: WidgetService._androidWidgetName,
+    androidName: WidgetService._androidWidgetName,
+    qualifiedAndroidName: WidgetService._qualifiedAndroidWidgetName,
+  );
 }

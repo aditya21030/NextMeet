@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/auth_service.dart';
@@ -26,12 +27,18 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   late StreamSubscription<AppUser?> _authSubscription;
+  StreamSubscription<Uri?>? _widgetClickSubscription;
   final GlobalKey<VaultHubScreenState> _vaultKey = GlobalKey<VaultHubScreenState>();
   final CloudRelationshipService _cloudService = CloudRelationshipService();
 
   @override
   void initState() {
     super.initState();
+    _checkWidgetLaunch();
+    _widgetClickSubscription = HomeWidget.widgetClicked.listen((uri) {
+      if (uri != null) _handleWidgetUri(uri);
+    });
+
     _authSubscription = AuthService().authStateChanges.listen((user) {
       if (user == null && mounted) {
         Navigator.pushAndRemoveUntil(
@@ -49,8 +56,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     });
   }
 
+  void _handleWidgetUri(Uri uri) {
+    if (!mounted) return;
+    final path = uri.path.toLowerCase();
+    final host = uri.host.toLowerCase();
+    if (path.contains('plan') || host == 'plan') {
+      setState(() => _selectedIndex = 2);
+    } else if (path.contains('vault') || host == 'vault') {
+      setState(() => _selectedIndex = 3);
+    } else if (path.contains('games') || host == 'games') {
+      setState(() => _selectedIndex = 1);
+    } else if (path.contains('home') || host == 'home') {
+      setState(() => _selectedIndex = 0);
+    }
+  }
+
+  void _checkWidgetLaunch() {
+    HomeWidget.initiallyLaunchedFromHomeWidget().then((uri) {
+      if (uri != null && mounted) {
+        _handleWidgetUri(uri);
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _widgetClickSubscription?.cancel();
     _authSubscription.cancel();
     super.dispose();
   }
