@@ -71,7 +71,7 @@ class _CreateVaultPinScreenState extends State<CreateVaultPinScreen> {
         final rel = await CloudRelationshipService().streamRelationship().first;
         final targetRelId = widget.relId ?? rel?.id;
         if (targetRelId != null && targetRelId.isNotEmpty) {
-          await CloudRelationshipService().updatePrivateSpacePin(targetRelId, _firstPin);
+          await CloudRelationshipService().finalizePinReset(targetRelId, _firstPin);
         }
       } catch (_) {}
 

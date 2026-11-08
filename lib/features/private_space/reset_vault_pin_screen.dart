@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
+import '../../core/services/cloud_relationship_service.dart';
+import '../../core/models/relationship_model.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/flat_components.dart';
 import 'create_vault_pin_screen.dart';
@@ -10,7 +12,8 @@ import 'create_vault_pin_screen.dart';
 /// Strictly following NextMeet Redesign.pdf (Page 60)
 class ResetVaultPinScreen extends StatefulWidget {
   final String partnerName;
-  const ResetVaultPinScreen({super.key, this.partnerName = 'Partner'});
+  final String? relId;
+  const ResetVaultPinScreen({super.key, this.partnerName = 'Partner', this.relId});
 
   @override
   State<ResetVaultPinScreen> createState() => _ResetVaultPinScreenState();
@@ -20,19 +23,46 @@ class _ResetVaultPinScreenState extends State<ResetVaultPinScreen> {
   bool _requestSent = false;
   int _secondsRemaining = 900; // 15 mins
   Timer? _countdownTimer;
+  StreamSubscription<RelationshipModel?>? _relSubscription;
+  final CloudRelationshipService _cloudService = CloudRelationshipService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialStatus();
+  }
+
+  void _checkInitialStatus() {
+    _relSubscription = _cloudService.streamRelationship().listen((rel) {
+      if (!mounted || rel == null) return;
+      if (rel.pinResetRequestBy == _cloudService.currentUid && !rel.pinResetApproved) {
+        if (!_requestSent) {
+          setState(() => _requestSent = true);
+          _startTimer();
+        }
+      } else if (rel.pinResetRequestBy == _cloudService.currentUid && rel.pinResetApproved) {
+        _countdownTimer?.cancel();
+        VibrationService.success();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${widget.partnerName} approved your reset request! 🎉')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => CreateVaultPinScreen(relId: rel.id)),
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _relSubscription?.cancel();
     super.dispose();
   }
 
-  void _sendResetRequest() {
-    VibrationService.medium();
-    setState(() {
-      _requestSent = true;
-    });
-
+  void _startTimer() {
+    _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
       if (_secondsRemaining > 0) {
@@ -41,18 +71,34 @@ class _ResetVaultPinScreenState extends State<ResetVaultPinScreen> {
         timer.cancel();
       }
     });
+  }
 
-    // Simulate partner approval after 4 seconds for interactive testing
-    Future.delayed(const Duration(seconds: 4), () {
-      if (!mounted) return;
-      VibrationService.success();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${widget.partnerName} approved your reset request! 🎉')),
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const CreateVaultPinScreen()),
-      );
+  Future<void> _sendResetRequest() async {
+    VibrationService.medium();
+    final targetRelId = widget.relId ?? _cloudService.cachedRelationship?.id;
+    if (targetRelId != null && targetRelId.isNotEmpty) {
+      await _cloudService.requestPinReset(targetRelId);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _requestSent = true;
+    });
+
+    _startTimer();
+  }
+
+  Future<void> _cancelResetRequest() async {
+    VibrationService.light();
+    final targetRelId = widget.relId ?? _cloudService.cachedRelationship?.id;
+    if (targetRelId != null && targetRelId.isNotEmpty) {
+      await _cloudService.cancelPinReset(targetRelId);
+    }
+    _countdownTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _requestSent = false;
+      _secondsRemaining = 900;
     });
   }
 
@@ -215,6 +261,17 @@ class _ResetVaultPinScreenState extends State<ResetVaultPinScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text('Time remaining: $timeStr', style: AppTextStyles.caption.copyWith(color: AppColors.partnerText)),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _cancelResetRequest,
+                        icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.danger),
+                        label: const Text('Cancel Request', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.danger, width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                      ),
                     ],
                   ),
                 ),

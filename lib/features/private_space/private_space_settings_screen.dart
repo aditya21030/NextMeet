@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
@@ -557,6 +558,10 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
       // Confirm new PIN
       if (pin == _newPin) {
         await widget.cloudService.updatePrivateSpacePin(widget.relId, pin);
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('vault_pin', pin);
+        } catch (_) {}
         VibrationService.success();
         if (mounted) {
           Navigator.pop(context);

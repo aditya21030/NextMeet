@@ -60,15 +60,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     if (!mounted) return;
     final path = uri.path.toLowerCase();
     final host = uri.host.toLowerCase();
+    int target = 0;
     if (path.contains('plan') || host == 'plan') {
-      setState(() => _selectedIndex = 2);
+      target = 2;
     } else if (path.contains('vault') || host == 'vault') {
-      setState(() => _selectedIndex = 3);
+      target = 3;
     } else if (path.contains('games') || host == 'games') {
-      setState(() => _selectedIndex = 1);
+      target = 1;
     } else if (path.contains('home') || host == 'home') {
-      setState(() => _selectedIndex = 0);
+      target = 0;
     }
+    if (target != 3) {
+      _vaultKey.currentState?.lock();
+    }
+    setState(() => _selectedIndex = target);
   }
 
   void _checkWidgetLaunch() {
@@ -150,7 +155,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return GestureDetector(
       onTap: () {
         VibrationService.light();
-        if (_selectedIndex == 3 && index != 3) {
+        if (index != 3) {
           _vaultKey.currentState?.lock();
         }
         setState(() => _selectedIndex = index);
