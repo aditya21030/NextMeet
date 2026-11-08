@@ -130,8 +130,44 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
     return StreamBuilder<RelationshipModel?>(
       stream: _cloudService.streamRelationship(),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+          );
+        }
+
         if (!snapshot.hasData || snapshot.data?.id == null) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              leading: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
+              ),
+              title: Text('Sanctuary Settings', style: AppTextStyles.h3),
+              centerTitle: true,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.favorite_border_rounded, size: 48, color: AppColors.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Pair with your partner to customize shared Sanctuary settings.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
 
         final rel = snapshot.data!;

@@ -55,7 +55,7 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused) {
       lock();
     }
   }
@@ -114,6 +114,13 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
       VibrationService.light();
       setState(() {
         _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
+        _errorMessage = null;
+      });
+    } else if (_setupStep == 1) {
+      VibrationService.light();
+      setState(() {
+        _setupStep = 0;
+        _enteredPin = _firstSetupPin;
         _errorMessage = null;
       });
     }
@@ -178,9 +185,14 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
 
   Future<void> _verifyPin(RelationshipModel? rel) async {
     setState(() => _isVerifying = true);
-    final activePin = (rel?.privateSpacePin != null && rel!.privateSpacePin!.isNotEmpty)
-        ? rel.privateSpacePin!
-        : (_cachedLocalPin != null && _cachedLocalPin!.isNotEmpty ? _cachedLocalPin! : null);
+    final cloudPin = (rel?.privateSpacePin != null && rel!.privateSpacePin!.isNotEmpty)
+        ? rel.privateSpacePin
+        : null;
+    final localPin = (_cachedLocalPin != null && _cachedLocalPin!.isNotEmpty)
+        ? _cachedLocalPin
+        : null;
+
+    final activePin = cloudPin ?? localPin;
 
     // If somehow no PIN is found, fallback to setup
     if (activePin == null || activePin.isEmpty) {
@@ -192,7 +204,17 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
       return;
     }
 
-    if (_enteredPin == activePin) {
+    if (_enteredPin == cloudPin || _enteredPin == localPin) {
+      // Synchronize missing store so local and cloud never desynchronize
+      if (localPin != _enteredPin) {
+        _cachedLocalPin = _enteredPin;
+        SharedPreferences.getInstance().then((prefs) => prefs.setString('vault_pin', _enteredPin));
+      }
+      final relId = rel?.id;
+      if (relId != null && relId.isNotEmpty && cloudPin != _enteredPin) {
+        _cloudService.updatePrivateSpacePin(relId, _enteredPin);
+      }
+
       VibrationService.success();
       if (!mounted) return;
       setState(() {
@@ -243,9 +265,17 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
       builder: (context, snapshot) {
         final rel = snapshot.data;
         if (!_isUnlocked) {
+          if (!_hasLoadedPrefs) {
+            return const Scaffold(
+              backgroundColor: AppColors.background,
+              body: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            );
+          }
           final hasPin = _isPinConfigured(rel);
           // If no PIN has been configured, guide through first-time setup
-          if (!hasPin && _hasLoadedPrefs) {
+          if (!hasPin) {
             return _buildSetupScreen(rel);
           }
           return _buildLockScreen(rel);
@@ -271,7 +301,35 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Vault Setup', style: AppTextStyles.display.copyWith(fontSize: 26)),
+                    Row(
+                      children: [
+                        if (isConfirm) ...[
+                          GestureDetector(
+                            onTap: () {
+                              VibrationService.light();
+                              setState(() {
+                                _setupStep = 0;
+                                _enteredPin = '';
+                                _firstSetupPin = '';
+                                _errorMessage = null;
+                              });
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              margin: const EdgeInsets.only(right: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: AppColors.border, width: 1.5),
+                              ),
+                              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: AppColors.ink),
+                            ),
+                          ),
+                        ],
+                        Text('Vault Setup', style: AppTextStyles.display.copyWith(fontSize: 26)),
+                      ],
+                    ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -740,6 +798,12 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
         child: StreamBuilder<QuerySnapshot>(
           stream: relId.isNotEmpty ? _cloudService.streamPrivatePhotos(relId) : Stream.empty(),
           builder: (context, photoSnapshot) {
+            if (photoSnapshot.connectionState == ConnectionState.waiting &&
+                !photoSnapshot.hasData &&
+                relId.isNotEmpty) {
+              return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            }
+
             final docs = photoSnapshot.data?.docs ?? [];
             final currentFilter = filters[_selectedFilter];
             final filteredDocs = docs.where((doc) {
@@ -750,9 +814,15 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
 
             final photoCountStr = '${docs.length} private photo${docs.length == 1 ? '' : 's'}';
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: Column(
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () async {
+                if (mounted) setState(() {});
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 12),
@@ -1046,7 +1116,8 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
                   const SizedBox(height: 24),
                 ],
               ),
-            );
+            ),
+          );
           },
         ),
       ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -22,10 +23,43 @@ class VoiceWhispersScreen extends StatefulWidget {
 class _VoiceWhispersScreenState extends State<VoiceWhispersScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
   bool _isPlaying = false;
-  double _playbackProgress = 0.45;
+  double _playbackProgress = 0.0;
   String _nowPlayingTitle = 'Good morning sunshine ☀️';
   String _nowPlayingAuthor = 'Partner';
   String _nowPlayingDuration = '0:24';
+  String? _selectedWhisperId;
+  Timer? _playbackTimer;
+
+  @override
+  void dispose() {
+    _playbackTimer?.cancel();
+    super.dispose();
+  }
+
+  void _togglePlay() {
+    VibrationService.light();
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+    _playbackTimer?.cancel();
+    if (_isPlaying) {
+      if (_playbackProgress >= 1.0) _playbackProgress = 0.0;
+      _playbackTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        setState(() {
+          _playbackProgress += 0.02;
+          if (_playbackProgress >= 1.0) {
+            _playbackProgress = 1.0;
+            _isPlaying = false;
+            timer.cancel();
+          }
+        });
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,16 +127,26 @@ class _VoiceWhispersScreenState extends State<VoiceWhispersScreen> {
                   }
 
                   if (docs.isNotEmpty) {
-                    final topData = docs.first.data() as Map<String, dynamic>;
+                    final selectedDoc = docs.firstWhere(
+                      (d) => d.id == _selectedWhisperId,
+                      orElse: () => docs.first,
+                    );
+                    final topData = selectedDoc.data() as Map<String, dynamic>;
                     _nowPlayingTitle = topData['title'] ?? 'Voice Whisper';
                     final isMe = topData['senderUid'] == myUid;
                     _nowPlayingAuthor = isMe ? myName : partnerName;
                     _nowPlayingDuration = topData['duration'] ?? '0:24';
                   }
 
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-                    child: Column(
+                  return RefreshIndicator(
+                    color: AppColors.partner,
+                    onRefresh: () async {
+                      if (mounted) setState(() {});
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Now-Playing Audio Player Card (Page 65)
@@ -143,10 +187,7 @@ class _VoiceWhispersScreenState extends State<VoiceWhispersScreen> {
                               Row(
                                 children: [
                                   GestureDetector(
-                                    onTap: () {
-                                      VibrationService.light();
-                                      setState(() => _isPlaying = !_isPlaying);
-                                    },
+                                    onTap: _togglePlay,
                                     child: Container(
                                       width: 48,
                                       height: 48,
@@ -332,12 +373,28 @@ class _VoiceWhispersScreenState extends State<VoiceWhispersScreen> {
                                     IconButton(
                                       onPressed: () {
                                         VibrationService.light();
+                                        _playbackTimer?.cancel();
                                         setState(() {
+                                          _selectedWhisperId = doc.id;
                                           _nowPlayingTitle = title;
                                           _nowPlayingAuthor = author;
                                           _nowPlayingDuration = duration;
                                           _isPlaying = true;
-                                          _playbackProgress = 0.5;
+                                          _playbackProgress = 0.0;
+                                        });
+                                        _playbackTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
+                                          if (!mounted) {
+                                            timer.cancel();
+                                            return;
+                                          }
+                                          setState(() {
+                                            _playbackProgress += 0.02;
+                                            if (_playbackProgress >= 1.0) {
+                                              _playbackProgress = 1.0;
+                                              _isPlaying = false;
+                                              timer.cancel();
+                                            }
+                                          });
                                         });
                                       },
                                       icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.partner, size: 32),
@@ -351,7 +408,8 @@ class _VoiceWhispersScreenState extends State<VoiceWhispersScreen> {
                         const SizedBox(height: 24),
                       ],
                     ),
-                  );
+                  ),
+                );
                 },
               ),
             ),

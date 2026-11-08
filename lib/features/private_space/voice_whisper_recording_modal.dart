@@ -62,6 +62,12 @@ class _VoiceWhisperRecordingModalState extends State<VoiceWhisperRecordingModal>
 
   Future<void> _sendWhisper() async {
     if (_isSaving) return;
+    if (_seconds < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please record for at least a few seconds 🎙️')),
+      );
+      return;
+    }
     setState(() => _isSaving = true);
     VibrationService.heavy();
     final pName = widget.partnerName ?? 'Partner';
@@ -201,8 +207,8 @@ class _VoiceWhisperRecordingModalState extends State<VoiceWhisperRecordingModal>
 
           const SizedBox(height: 16),
           Text(
-            'Tap checkmark to send to ${widget.partnerName ?? "Partner"}',
-            style: AppTextStyles.caption.copyWith(color: Colors.white60),
+            'Tap send button to deliver your whisper to ${widget.partnerName ?? "Partner"}',
+            style: AppTextStyles.caption.copyWith(color: Colors.white70),
           ),
         ],
       ),

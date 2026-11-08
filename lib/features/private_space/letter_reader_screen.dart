@@ -290,7 +290,7 @@ class _LetterReaderScreenState extends State<LetterReaderScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const NewLetterScreen(),
+                            builder: (context) => NewLetterScreen(partnerName: widget.sender),
                           ),
                         );
                       },

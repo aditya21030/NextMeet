@@ -78,7 +78,10 @@ class _NewLetterScreenState extends State<NewLetterScreen> {
     try {
       String? targetRelId = widget.relId;
       if (targetRelId == null) {
-        final rel = await _cloudService.streamRelationship().first;
+        final rel = await _cloudService
+            .streamRelationship()
+            .first
+            .timeout(const Duration(seconds: 5));
         targetRelId = rel?.id;
       }
 

@@ -50,6 +50,14 @@ class _ResetVaultPinScreenState extends State<ResetVaultPinScreen> {
           context,
           MaterialPageRoute(builder: (context) => CreateVaultPinScreen(relId: rel.id)),
         );
+      } else if (_requestSent && rel.pinResetRequestBy == null) {
+        _countdownTimer?.cancel();
+        if (mounted) {
+          setState(() {
+            _requestSent = false;
+            _secondsRemaining = 900;
+          });
+        }
       }
     });
   }

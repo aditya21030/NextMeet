@@ -335,11 +335,17 @@ class _SecretPhotosGalleryScreenState extends State<SecretPhotosGalleryScreen> {
                               return _buildEmptyState(relId);
                             }
 
-                            return GridView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.page,
-                                vertical: 8,
-                              ),
+                            return RefreshIndicator(
+                              color: AppColors.primary,
+                              onRefresh: () async {
+                                if (mounted) setState(() {});
+                              },
+                              child: GridView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.page,
+                                  vertical: 8,
+                                ),
                               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 3,
                                 crossAxisSpacing: 10,
@@ -402,9 +408,10 @@ class _SecretPhotosGalleryScreenState extends State<SecretPhotosGalleryScreen> {
                                   ),
                                 );
                               },
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
+                      ),
                 ),
               ],
             ),

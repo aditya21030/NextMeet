@@ -200,9 +200,15 @@ class _LoveLettersScreenState extends State<LoveLettersScreen> {
                                 Expanded(
                                   child: currentDocs.isEmpty
                                       ? _buildEmptyState(relId, partnerName)
-                                      : SingleChildScrollView(
-                                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-                                          child: Column(
+                                      : RefreshIndicator(
+                                          color: AppColors.primary,
+                                          onRefresh: () async {
+                                            if (mounted) setState(() {});
+                                          },
+                                          child: SingleChildScrollView(
+                                            physics: const AlwaysScrollableScrollPhysics(),
+                                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                                            child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.stretch,
                                             children: [
                                               // If locked letters exist and on inbox or locked tab, show hero banner
@@ -224,6 +230,7 @@ class _LoveLettersScreenState extends State<LoveLettersScreen> {
                                             ],
                                           ),
                                         ),
+                                      ),
                                 ),
                               ],
                             );

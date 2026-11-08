@@ -68,7 +68,10 @@ class _CreateVaultPinScreenState extends State<CreateVaultPinScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('vault_pin', _firstPin);
 
-        final rel = await CloudRelationshipService().streamRelationship().first;
+        final rel = await CloudRelationshipService()
+            .streamRelationship()
+            .first
+            .timeout(const Duration(seconds: 5));
         final targetRelId = widget.relId ?? rel?.id;
         if (targetRelId != null && targetRelId.isNotEmpty) {
           await CloudRelationshipService().finalizePinReset(targetRelId, _firstPin);
