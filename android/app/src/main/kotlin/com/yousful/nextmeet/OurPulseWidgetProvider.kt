@@ -1,5 +1,6 @@
 package com.yousful.nextmeet
 
+import android.app.ActivityOptions
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
@@ -7,10 +8,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetBackgroundReceiver
+import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetPlugin
 import es.antonborri.home_widget.HomeWidgetProvider
 
@@ -130,6 +133,7 @@ class OurPulseWidgetProvider : HomeWidgetProvider() {
             fun createTouchPendingIntent(type: String, requestCode: Int): PendingIntent {
                 val touchIntent = Intent(context, OurPulseWidgetProvider::class.java).apply {
                     action = ACTION_TOUCH
+                    data = Uri.parse("nextmeet://action/touch?type=$type")
                     putExtra("type", type)
                     putExtra("appWidgetId", appWidgetId)
                 }
@@ -147,41 +151,32 @@ class OurPulseWidgetProvider : HomeWidgetProvider() {
             views.setOnClickPendingIntent(R.id.btn_action_sync, createTouchPendingIntent("sync", 204))
 
             // --- 2. DEEP LINKING ACTIONS (OPEN SPECIFIC APP SCREENS) ---
-            val mainIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            if (mainIntent != null) {
-                // Tapping distance / route header opens Home Screen
-                val homePendingIntent = PendingIntent.getActivity(
-                    context,
-                    100,
-                    mainIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_header_area, homePendingIntent)
-
-                // Tapping countdown pill opens Plan / Reunion Hub
-                val planIntent = Intent(mainIntent).apply {
-                    data = Uri.parse("nextmeet://route/plan")
+            fun createActivityPendingIntent(uriString: String, requestCode: Int): PendingIntent {
+                val activityIntent = Intent(context, MainActivity::class.java).apply {
+                    action = HomeWidgetLaunchIntent.HOME_WIDGET_LAUNCH_ACTION
+                    data = Uri.parse(uriString)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
-                val planPendingIntent = PendingIntent.getActivity(
-                    context,
-                    101,
-                    planIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_countdown_val, planPendingIntent)
-
-                // Tapping partner name opens Home / Chat
-                val chatIntent = Intent(mainIntent).apply {
-                    data = Uri.parse("nextmeet://route/home")
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                if (Build.VERSION.SDK_INT >= 34) {
+                    val options = ActivityOptions.makeBasic()
+                    if (Build.VERSION.SDK_INT >= 35) {
+                        options.setPendingIntentCreatorBackgroundActivityStartMode(
+                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                        )
+                    } else {
+                        options.pendingIntentBackgroundActivityStartMode =
+                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                    }
+                    return PendingIntent.getActivity(context, requestCode, activityIntent, flags, options.toBundle())
                 }
-                val chatPendingIntent = PendingIntent.getActivity(
-                    context,
-                    102,
-                    chatIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_partner_name, chatPendingIntent)
+                return PendingIntent.getActivity(context, requestCode, activityIntent, flags)
             }
+
+            views.setOnClickPendingIntent(R.id.widget_container, createActivityPendingIntent("nextmeet://route/home", 100))
+            views.setOnClickPendingIntent(R.id.widget_header_area, createActivityPendingIntent("nextmeet://route/home", 100))
+            views.setOnClickPendingIntent(R.id.widget_partner_name, createActivityPendingIntent("nextmeet://route/home", 102))
+            views.setOnClickPendingIntent(R.id.widget_countdown_val, createActivityPendingIntent("nextmeet://route/plan", 101))
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
