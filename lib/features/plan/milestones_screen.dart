@@ -20,6 +20,7 @@ class MilestonesScreen extends StatelessWidget {
       stream: cloudService.streamRelationship(),
       builder: (context, snapshot) {
         final rel = snapshot.data;
+        final partnerName = rel?.getPartnerName(cloudService.currentUid) ?? 'Partner';
         final anniversary = rel?.anniversaryDate ?? DateTime.now().subtract(const Duration(days: 300));
         final currentDays = DateTime.now().difference(anniversary).inDays.abs();
 
@@ -100,58 +101,65 @@ class MilestonesScreen extends StatelessWidget {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 12),
-                  // Top Bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.border, width: 1.5),
-                          ),
-                          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
-                        ),
-                      ),
-                      Text('Milestones', style: AppTextStyles.title2.copyWith(fontSize: 18)),
-                      GestureDetector(
-                        onTap: () => MilestoneUnlockedModal.show(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.butterSoft,
-                            borderRadius: BorderRadius.circular(AppRadius.pill),
-                            border: Border.all(color: AppColors.butter, width: 1.5),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🎉', style: TextStyle(fontSize: 13)),
-                              const SizedBox(width: 4),
-                              Text('Preview', style: AppTextStyles.heading.copyWith(fontSize: 12, color: AppColors.butterText)),
-                            ],
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              backgroundColor: Colors.white,
+              onRefresh: () async {
+                VibrationService.light();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 12),
+                    // Top Bar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.border, width: 1.5),
+                            ),
+                            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        Text('Milestones', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                        GestureDetector(
+                          onTap: () => MilestoneUnlockedModal.show(context, partnerName: partnerName),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.butterSoft,
+                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                              border: Border.all(color: AppColors.butter, width: 1.5),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('🎉', style: TextStyle(fontSize: 13)),
+                                const SizedBox(width: 4),
+                                Text('Preview', style: AppTextStyles.heading.copyWith(fontSize: 12, color: AppColors.butterText)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Hero Milestone Progress Card (Page 37)
-                  GestureDetector(
-                    onTap: () => MilestoneUnlockedModal.show(context),
-                    child: Container(
+                    // Hero Milestone Progress Card (Page 37)
+                    GestureDetector(
+                      onTap: () => MilestoneUnlockedModal.show(context, partnerName: partnerName),
+                      child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -324,7 +332,8 @@ class MilestonesScreen extends StatelessWidget {
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }

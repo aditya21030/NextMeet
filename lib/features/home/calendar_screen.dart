@@ -227,7 +227,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
           backgroundColor: AppColors.background,
           body: SafeArea(
             child: relId == null
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.border, width: 1.5),
+                                ),
+                                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
+                              ),
+                            ),
+                            Text('Calendar', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                            const SizedBox(width: 40),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      const MascotHeart(color: MascotColor.pink, size: 54),
+                      const SizedBox(height: 14),
+                      Text('No couple connected yet', style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                      const SizedBox(height: 6),
+                      Text('Pair with your partner to share calendar events together!', style: AppTextStyles.caption),
+                      const Spacer(),
+                    ],
+                  )
                 : StreamBuilder<List<CalendarEventModel>>(
                     stream: _cloudService.streamCalendarEvents(relId),
                     builder: (context, eventsSnapshot) {

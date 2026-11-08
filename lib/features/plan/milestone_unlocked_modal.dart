@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../widgets/primary_button.dart';
@@ -105,7 +106,7 @@ class MilestoneUnlockedModal extends StatelessWidget {
           GestureDetector(
             onTap: () {
               VibrationService.light();
-              Navigator.pop(context);
+              Share.share('Celebrating 1,000 Days of Love together on NextMeet! 💕✨');
             },
             child: Container(
               height: 48,
