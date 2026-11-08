@@ -1,25 +1,42 @@
 import 'package:flutter/services.dart';
 
 class VibrationService {
+  static int hapticLevel = 2; // 0: Off, 1: Subtle, 2: Crisp, 3: Deep
+
   static Future<void> light() async {
+    if (hapticLevel == 0) return;
     await HapticFeedback.selectionClick();
   }
 
   static Future<void> medium() async {
-    await HapticFeedback.mediumImpact();
+    if (hapticLevel == 0) return;
+    if (hapticLevel == 1) {
+      await HapticFeedback.selectionClick();
+    } else {
+      await HapticFeedback.mediumImpact();
+    }
   }
 
   static Future<void> heavy() async {
-    await HapticFeedback.heavyImpact();
+    if (hapticLevel == 0) return;
+    if (hapticLevel == 1) {
+      await HapticFeedback.selectionClick();
+    } else if (hapticLevel == 2) {
+      await HapticFeedback.mediumImpact();
+    } else {
+      await HapticFeedback.heavyImpact();
+    }
   }
 
   static Future<void> success() async {
+    if (hapticLevel == 0) return;
     await HapticFeedback.lightImpact();
     await Future.delayed(const Duration(milliseconds: 50));
     await HapticFeedback.lightImpact();
   }
 
   static Future<void> error() async {
+    if (hapticLevel == 0) return;
     await HapticFeedback.vibrate();
   }
 

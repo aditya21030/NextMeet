@@ -10,6 +10,10 @@ import '../auth/reset_password_screen.dart';
 import 'app_customise_screen.dart';
 import 'edit_location_screen.dart';
 import 'edit_profile_screen.dart';
+import 'help_feedback_screen.dart';
+import 'notification_settings_screen.dart';
+import 'privacy_security_screen.dart';
+import 'terms_policy_screen.dart';
 import 'widgets_showcase_screen.dart';
 import 'wrapped_story_screen.dart';
 
@@ -40,8 +44,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
+    final hLevel = prefs.getInt('settings_haptic_level') ?? 2;
+    VibrationService.hapticLevel = hLevel;
     setState(() {
-      _hapticLevel = prefs.getInt('settings_haptic_level') ?? 2;
+      _hapticLevel = hLevel;
       _heartbeatVibration = prefs.getBool('settings_heartbeat_vibration') ?? true;
       _soundEffects = prefs.getBool('settings_sound_effects') ?? true;
       _batterySaver = prefs.getBool('settings_battery_saver') ?? false;
@@ -49,6 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _setHaptic(int level) async {
+    VibrationService.hapticLevel = level;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('settings_haptic_level', level);
   }
@@ -152,9 +159,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-              child: Column(
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () async {
+                if (mounted) setState(() {});
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 12),
@@ -384,6 +397,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                   const SizedBox(height: 20),
 
+                  // Section: Notifications & Privacy (Pages 72-73)
+                  Text('Notifications & Privacy',
+                      style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(color: AppColors.border, width: 1.5),
+                    ),
+                    child: Column(
+                      children: [
+                        _settingsTile(
+                          icon: Icons.notifications_none_rounded,
+                          iconColor: AppColors.butterText,
+                          iconBg: AppColors.butterSoft,
+                          title: 'Notification Preferences',
+                          subtitle: 'Custom alert sounds, touch alerts, and quiet hours',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const NotificationSettingsScreen()),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1, color: AppColors.border),
+                        _settingsTile(
+                          icon: Icons.lock_outline_rounded,
+                          iconColor: AppColors.primary,
+                          iconBg: AppColors.pinkSoft,
+                          title: 'Privacy & Vault PIN',
+                          subtitle: 'Vault PIN, biometric unlock, and location privacy',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const PrivacySecurityScreen()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
                   // Section: Background & Battery
                   Text('Battery & Sync', style: AppTextStyles.heading.copyWith(fontSize: 16)),
                   const SizedBox(height: 10),
@@ -403,6 +463,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         setState(() => _batterySaver = v);
                         _setBatterySaver(v);
                       },
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Section: Support & Legal (Page 74)
+                  Text('Support & Legal', style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(color: AppColors.border, width: 1.5),
+                    ),
+                    child: Column(
+                      children: [
+                        _settingsTile(
+                          icon: Icons.help_outline_rounded,
+                          iconColor: AppColors.partner,
+                          iconBg: AppColors.partnerSoft,
+                          title: 'Help & Feedback',
+                          subtitle: 'Frequently asked questions and support contact',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const HelpFeedbackScreen()),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1, color: AppColors.border),
+                        _settingsTile(
+                          icon: Icons.description_outlined,
+                          iconColor: AppColors.mintText,
+                          iconBg: AppColors.mintSoft,
+                          title: 'Terms & Privacy Policy',
+                          subtitle: 'Our privacy commitment and terms of service',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const TermsPolicyScreen()),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
 
@@ -466,7 +572,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }

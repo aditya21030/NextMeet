@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 
@@ -26,6 +27,42 @@ class _NotificationSettingsScreenState
 
   int? _snoozedHours;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _masterNotifications = prefs.getBool('notif_master') ?? true;
+      _touchAlerts = prefs.getBool('notif_touches') ?? true;
+      _loveLetters = prefs.getBool('notif_letters') ?? true;
+      _momentsAlerts = prefs.getBool('notif_moments') ?? true;
+      _tripAlerts = prefs.getBool('notif_trips') ?? true;
+      _quietHoursEnabled = prefs.getBool('notif_quiet_hours') ?? true;
+      final startHour = prefs.getInt('notif_quiet_start_h') ?? 23;
+      final startMin = prefs.getInt('notif_quiet_start_m') ?? 0;
+      _quietStart = TimeOfDay(hour: startHour, minute: startMin);
+      final endHour = prefs.getInt('notif_quiet_end_h') ?? 7;
+      final endMin = prefs.getInt('notif_quiet_end_m') ?? 0;
+      _quietEnd = TimeOfDay(hour: endHour, minute: endMin);
+    });
+  }
+
+  Future<void> _setPrefBool(String key, bool val) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, val);
+  }
+
+  Future<void> _setQuietTime(String prefix, TimeOfDay time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('${prefix}_h', time.hour);
+    await prefs.setInt('${prefix}_m', time.minute);
+  }
+
   void _snooze(int hours) {
     VibrationService.medium();
     setState(() => _snoozedHours = hours);
@@ -42,9 +79,13 @@ class _NotificationSettingsScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-          child: Column(
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: _loadPreferences,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 12),
@@ -112,6 +153,7 @@ class _NotificationSettingsScreenState
                       onChanged: (v) {
                         VibrationService.light();
                         setState(() => _masterNotifications = v);
+                        _setPrefBool('notif_master', v);
                       },
                       activeColor: AppColors.primary,
                     ),
@@ -140,7 +182,10 @@ class _NotificationSettingsScreenState
                       title: 'Touches & Kisses',
                       subtitle: 'When partner taps Miss You, Hug, or Touch',
                       value: _touchAlerts,
-                      onChanged: (v) => setState(() => _touchAlerts = v),
+                      onChanged: (v) {
+                        setState(() => _touchAlerts = v);
+                        _setPrefBool('notif_touches', v);
+                      },
                     ),
                     const Divider(height: 16, color: AppColors.border),
                     _alertSwitch(
@@ -149,7 +194,10 @@ class _NotificationSettingsScreenState
                       title: 'Love Letters',
                       subtitle: 'When a new sealed letter is delivered',
                       value: _loveLetters,
-                      onChanged: (v) => setState(() => _loveLetters = v),
+                      onChanged: (v) {
+                        setState(() => _loveLetters = v);
+                        _setPrefBool('notif_letters', v);
+                      },
                     ),
                     const Divider(height: 16, color: AppColors.border),
                     _alertSwitch(
@@ -158,7 +206,10 @@ class _NotificationSettingsScreenState
                       title: 'Moments Daily Photo',
                       subtitle: "When partner snaps today's split moment",
                       value: _momentsAlerts,
-                      onChanged: (v) => setState(() => _momentsAlerts = v),
+                      onChanged: (v) {
+                        setState(() => _momentsAlerts = v);
+                        _setPrefBool('notif_moments', v);
+                      },
                     ),
                     const Divider(height: 16, color: AppColors.border),
                     _alertSwitch(
@@ -167,7 +218,10 @@ class _NotificationSettingsScreenState
                       title: 'Trips & Calendar',
                       subtitle: 'Flight countdowns and milestone reminders',
                       value: _tripAlerts,
-                      onChanged: (v) => setState(() => _tripAlerts = v),
+                      onChanged: (v) {
+                        setState(() => _tripAlerts = v);
+                        _setPrefBool('notif_trips', v);
+                      },
                     ),
                   ],
                 ),
@@ -209,6 +263,7 @@ class _NotificationSettingsScreenState
                           onChanged: (v) {
                             VibrationService.light();
                             setState(() => _quietHoursEnabled = v);
+                            _setPrefBool('notif_quiet_hours', v);
                           },
                           activeColor: AppColors.primary,
                         ),
@@ -221,11 +276,13 @@ class _NotificationSettingsScreenState
                         children: [
                           _timePickerBox('Bedtime', _quietStart, (t) {
                             setState(() => _quietStart = t);
+                            _setQuietTime('notif_quiet_start', t);
                           }),
                           Container(
                               width: 1, height: 32, color: AppColors.border),
                           _timePickerBox('Wake up', _quietEnd, (t) {
                             setState(() => _quietEnd = t);
+                            _setQuietTime('notif_quiet_end', t);
                           }),
                         ],
                       ),
@@ -261,8 +318,9 @@ class _NotificationSettingsScreenState
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _alertSwitch({
     required IconData icon,
