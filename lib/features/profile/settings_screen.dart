@@ -11,6 +11,8 @@ import 'app_customise_screen.dart';
 import 'edit_location_screen.dart';
 import 'edit_profile_screen.dart';
 import 'help_feedback_screen.dart';
+import 'manage_subscription_screen.dart';
+import 'nextmeet_plus_screen.dart';
 import 'notification_settings_screen.dart';
 import 'privacy_security_screen.dart';
 import 'terms_policy_screen.dart';
@@ -306,6 +308,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               MaterialPageRoute(
                                   builder: (context) => const WrappedStoryScreen()),
                             );
+                          },
+                        ),
+                        const Divider(height: 1, color: AppColors.border),
+                        _settingsTile(
+                          icon: Icons.workspace_premium_rounded,
+                          iconColor: AppColors.butterText,
+                          iconBg: AppColors.butterSoft,
+                          title: currentRel.isPlus ? 'Manage NextMeet+ VIP' : 'NextMeet+ VIP Subscription',
+                          subtitle: currentRel.isPlus
+                              ? 'Active plan, benefits & renewal details'
+                              : 'One plan covers both hearts • 100% ad-free',
+                          onTap: () {
+                            if (currentRel.isPlus) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const ManageSubscriptionScreen()),
+                              );
+                            } else {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => NextMeetPlusScreen(relId: relId)),
+                              );
+                            }
                           },
                         ),
                       ],
