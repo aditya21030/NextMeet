@@ -370,47 +370,62 @@ class _MomentsScreenState extends State<MomentsScreen> {
                               VibrationService.light();
                               _cloudService.deleteMoment(relId, doc.id);
                             },
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(AppRadius.card),
-                                border: Border.all(color: AppColors.border, width: 1.5),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: isMe ? AppColors.pinkSoft : AppColors.partnerSoft,
-                                      borderRadius: BorderRadius.circular(12),
+                            child: GestureDetector(
+                              onTap: () {
+                                VibrationService.light();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MomentViewerScreen(
+                                      authorName: author,
+                                      caption: caption,
+                                      color: isMe ? MascotColor.pink : MascotColor.violet,
                                     ),
-                                    child: Center(
-                                      child: Icon(
-                                        Icons.photo_camera_rounded,
-                                        color: isMe ? AppColors.primary : AppColors.partner,
-                                        size: 24,
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(AppRadius.card),
+                                  border: Border.all(color: AppColors.border, width: 1.5),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: isMe ? AppColors.pinkSoft : AppColors.partnerSoft,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Center(
+                                        child: Icon(
+                                          Icons.photo_camera_rounded,
+                                          color: isMe ? AppColors.primary : AppColors.partner,
+                                          size: 24,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(caption, style: AppTextStyles.heading.copyWith(fontSize: 14)),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '$author • $dateStr • $frame',
-                                          style: AppTextStyles.caption.copyWith(color: AppColors.muted),
-                                        ),
-                                      ],
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(caption, style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '$author • $dateStr • $frame',
+                                            style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.muted, size: 14),
-                                ],
+                                    const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.muted, size: 14),
+                                  ],
+                                ),
                               ),
                             ),
                           );

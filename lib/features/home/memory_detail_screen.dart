@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/models/memory_model.dart';
 import '../../core/models/relationship_model.dart';
@@ -123,15 +124,21 @@ class _MemoryDetailScreenState extends State<MemoryDetailScreen> {
                   Text('Memory', style: AppTextStyles.title2.copyWith(fontSize: 18)),
                   Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.border, width: 1.5),
+                      GestureDetector(
+                        onTap: () {
+                          VibrationService.light();
+                          Share.share('Remembering our moment: "$title" at $location ❤️ #NextMeet');
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          child: const Icon(Icons.share_outlined, size: 18, color: AppColors.ink),
                         ),
-                        child: const Icon(Icons.share_outlined, size: 18, color: AppColors.ink),
                       ),
                     ],
                   ),
@@ -228,11 +235,29 @@ class _MemoryDetailScreenState extends State<MemoryDetailScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.card),
                         border: Border.all(color: AppColors.border, width: 1.5),
                       ),
-                      child: Text(
-                        'We sat on the sand until the sun dipped completely under the horizon. '
-                        'The waves were warm and you promised we would come back here every year. '
-                        'One of the sweetest days of our journey.',
-                        style: AppTextStyles.body.copyWith(height: 1.5, color: AppColors.ink),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.memory?.partner1Caption?.isNotEmpty == true || widget.memory?.partner2Caption?.isNotEmpty == true) ...[
+                            if (widget.memory?.partner1Caption?.isNotEmpty == true) ...[
+                              Text('$myName\'s note', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                              const SizedBox(height: 2),
+                              Text(widget.memory!.partner1Caption!, style: AppTextStyles.body.copyWith(height: 1.4, color: AppColors.ink)),
+                              const SizedBox(height: 10),
+                            ],
+                            if (widget.memory?.partner2Caption?.isNotEmpty == true) ...[
+                              Text('$partnerName\'s note', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, color: AppColors.partner)),
+                              const SizedBox(height: 2),
+                              Text(widget.memory!.partner2Caption!, style: AppTextStyles.body.copyWith(height: 1.4, color: AppColors.ink)),
+                            ],
+                          ] else
+                            Text(
+                              widget.memory?.caption.isNotEmpty == true
+                                  ? widget.memory!.caption
+                                  : 'We spent this day together making memories that will last a lifetime. One of the sweetest moments of our journey ❤️',
+                              style: AppTextStyles.body.copyWith(height: 1.5, color: AppColors.ink),
+                            ),
+                        ],
                       ),
                     ),
 

@@ -7,7 +7,6 @@ import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../widgets/flat_components.dart';
 import 'heartbeat_sync_modal.dart';
-import '../private_space/voice_whispers_screen.dart';
 import '../private_space/love_letters_screen.dart';
 import 'memories_screen.dart';
 
@@ -191,7 +190,7 @@ class NotificationsScreen extends StatelessWidget {
                                         context,
                                         MaterialPageRoute(builder: (context) => const MemoriesScreen()),
                                       );
-                                    } else if (type == 'heartbeat') {
+                                    } else if (type == 'heartbeat' || type == 'touch' || type == 'hug' || type == 'miss') {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(

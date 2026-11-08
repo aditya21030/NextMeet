@@ -184,7 +184,9 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                                 return m.location.toLowerCase().contains('trip') ||
                                     m.caption.toLowerCase().contains('trip') ||
                                     m.location.toLowerCase().contains('beach') ||
-                                    m.location.toLowerCase().contains('flight');
+                                    m.location.toLowerCase().contains('flight') ||
+                                    m.moodEmoji == '✈️' ||
+                                    m.moodEmoji == 'Adventure';
                               }
                               if (currentFilter == 'Dates') {
                                 return m.caption.toLowerCase().contains('date') ||

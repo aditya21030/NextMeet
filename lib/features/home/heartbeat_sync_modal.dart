@@ -35,9 +35,10 @@ class _HeartbeatSyncModalState extends State<HeartbeatSyncModal> with SingleTick
 
     // Synchronized heartbeat double-pulse haptics
     _hapticTimer = Timer.periodic(const Duration(milliseconds: 1400), (timer) {
+      if (!mounted) return;
       VibrationService.light();
       Future.delayed(const Duration(milliseconds: 150), () {
-        VibrationService.medium();
+        if (mounted) VibrationService.medium();
       });
     });
 
