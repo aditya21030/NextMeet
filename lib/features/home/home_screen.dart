@@ -327,10 +327,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final partnerName = rel?.getPartnerName(currentUid) ?? 'Partner';
     final inviteCode = rel?.inviteCode ?? '------';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return RefreshIndicator(
+      color: AppColors.primary,
+      backgroundColor: Colors.white,
+      onRefresh: () async {
+        VibrationService.light();
+        if (mounted) setState(() {});
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 12),
           // Top Header (Page 16)
@@ -557,8 +565,9 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 24),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _lockedFeatureTile(String label, IconData icon) {
     return Container(
@@ -594,10 +603,33 @@ class _HomeScreenState extends State<HomeScreen> {
     final partnerTime = now.toUtc().add(Duration(minutes: partnerTimezone));
     final partnerTimeStr = DateFormat('h:mm a').format(partnerTime);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final isPartnerCharging = rel.isPartnerCharging(currentUid);
+    final isPartnerAsleep = partnerTime.hour >= 23 || partnerTime.hour < 7;
+    String partnerStatusText;
+    if (isPartnerCharging) {
+      partnerStatusText = '⚡ Charging • battery $partnerBattery%';
+    } else if (isPartnerAsleep) {
+      partnerStatusText = '🌙 Probably asleep • $partnerBattery%';
+    } else {
+      partnerStatusText = 'Online now • battery $partnerBattery%';
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      backgroundColor: Colors.white,
+      onRefresh: () async {
+        VibrationService.light();
+        await Future.wait([
+          _fetchAndUpdateLocation(requestIfDenied: false),
+          _reportBatteryStatus(),
+        ]);
+        if (mounted) setState(() {});
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 12),
           // Top Header (Page 18)
@@ -726,7 +758,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  'Online now, battery $partnerBattery%',
+                                  partnerStatusText,
                                   style: AppTextStyles.caption.copyWith(color: Colors.white.withValues(alpha: 0.9)),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1142,8 +1174,9 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 24),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _metricPill(String title, String value, IconData icon, Color color) {
     return Container(
