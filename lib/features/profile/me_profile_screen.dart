@@ -264,7 +264,7 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
                     icon: Icons.person_outline_rounded,
                     iconBg: AppColors.pinkSoft,
                     iconColor: AppColors.primary,
-                    title: 'Account',
+                    title: 'Profile & Names',
                     onTap: () {
                       Navigator.push(
                         context,
