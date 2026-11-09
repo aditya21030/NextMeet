@@ -70,7 +70,15 @@ class CoupleLevelScreen extends StatelessWidget {
                       child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                     ),
                   ),
-                  Text('Couple Level', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Couple Level',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () => LevelUpModal.show(context),
                     child: Container(
@@ -163,7 +171,12 @@ class CoupleLevelScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(quest['title'] as String, style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                            Text(
+                              quest['title'] as String,
+                              style: AppTextStyles.heading.copyWith(fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             const SizedBox(height: 2),
                             Text(
                               'Progress: ${quest['progress']} • ${quest['xp']}',

@@ -138,7 +138,15 @@ class _MemoryMatchScreenState extends State<MemoryMatchScreen> {
                       child: const Icon(Icons.close_rounded, size: 20, color: AppColors.ink),
                     ),
                   ),
-                  Text('Memory Match', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Memory Match',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () => setState(_startNewGame),
                     child: Container(

@@ -178,7 +178,15 @@ class _NeverHaveIEverScreenState extends State<NeverHaveIEverScreen> {
                           child: const Icon(Icons.close_rounded, size: 20, color: AppColors.ink),
                         ),
                       ),
-                      Text('Never Have I Ever', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                      Expanded(
+                        child: Text(
+                          'Never Have I Ever',
+                          style: AppTextStyles.title2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(

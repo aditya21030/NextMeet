@@ -944,7 +944,14 @@ class _SharedMapScreenState extends State<SharedMapScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('All Visited Places (${allPlaces.length})', style: AppTextStyles.title1.copyWith(fontSize: 20)),
+                      Expanded(
+                        child: Text(
+                          'All Visited Places (${allPlaces.length})',
+                          style: AppTextStyles.title1.copyWith(fontSize: 20),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: const Icon(Icons.close_rounded, color: AppColors.muted, size: 24),

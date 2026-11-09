@@ -645,9 +645,19 @@ class _PlanHubScreenState extends State<PlanHubScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTextStyles.heading.copyWith(fontSize: 15)),
+                Text(
+                  title,
+                  style: AppTextStyles.heading.copyWith(fontSize: 15),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: AppTextStyles.caption),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),

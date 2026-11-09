@@ -162,7 +162,15 @@ class _EmojiCipherScreenState extends State<EmojiCipherScreen> {
                       child: const Icon(Icons.close_rounded, size: 20, color: AppColors.ink),
                     ),
                   ),
-                  Text('Emoji Cipher', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Emoji Cipher',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(

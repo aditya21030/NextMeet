@@ -95,7 +95,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: const Icon(Icons.logout_rounded, color: AppColors.danger, size: 22),
             ),
             const SizedBox(width: 12),
-            Text('Log Out?', style: AppTextStyles.title1.copyWith(fontSize: 20)),
+            Expanded(
+              child: Text(
+                'Log Out?',
+                style: AppTextStyles.title1.copyWith(fontSize: 20),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -191,8 +198,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               size: 16, color: AppColors.ink),
                         ),
                       ),
-                      Text('Settings',
-                          style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                      Expanded(
+                        child: Text(
+                          'Settings',
+                          style: AppTextStyles.title2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       const SizedBox(width: 40),
                     ],
                   ),
@@ -358,7 +372,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Vibration Strength', style: AppTextStyles.title2.copyWith(fontSize: 15)),
+                            Expanded(
+                              child: Text(
+                                'Vibration Strength',
+                                style: AppTextStyles.title2.copyWith(fontSize: 15),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(

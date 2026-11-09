@@ -345,25 +345,34 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.pinkSoft,
-                    child: Text(
-                      myName.isNotEmpty ? myName[0].toUpperCase() : 'A',
-                      style: AppTextStyles.heading.copyWith(color: AppColors.primary),
+              Expanded(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.pinkSoft,
+                      child: Text(
+                        myName.isNotEmpty ? myName[0].toUpperCase() : 'A',
+                        style: AppTextStyles.heading.copyWith(color: AppColors.primary),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_getTimeGreeting(), style: AppTextStyles.caption),
-                      Text('Hi, $myName', style: AppTextStyles.title2.copyWith(fontSize: 18)),
-                    ],
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_getTimeGreeting(), style: AppTextStyles.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(
+                            'Hi, $myName',
+                            style: AppTextStyles.title2.copyWith(fontSize: 18),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               IconButton(
                 onPressed: () {
@@ -798,18 +807,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Column(
-                        children: [
-                          Text('You', style: AppTextStyles.caption.copyWith(fontSize: 11)),
-                          Text(myTimeStr, style: AppTextStyles.heading.copyWith(fontSize: 18, color: AppColors.ink)),
-                        ],
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text('You', style: AppTextStyles.caption.copyWith(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text(myTimeStr, style: AppTextStyles.heading.copyWith(fontSize: 18, color: AppColors.ink), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
                       ),
                       Container(width: 1.5, height: 28, color: AppColors.border),
-                      Column(
-                        children: [
-                          Text(partnerName, style: AppTextStyles.caption.copyWith(fontSize: 11)),
-                          Text(partnerTimeStr, style: AppTextStyles.heading.copyWith(fontSize: 18, color: AppColors.ink)),
-                        ],
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(partnerName, style: AppTextStyles.caption.copyWith(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text(partnerTimeStr, style: AppTextStyles.heading.copyWith(fontSize: 18, color: AppColors.ink), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
                       ),
                     ],
                   ),

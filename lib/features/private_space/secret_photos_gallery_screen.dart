@@ -216,30 +216,44 @@ class _SecretPhotosGalleryScreenState extends State<SecretPhotosGalleryScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppColors.border, width: 1.5),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.border, width: 1.5),
+                                ),
+                                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                               ),
-                              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Secret Photos', style: AppTextStyles.title2.copyWith(fontSize: 18)),
-                              Text('End-to-end private', style: AppTextStyles.caption.copyWith(fontSize: 11)),
-                            ],
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Secret Photos',
+                                    style: AppTextStyles.title2.copyWith(fontSize: 18),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'End-to-end private',
+                                    style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       if (_isUploading)
                         const SizedBox(

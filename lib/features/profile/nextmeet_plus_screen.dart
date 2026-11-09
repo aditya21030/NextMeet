@@ -105,7 +105,15 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                       child: const Icon(Icons.close_rounded, size: 20, color: AppColors.ink),
                     ),
                   ),
-                  Text('NextMeet+', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'NextMeet+',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () {
                       VibrationService.light();

@@ -142,7 +142,15 @@ class _ResetVaultPinScreenState extends State<ResetVaultPinScreen> {
                       child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                     ),
                   ),
-                  Text('Reset PIN', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Reset PIN',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   const SizedBox(width: 40),
                 ],
               ),

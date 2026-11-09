@@ -244,7 +244,15 @@ class _TripBudgetScreenState extends State<TripBudgetScreen> {
                               child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                             ),
                           ),
-                          Text('Trip Budget & Split', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                          Expanded(
+                            child: Text(
+                              'Trip Budget & Split',
+                              style: AppTextStyles.title2.copyWith(fontSize: 18),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           GestureDetector(
                             onTap: () => _showAddExpenseModal(relId, myName, partnerName),
                             child: Container(
@@ -456,9 +464,19 @@ class _TripBudgetScreenState extends State<TripBudgetScreen> {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(title, style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                                              Text(
+                                                title,
+                                                style: AppTextStyles.heading.copyWith(fontSize: 14),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                               const SizedBox(height: 2),
-                                              Text('Paid by $paidBy • $cat', style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
+                                              Text(
+                                                'Paid by $paidBy • $cat',
+                                                style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ],
                                           ),
                                         ),

@@ -60,7 +60,15 @@ class _TravelTrackerScreenState extends State<TravelTrackerScreen> {
                           child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                         ),
                       ),
-                      Text('Live Travel Tracker', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                      Expanded(
+                        child: Text(
+                          'Live Travel Tracker',
+                          style: AppTextStyles.title2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
@@ -118,12 +126,24 @@ class _TravelTrackerScreenState extends State<TravelTrackerScreen> {
                                   child: const Icon(Icons.flight_rounded, color: AppColors.partner, size: 18),
                                 ),
                                 const SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Flight to $dest', style: AppTextStyles.heading.copyWith(fontSize: 14)),
-                                    Text('Couple Reunion Route', style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11)),
-                                  ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Flight to $dest',
+                                        style: AppTextStyles.heading.copyWith(fontSize: 14),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        'Couple Reunion Route',
+                                        style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -221,7 +241,12 @@ class _TravelTrackerScreenState extends State<TravelTrackerScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('$partnerName is reuniting with you!', style: AppTextStyles.heading.copyWith(fontSize: 15, color: AppColors.primary)),
+                              Text(
+                                '$partnerName is reuniting with you!',
+                                style: AppTextStyles.heading.copyWith(fontSize: 15, color: AppColors.primary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const SizedBox(height: 2),
                               Text(
                                 daysToMeet > 0

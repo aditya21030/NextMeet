@@ -171,7 +171,15 @@ class _TripDetailHubScreenState extends State<TripDetailHubScreen> {
                           child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                         ),
                       ),
-                      Text('Trip Plan', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                      Expanded(
+                        child: Text(
+                          'Trip Plan',
+                          style: AppTextStyles.title2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () {
                           if (relId != null) {
@@ -485,9 +493,19 @@ class _TripDetailHubScreenState extends State<TripDetailHubScreen> {
                                                   ],
                                                 ),
                                                 const SizedBox(height: 2),
-                                                Text(title, style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                                                Text(
+                                                  title,
+                                                  style: AppTextStyles.heading.copyWith(fontSize: 14),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                                 const SizedBox(height: 2),
-                                                Text(desc, style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11)),
+                                                Text(
+                                                  desc,
+                                                  style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ],
                                             ),
                                           ),

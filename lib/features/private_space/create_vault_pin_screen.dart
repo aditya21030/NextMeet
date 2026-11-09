@@ -131,7 +131,15 @@ class _CreateVaultPinScreenState extends State<CreateVaultPinScreen> {
                       child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                     ),
                   ),
-                  Text('Vault PIN', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Vault PIN',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   const SizedBox(width: 40),
                 ],
               ),

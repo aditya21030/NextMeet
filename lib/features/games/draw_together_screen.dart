@@ -137,7 +137,15 @@ class _DrawTogetherScreenState extends State<DrawTogetherScreen> {
                           child: const Icon(Icons.close_rounded, size: 20, color: AppColors.ink),
                         ),
                       ),
-                      Text('Draw Together', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                      Expanded(
+                        child: Text(
+                          'Draw Together',
+                          style: AppTextStyles.title2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       Row(
                         children: [
                           GestureDetector(

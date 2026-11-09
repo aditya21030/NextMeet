@@ -114,20 +114,24 @@ class GameWinModal extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Column(
-                  children: [
-                    Text('You', style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
-                    Text('$score1', style: AppTextStyles.display.copyWith(fontSize: 28)),
-                  ],
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text('You', style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text('$score1', style: AppTextStyles.display.copyWith(fontSize: 28), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ),
                 Container(width: 1.5, height: 40, color: AppColors.border),
-                Column(
-                  children: [
-                    Text(partnerName, style: AppTextStyles.caption.copyWith(color: AppColors.partner, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
-                    Text('$score2', style: AppTextStyles.display.copyWith(fontSize: 28)),
-                  ],
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(partnerName, style: AppTextStyles.caption.copyWith(color: AppColors.partner, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text('$score2', style: AppTextStyles.display.copyWith(fontSize: 28), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ),
               ],
             ),

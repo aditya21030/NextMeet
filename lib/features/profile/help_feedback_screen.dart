@@ -97,8 +97,15 @@ class _HelpFeedbackScreenState extends State<HelpFeedbackScreen> {
                             size: 16, color: AppColors.ink),
                       ),
                     ),
-                    Text('Help & Support',
-                        style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                    Expanded(
+                      child: Text(
+                        'Help & Support',
+                        style: AppTextStyles.title2.copyWith(fontSize: 18),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     const SizedBox(width: 40),
                   ],
                 ),

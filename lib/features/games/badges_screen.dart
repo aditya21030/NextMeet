@@ -196,7 +196,15 @@ class _BadgesScreenState extends State<BadgesScreen> {
                       child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                     ),
                   ),
-                  Text('Couple Badges', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Couple Badges',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(

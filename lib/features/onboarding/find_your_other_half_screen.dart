@@ -431,7 +431,12 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text('Your city', style: AppTextStyles.caption),
-                                      Text(widget.yourCity, style: AppTextStyles.heading.copyWith(fontSize: 15)),
+                                      Text(
+                                        widget.yourCity,
+                                        style: AppTextStyles.heading.copyWith(fontSize: 15),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -440,7 +445,12 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text('Their city', style: AppTextStyles.caption),
-                                      Text(widget.theirCity, style: AppTextStyles.heading.copyWith(fontSize: 15)),
+                                      Text(
+                                        widget.theirCity,
+                                        style: AppTextStyles.heading.copyWith(fontSize: 15),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ],
                                   ),
                                 ),

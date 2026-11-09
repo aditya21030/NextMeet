@@ -300,7 +300,15 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
                           child: const Icon(Icons.close_rounded, size: 20, color: AppColors.ink),
                         ),
                       ),
-                      Text('Hearts in a Row', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                      Expanded(
+                        child: Text(
+                          'Hearts in a Row',
+                          style: AppTextStyles.title2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => _resetGame(relId, myUid, partnerUid),
                         child: Container(
@@ -414,46 +422,63 @@ class _ConnectFourScreenState extends State<ConnectFourScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const MascotHeart(color: MascotColor.pink, size: 32),
-                            const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('You', style: AppTextStyles.heading.copyWith(fontSize: 13, color: AppColors.primary)),
-                                Text('$scoreYou wins', style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
-                              ],
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isMyTurn ? AppColors.pinkSoft : AppColors.partnerSoft,
-                            borderRadius: BorderRadius.circular(AppRadius.pill),
-                            border: Border.all(color: isMyTurn ? AppColors.primary : AppColors.partner, width: 1.5),
-                          ),
-                          child: Text(
-                            isMyTurn ? 'Your Turn! 💖' : "Waiting for $pName...",
-                            style: AppTextStyles.caption.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: isMyTurn ? AppColors.primary : AppColors.partnerText,
-                            ),
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const MascotHeart(color: MascotColor.pink, size: 32),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('You', style: AppTextStyles.heading.copyWith(fontSize: 13, color: AppColors.primary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    Text('$scoreYou wins', style: AppTextStyles.caption.copyWith(color: AppColors.muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Row(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(pName, style: AppTextStyles.heading.copyWith(fontSize: 13, color: AppColors.partner)),
-                                Text('$scorePartner wins', style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
-                              ],
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isMyTurn ? AppColors.pinkSoft : AppColors.partnerSoft,
+                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                              border: Border.all(color: isMyTurn ? AppColors.primary : AppColors.partner, width: 1.5),
                             ),
-                            const SizedBox(width: 8),
-                            const MascotHeart(color: MascotColor.violet, size: 32),
-                          ],
+                            child: Text(
+                              isMyTurn ? 'Your Turn! 💖' : "Waiting for $pName...",
+                              style: AppTextStyles.caption.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: isMyTurn ? AppColors.primary : AppColors.partnerText,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(pName, style: AppTextStyles.heading.copyWith(fontSize: 13, color: AppColors.partner), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    Text('$scorePartner wins', style: AppTextStyles.caption.copyWith(color: AppColors.muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const MascotHeart(color: MascotColor.violet, size: 32),
+                            ],
+                          ),
                         ),
                       ],
                     ),

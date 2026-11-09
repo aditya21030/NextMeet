@@ -444,7 +444,14 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
               child: const Icon(Icons.logout_rounded, color: AppColors.danger, size: 22),
             ),
             const SizedBox(width: 12),
-            Text('Log Out?', style: AppTextStyles.title1.copyWith(fontSize: 20)),
+            Expanded(
+              child: Text(
+                'Log Out?',
+                style: AppTextStyles.title1.copyWith(fontSize: 20),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Text(

@@ -107,8 +107,15 @@ class _NotificationSettingsScreenState
                           size: 16, color: AppColors.ink),
                     ),
                   ),
-                  Text('Notifications',
-                      style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Notifications',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   const SizedBox(width: 40),
                 ],
               ),

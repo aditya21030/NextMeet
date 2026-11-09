@@ -137,7 +137,15 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                         child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.ink),
                       ),
                     ),
-                    Text('Privacy & Security', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                    Expanded(
+                      child: Text(
+                        'Privacy & Security',
+                        style: AppTextStyles.title2.copyWith(fontSize: 18),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     const SizedBox(width: 40),
                   ],
                 ),

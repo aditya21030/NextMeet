@@ -134,7 +134,15 @@ class _TripPackingScreenState extends State<TripPackingScreen> {
                               child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                             ),
                           ),
-                          Text('Packing Checklist', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                          Expanded(
+                            child: Text(
+                              'Packing Checklist',
+                              style: AppTextStyles.title2.copyWith(fontSize: 18),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(

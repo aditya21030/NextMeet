@@ -141,7 +141,15 @@ class _PlanTripScreenState extends State<PlanTripScreen> {
                       child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                     ),
                   ),
-                  Text('Plan a Trip', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Plan a Trip',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   GestureDetector(
                     onTap: _isSaving ? null : _createTrip,
                     child: Container(

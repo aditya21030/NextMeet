@@ -121,7 +121,15 @@ class _MemoryDetailScreenState extends State<MemoryDetailScreen> {
                       child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                     ),
                   ),
-                  Text('Memory', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Memory',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Row(
                     children: [
                       GestureDetector(
@@ -191,17 +199,34 @@ class _MemoryDetailScreenState extends State<MemoryDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(title, style: AppTextStyles.title1.copyWith(fontSize: 22)),
+                              Text(
+                                title,
+                                style: AppTextStyles.title1.copyWith(fontSize: 22),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const SizedBox(height: 6),
                               Row(
                                 children: [
                                   const Icon(Icons.place_rounded, size: 16, color: AppColors.primary),
                                   const SizedBox(width: 4),
-                                  Text(location, style: AppTextStyles.caption.copyWith(color: AppColors.ink)),
+                                  Flexible(
+                                    child: Text(
+                                      location,
+                                      style: AppTextStyles.caption.copyWith(color: AppColors.ink),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                   const SizedBox(width: 12),
                                   const Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.muted),
                                   const SizedBox(width: 4),
-                                  Text(date, style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
+                                  Text(
+                                    date,
+                                    style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ],
                               ),
                             ],

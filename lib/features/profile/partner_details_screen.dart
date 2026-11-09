@@ -67,8 +67,15 @@ class PartnerDetailsScreen extends StatelessWidget {
                           size: 16, color: AppColors.ink),
                     ),
                   ),
-                  Text('Partner Details',
-                      style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Partner Details',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   const SizedBox(width: 40),
                 ],
               ),

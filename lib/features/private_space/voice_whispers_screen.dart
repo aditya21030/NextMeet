@@ -92,7 +92,15 @@ class _VoiceWhispersScreenState extends State<VoiceWhispersScreen> {
                       child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                     ),
                   ),
-                  Text('Voice Whispers', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Voice Whispers',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () => VoiceWhisperRecordingModal.show(
                       context,

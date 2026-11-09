@@ -131,7 +131,15 @@ class MilestonesScreen extends StatelessWidget {
                             child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
                           ),
                         ),
-                        Text('Milestones', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                        Expanded(
+                          child: Text(
+                            'Milestones',
+                            style: AppTextStyles.title2.copyWith(fontSize: 18),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         GestureDetector(
                           onTap: () => MilestoneUnlockedModal.show(context, partnerName: partnerName),
                           child: Container(
@@ -271,7 +279,12 @@ class MilestonesScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item['title'] as String, style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                                Text(
+                                  item['title'] as String,
+                                  style: AppTextStyles.heading.copyWith(fontSize: 14),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 const SizedBox(height: 2),
                                 Text(item['target'] as String, style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
                               ],
@@ -315,7 +328,12 @@ class MilestonesScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item['title'] as String, style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                                Text(
+                                  item['title'] as String,
+                                  style: AppTextStyles.heading.copyWith(fontSize: 14),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 const SizedBox(height: 2),
                                 Text(item['date'] as String, style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
                               ],

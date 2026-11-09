@@ -263,9 +263,19 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                Text(
+                  title,
+                  style: AppTextStyles.heading.copyWith(fontSize: 16),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: AppTextStyles.caption.copyWith(fontSize: 12, height: 1.25)),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.caption.copyWith(fontSize: 12, height: 1.25),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),

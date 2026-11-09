@@ -140,7 +140,15 @@ class _SongAssociationScreenState extends State<SongAssociationScreen> {
                       child: const Icon(Icons.close_rounded, size: 20, color: AppColors.ink),
                     ),
                   ),
-                  Text('Song Association', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                  Expanded(
+                    child: Text(
+                      'Song Association',
+                      style: AppTextStyles.title2.copyWith(fontSize: 18),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(

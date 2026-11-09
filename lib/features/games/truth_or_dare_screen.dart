@@ -182,7 +182,15 @@ class _TruthOrDareScreenState extends State<TruthOrDareScreen> {
                           child: const Icon(Icons.close_rounded, size: 20, color: AppColors.ink),
                         ),
                       ),
-                      Text('Truth or Dare', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+                      Expanded(
+                        child: Text(
+                          'Truth or Dare',
+                          style: AppTextStyles.title2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
