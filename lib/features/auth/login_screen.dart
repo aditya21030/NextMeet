@@ -427,31 +427,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
 
-                        const SizedBox(height: 12),
-
-                        // Continue with Apple
-                        Container(
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: AppColors.ink,
-                            borderRadius: BorderRadius.circular(AppRadius.pill),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const FaIcon(FontAwesomeIcons.apple, color: Colors.white, size: 20),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Continue with Apple',
-                                style: AppTextStyles.button.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
                         const SizedBox(height: 20),
 
                         // Terms and Privacy Footer

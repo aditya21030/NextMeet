@@ -7,8 +7,10 @@ import '../../widgets/flat_components.dart';
 import 'plus_welcome_screen.dart';
 import 'manage_subscription_screen.dart';
 
+enum PlusPlanChoice { annual, monthly, lifetime }
+
 /// NextMeet+ Paywall Screen ("One subscription, two hearts covered")
-/// Strictly following NextMeet Redesign.pdf (Page 76)
+/// Strictly following NextMeet Monetize.md & Design System
 class NextMeetPlusScreen extends StatefulWidget {
   final String? relId;
   const NextMeetPlusScreen({super.key, this.relId});
@@ -18,37 +20,51 @@ class NextMeetPlusScreen extends StatefulWidget {
 }
 
 class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
-  bool _isYearly = true; // Yearly: ₹499/yr, Monthly: ₹49/mo
+  PlusPlanChoice _selectedPlan = PlusPlanChoice.annual;
   bool _isProcessing = false;
 
   final List<Map<String, dynamic>> _perks = [
     {
-      'title': 'Unlimited Sanctum Vault',
-      'desc': 'Zero photo storage caps with end-to-end PIN encryption',
-      'icon': Icons.lock_rounded,
+      'title': '100% Ad-Free All 20 Games',
+      'desc': 'Zero ads between rounds, instant revives & VIP winner badges',
+      'icon': Icons.block_rounded,
       'color': AppColors.primary,
       'bg': AppColors.pinkSoft,
     },
     {
-      'title': 'Voice Whispers Archive',
-      'desc': 'Listen back to every sweet whisper anytime without expiration',
-      'icon': Icons.mic_rounded,
+      'title': 'Unlimited 4K Vault & Audio',
+      'desc': 'No photo caps, original 4K resolution & permanent voice archive',
+      'icon': Icons.cloud_done_rounded,
       'color': AppColors.partner,
       'bg': AppColors.partnerSoft,
     },
     {
-      'title': 'Golden Crowns & Hats',
-      'desc': 'Equip royal accessories to both your mascot hearts',
+      'title': 'All 14 Interactive Widgets',
+      'desc': 'Airport flight board, live heartbeat, countdowns & AMOLED styles',
+      'icon': Icons.widgets_rounded,
+      'color': AppColors.mintText,
+      'bg': AppColors.mintSoft,
+    },
+    {
+      'title': 'Golden Crowns & Mascot Hats',
+      'desc': 'Equip royal crowns, caps, halos & custom colors for both mascots',
       'icon': Icons.celebration_rounded,
       'color': AppColors.butterText,
       'bg': AppColors.butterSoft,
     },
     {
-      'title': 'NextMeet Wrapped 2026',
-      'desc': 'Personalized 6-slide story recap of your year together',
-      'icon': Icons.auto_stories_rounded,
-      'color': AppColors.mintText,
-      'bg': AppColors.mintSoft,
+      'title': 'Time Capsule Letters & Wrapped',
+      'desc': 'Seal letters until reunion dates + full 6-slide animated year story',
+      'icon': Icons.mark_email_unread_rounded,
+      'color': AppColors.primary,
+      'bg': AppColors.pinkSoft,
+    },
+    {
+      'title': 'Unlimited Trips & Boarding Passes',
+      'desc': 'Multiple concurrent trips, shared budget calculator & airport tracker',
+      'icon': Icons.flight_takeoff_rounded,
+      'color': AppColors.partner,
+      'bg': AppColors.partnerSoft,
     },
   ];
 
@@ -59,11 +75,27 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
     try {
       final targetRelId = widget.relId ?? CloudRelationshipService().cachedRelationship?.id;
       if (targetRelId != null && targetRelId.isNotEmpty) {
-        final plan = _isYearly ? 'yearly' : 'monthly';
-        final expiry = DateTime.now().add(_isYearly ? const Duration(days: 365) : const Duration(days: 30));
+        String planStr;
+        DateTime expiry;
+
+        switch (_selectedPlan) {
+          case PlusPlanChoice.annual:
+            planStr = 'Annual Sanctuary';
+            expiry = DateTime.now().add(const Duration(days: 365));
+            break;
+          case PlusPlanChoice.monthly:
+            planStr = 'Monthly Sanctuary';
+            expiry = DateTime.now().add(const Duration(days: 30));
+            break;
+          case PlusPlanChoice.lifetime:
+            planStr = 'Lifetime Pass';
+            expiry = DateTime.now().add(const Duration(days: 36500)); // 100 years
+            break;
+        }
+
         await CloudRelationshipService().activateRealPremium(
           relId: targetRelId,
-          planType: plan,
+          planType: planStr,
           renewalDate: expiry,
           transactionId: 'nm_${DateTime.now().millisecondsSinceEpoch}',
         );
@@ -86,7 +118,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            // Top Bar
+            // Modern Top Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
               child: Row(
@@ -107,7 +139,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                   ),
                   Expanded(
                     child: Text(
-                      'NextMeet+',
+                      'NextMeet+ Pro',
                       style: AppTextStyles.title2.copyWith(fontSize: 18),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -124,23 +156,23 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                     },
                     child: Text(
                       'Manage',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                      style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800),
                     ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Scrollable Paywall Body (Page 76)
+            // Scrollable Paywall Body
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Hero Mascot Crown Banner
+                    // Hero Mascot Crown Header
                     Center(
                       child: Column(
                         children: [
@@ -149,7 +181,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                             leftAccessory: MascotAccessory.crown,
                             rightAccessory: MascotAccessory.crown,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                           Text('NextMeet+ For Two', style: AppTextStyles.title1.copyWith(fontSize: 24)),
                           const SizedBox(height: 4),
                           Text(
@@ -160,118 +192,89 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
-                    // Pricing Selector Cards (Yearly vs Monthly)
+                    // Golden Couple Rule Banner (Monetize.md Section 1)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.pinkSoft,
+                        borderRadius: BorderRadius.circular(AppRadius.card),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25), width: 1.5),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 22),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'The Golden Couple Rule 🌟',
+                                  style: AppTextStyles.heading.copyWith(fontSize: 13, color: AppColors.primary),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Pay once, both hearts unlocked. When you subscribe, your partner gets full NextMeet+ Pro at zero extra charge.',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.ink, fontSize: 11, height: 1.35),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // 3 Pricing Options (Monetize.md Section 4)
                     Row(
                       children: [
-                        // Yearly Option
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              VibrationService.light();
-                              setState(() => _isYearly = true);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: _isYearly ? AppColors.pinkSoft.withValues(alpha: 0.8) : Colors.white,
-                                borderRadius: BorderRadius.circular(AppRadius.card),
-                                border: Border.all(
-                                  color: _isYearly ? AppColors.primary : AppColors.border,
-                                  width: _isYearly ? 2.0 : 1.5,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                                    ),
-                                    child: Text(
-                                      'BEST VALUE',
-                                      style: AppTextStyles.label.copyWith(color: Colors.white, fontSize: 9),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text('Yearly', style: AppTextStyles.heading.copyWith(fontSize: 15)),
-                                  const SizedBox(height: 2),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text('₹499 / yr', style: AppTextStyles.title1.copyWith(fontSize: 18, color: AppColors.primary)),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text('Just ₹41/month', style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                        // Option 1: Monthly Sanctuary
+                        _buildPlanCard(
+                          choice: PlusPlanChoice.monthly,
+                          badge: 'FLEXIBLE',
+                          badgeBg: AppColors.card,
+                          badgeColor: AppColors.muted,
+                          title: 'Monthly',
+                          price: '₹49',
+                          period: '/ month',
+                          subtitle: 'Cancel anytime',
                         ),
-                        const SizedBox(width: 12),
-                        // Monthly Option
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              VibrationService.light();
-                              setState(() => _isYearly = false);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: !_isYearly ? AppColors.pinkSoft.withValues(alpha: 0.8) : Colors.white,
-                                borderRadius: BorderRadius.circular(AppRadius.card),
-                                border: Border.all(
-                                  color: !_isYearly ? AppColors.primary : AppColors.border,
-                                  width: !_isYearly ? 2.0 : 1.5,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.background,
-                                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                                    ),
-                                    child: Text(
-                                      'FLEXIBLE',
-                                      style: AppTextStyles.label.copyWith(color: AppColors.muted, fontSize: 9),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text('Monthly', style: AppTextStyles.heading.copyWith(fontSize: 15)),
-                                  const SizedBox(height: 2),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text('₹49 / mo', style: AppTextStyles.title1.copyWith(fontSize: 18, color: AppColors.primary)),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text('Cancel anytime', style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                        const SizedBox(width: 8),
+
+                        // Option 2: Annual Sanctuary (BEST VALUE)
+                        _buildPlanCard(
+                          choice: PlusPlanChoice.annual,
+                          badge: 'SAVE 17% 👑',
+                          badgeBg: AppColors.primary,
+                          badgeColor: Colors.white,
+                          title: 'Annual',
+                          price: '₹499',
+                          period: '/ year',
+                          subtitle: 'Just ₹41/mo',
+                          isHero: true,
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Option 3: Lifetime Pass
+                        _buildPlanCard(
+                          choice: PlusPlanChoice.lifetime,
+                          badge: 'LIFETIME ✨',
+                          badgeBg: AppColors.butter,
+                          badgeColor: AppColors.butterText,
+                          title: 'Forever',
+                          price: '₹1,499',
+                          period: 'one-time',
+                          subtitle: 'Never pay again',
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 22),
 
-                    // 4 VIP Perks Cards
+                    // Master VIP Perks List (Monetize.md Section 2)
                     ..._perks.map((perk) {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -311,28 +314,122 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                       );
                     }),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     // Primary Subscription Button
                     PrimaryButton(
-                      text: _isYearly ? 'Get NextMeet+ (₹499/yr) 👑' : 'Get NextMeet+ (₹49/mo) 👑',
+                      text: _getCtaText(),
                       isLoading: _isProcessing,
                       onPressed: _subscribe,
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(
-                      'Payment charged via App Store / Google Play. Auto-renews unless cancelled 24 hours prior.',
+                      'Payment charged via Google Play Store / App Store. Auto-renews unless cancelled 24 hours prior. Covers both partners.',
                       style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 10),
                       textAlign: TextAlign.center,
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  String _getCtaText() {
+    switch (_selectedPlan) {
+      case PlusPlanChoice.annual:
+        return 'Unlock for Both Hearts (₹499/yr) 👑';
+      case PlusPlanChoice.monthly:
+        return 'Unlock for Both Hearts (₹49/mo) 👑';
+      case PlusPlanChoice.lifetime:
+        return 'Unlock Lifetime for Both (₹1,499) 💎';
+    }
+  }
+
+  Widget _buildPlanCard({
+    required PlusPlanChoice choice,
+    required String badge,
+    required Color badgeBg,
+    required Color badgeColor,
+    required String title,
+    required String price,
+    required String period,
+    required String subtitle,
+    bool isHero = false,
+  }) {
+    final isSelected = _selectedPlan == choice;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          VibrationService.light();
+          setState(() => _selectedPlan = choice);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.pinkSoft.withValues(alpha: 0.85) : Colors.white,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.border,
+              width: isSelected ? 2.0 : 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  badge,
+                  style: AppTextStyles.label.copyWith(color: badgeColor, fontSize: 8, fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(title, style: AppTextStyles.heading.copyWith(fontSize: 13)),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  price,
+                  style: AppTextStyles.title1.copyWith(
+                    fontSize: 17,
+                    color: isSelected ? AppColors.primary : AppColors.ink,
+                  ),
+                ),
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(period, style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.muted)),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  subtitle,
+                  style: AppTextStyles.caption.copyWith(
+                    color: isSelected ? AppColors.primary : AppColors.muted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:animate_do/animate_do.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/security_service.dart';
 import '../../core/models/relationship_model.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/primary_button.dart';
 import '../profile/nextmeet_plus_screen.dart';
 import '../profile/biometric_security_screen.dart';
+import 'reset_vault_pin_screen.dart';
 
+/// Modernized NextMeet Vault Settings Screen
+/// Aligned with NextMeet Design System and Monetize.md
 class PrivateSpaceSettingsScreen extends StatefulWidget {
-  const PrivateSpaceSettingsScreen({super.key});
+  final String? relId;
+  const PrivateSpaceSettingsScreen({super.key, this.relId});
 
   @override
   State<PrivateSpaceSettingsScreen> createState() => _PrivateSpaceSettingsScreenState();
@@ -41,9 +46,9 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl))),
+      backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -52,34 +57,51 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40,
+              width: 44,
               height: 4,
-              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 18),
+            Text('Auto-lock Timeout', style: AppTextStyles.title2.copyWith(fontSize: 18)),
+            const SizedBox(height: 6),
+            Text(
+              'Choose how quickly your Vault locks when inactive',
+              style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            Text('Auto-lock Timeout', style: AppTextStyles.h3),
-            const SizedBox(height: 8),
-            Text(
-              'Choose how quickly Sanctuary locks when inactive',
-              style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            ...options.map((opt) => ListTile(
-              title: Text(
-                opt,
-                style: AppTextStyles.bodyM.copyWith(
-                  fontWeight: opt == current ? FontWeight.bold : FontWeight.normal,
-                  color: opt == current ? AppColors.primary : AppColors.textPrimary,
+            ...options.map((opt) {
+              final isSelected = opt == current;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.pinkSoft.withValues(alpha: 0.5) : AppColors.background,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.border,
+                    width: isSelected ? 1.5 : 1.0,
+                  ),
                 ),
-              ),
-              trailing: opt == current ? const Icon(Icons.check_circle_rounded, color: AppColors.primary) : null,
-              onTap: () {
-                _cloudService.updatePrivateSpaceTimeout(relId, opt);
-                Navigator.pop(context);
-                VibrationService.medium();
-              },
-            )),
-            const SizedBox(height: AppSpacing.xl),
+                child: ListTile(
+                  title: Text(
+                    opt,
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: isSelected ? AppColors.primary : AppColors.ink,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
+                      : null,
+                  onTap: () async {
+                    VibrationService.medium();
+                    await _cloudService.updatePrivateSpaceTimeout(relId, opt);
+                    if (mounted) Navigator.pop(context);
+                  },
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -87,40 +109,92 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
   }
 
   void _showClearDataDialog(String relId) {
-    VibrationService.medium();
-    showDialog(
+    VibrationService.heavy();
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-        title: const Text('Clear All Private Data? ⚠️'),
-        content: const Text(
-          'This will permanently delete ALL secret photos and love letters in your Sanctuary from both this phone and the cloud. This action cannot be undone.',
+      backgroundColor: Colors.transparent,
+      builder: (dialogCtx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              VibrationService.success();
-              Navigator.pop(context);
-
-              await _cloudService.clearPrivateSpaceData(relId);
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Private Space data has been deep-cleaned. 🗑️'),
-                    backgroundColor: Colors.red,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 28),
+            ),
+            const SizedBox(height: 16),
+            Text('Clear All Vault Data?', style: AppTextStyles.title2.copyWith(fontSize: 20)),
+            const SizedBox(height: 8),
+            Text(
+              'This permanently deletes all secret photos and love letters in your Vault from both phones and cloud backup. This action cannot be reversed.',
+              style: AppTextStyles.caption.copyWith(color: AppColors.muted, height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(dialogCtx),
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        border: Border.all(color: AppColors.border, width: 1.5),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text('Cancel', style: AppTextStyles.button.copyWith(color: AppColors.ink)),
+                    ),
                   ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('CLEAR DATA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      VibrationService.heavy();
+                      Navigator.pop(dialogCtx);
+                      await _cloudService.clearPrivateSpaceData(relId);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Vault data has been cleared 🗑️'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text('Delete All', style: AppTextStyles.button.copyWith(color: Colors.white)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
       ),
     );
   }
@@ -137,330 +211,426 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
           );
         }
 
-        if (!snapshot.hasData || snapshot.data?.id == null) {
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            appBar: AppBar(
-              leading: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
-              ),
-              title: Text('Sanctuary Settings', style: AppTextStyles.h3),
-              centerTitle: true,
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-            ),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.favorite_border_rounded, size: 48, color: AppColors.primary),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Pair with your partner to customize shared Sanctuary settings.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.bodyM.copyWith(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-
-        final rel = snapshot.data!;
-        final relId = rel.id!;
-        final bool isPlus = rel.isPlus;
-        final double limitMb = isPlus ? AppSubscription.plusSecretPhotoVaultBytes / (1024 * 1024) : 20.0;
+        final rel = snapshot.data;
+        final relId = widget.relId ?? rel?.id ?? '';
+        final partnerName = rel?.getPartnerName(_cloudService.currentUid) ?? 'Partner';
+        final bool isPlus = rel?.isPlus ?? false;
 
         return Scaffold(
           backgroundColor: AppColors.background,
-          appBar: AppBar(
-            leading: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
-            ),
-            title: Text('Sanctuary Settings', style: AppTextStyles.h3),
-            centerTitle: true,
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.l),
+          body: SafeArea(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FadeInUp(child: _buildSectionHeader('SECURITY & ACCESS')),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 100),
-                  child: GlassCard(
-                    padding: const EdgeInsets.all(AppSpacing.m),
-                    child: Column(
-                      children: [
-                        _buildSettingRow(
-                          'Change Sanctuary PIN',
-                          rel.pinResetRequestBy != null
-                              ? 'Reset approval in progress...'
-                              : 'Update your 4-digit security code',
-                          Icons.pin_rounded,
-                          trailing: rel.pinResetRequestBy != null
-                              ? const Icon(Icons.mark_email_unread_rounded, color: Colors.orange, size: 20)
-                              : null,
-                          onTap: () => _handleChangePin(relId, rel),
-                        ),
-                        Divider(height: 1, color: AppColors.divider.withValues(alpha: 0.5)),
-                        _buildSettingRow(
-                          'Biometric Unlock',
-                          'Use Fingerprint for fast access',
-                          Icons.fingerprint_rounded,
-                          trailing: Switch(
-                            value: rel.getMyBiometricPreference(_cloudService.currentUid),
-                            activeColor: AppColors.primary,
-                            onChanged: (val) async {
-                              VibrationService.light();
-                              if (val) {
-                                final result = await _securityService.authenticateWithDetails(
-                                  reason: 'Scan Fingerprint to enable biometric unlock',
-                                );
-                                if (!result.success) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(result.errorMessage ?? 'Biometrics not available on this device'),
-                                        backgroundColor: Colors.redAccent,
-                                      ),
-                                    );
-                                  }
-                                  return;
-                                }
-                                await _cloudService.updateBiometricPreference(relId, true);
-                                await _securityService.setLocalBiometricEnabled(true);
-                                VibrationService.success();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Biometric unlock enabled! 🔒✨')),
-                                  );
-                                }
-                              } else {
-                                await _cloudService.updateBiometricPreference(relId, false);
-                                await _securityService.setLocalBiometricEnabled(false);
-                              }
-                            },
-                          ),
-                        ),
-                        Divider(height: 1, color: AppColors.divider.withValues(alpha: 0.5)),
-                        _buildSettingRow(
-                          'Configure Fingerprint Lock',
-                          'Hardware sensor options and sensor test',
-                          Icons.security_rounded,
-                          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => BiometricSecurityScreen(rel: rel)),
-                            );
-                          },
-                        ),
-                        Divider(height: 1, color: AppColors.divider.withValues(alpha: 0.5)),
-                        _buildSettingRow(
-                          'Screen Timeout',
-                          'Auto-locks when app goes inactive',
-                          Icons.timer_rounded,
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              rel.privateSpaceTimeout,
-                              style: AppTextStyles.bodyS.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          onTap: () => _showTimeoutPicker(relId, rel.privateSpaceTimeout),
-                        ),
-                        Divider(height: 1, color: AppColors.divider.withValues(alpha: 0.5)),
-                        _buildSettingRow(
-                          'Lock Sanctuary Now',
-                          'Immediately exit and require PIN to return',
-                          Icons.lock_rounded,
-                          onTap: () {
-                            VibrationService.medium();
-                            Navigator.of(context).popUntil((route) => route.isFirst);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 200),
-                  child: _buildSectionHeader('ENCRYPTED STORAGE'),
-                ),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 300),
-                  child: GlassCard(
-                    padding: const EdgeInsets.all(AppSpacing.l),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.storage_rounded, color: AppColors.primary, size: 20),
-                            ),
-                            const SizedBox(width: AppSpacing.m),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'Encrypted Vault Storage',
-                                        style: AppTextStyles.bodyM.copyWith(fontWeight: FontWeight.bold),
-                                      ),
-                                      if (isPlus) ...[
-                                        const SizedBox(width: 6),
-                                        const Icon(Icons.stars_rounded, color: Colors.amber, size: 16),
-                                      ],
-                                    ],
-                                  ),
-                                  Text(
-                                    '${(rel.privateSpaceStorageBytes / (1024 * 1024)).toStringAsFixed(1)} MB of ${limitMb.toInt()} MB used',
-                                    style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.l),
-                        SizedBox(
-                          height: 6,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: (rel.privateSpaceStorageBytes / (limitMb * 1024 * 1024)).clamp(0.0, 1.0),
-                              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                            ),
-                          ),
-                        ),
-                        if (!isPlus) ...[
-                          const SizedBox(height: 16),
-                          InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => NextMeetPlusScreen(relId: relId)),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.stars_rounded, color: AppColors.primary, size: 18),
-                                  const SizedBox(width: 8),
-                                  const Expanded(
-                                    child: Text(
-                                      'Upgrade to NextMeet+ for 150 MB Vault ✨',
-                                      style: TextStyle(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 400),
-                  child: _buildSectionHeader('DANGER ZONE'),
-                ),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 500),
-                  child: InkWell(
-                    onTap: () => _showClearDataDialog(relId),
-                    borderRadius: BorderRadius.circular(AppRadius.xl),
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.l),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(AppRadius.xl),
-                        border: Border.all(color: Colors.red.withValues(alpha: 0.1)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), shape: BoxShape.circle),
-                            child: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 20),
-                          ),
-                          const SizedBox(width: AppSpacing.l),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Clear Private Space Data',
-                                  style: AppTextStyles.bodyM.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  'Permanently delete secret photos & letters',
-                                  style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 36),
-                Center(
-                  child: Column(
+                const SizedBox(height: 12),
+                // Modern Top Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'NextMeet Private Sanctuary v1.0.43',
-                        style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 10),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'End-to-End Encrypted Couple Space',
-                        style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 10),
+                      Expanded(
+                        child: Text(
+                          'Vault Settings',
+                          style: AppTextStyles.title2.copyWith(fontSize: 18),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          VibrationService.medium();
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          child: const Icon(Icons.lock_rounded, size: 18, color: AppColors.primary),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 60),
+
+                const SizedBox(height: 16),
+
+                // Settings Body
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // SECTION 1: SECURITY & PIN
+                        _buildSectionHeader('VAULT SECURITY & PIN'),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppRadius.hero),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildSettingRow(
+                                title: 'Change Vault PIN',
+                                sub: rel?.pinResetRequestBy != null
+                                    ? 'Reset request pending partner approval...'
+                                    : 'Update your 4-digit secret key',
+                                icon: Icons.pin_rounded,
+                                iconBg: AppColors.pinkSoft,
+                                iconColor: AppColors.primary,
+                                trailing: rel?.pinResetRequestBy != null
+                                    ? const Icon(Icons.mark_email_unread_rounded, color: Colors.orange, size: 20)
+                                    : null,
+                                onTap: rel != null ? () => _handleChangePin(relId, rel) : null,
+                              ),
+                              Divider(height: 1, indent: 64, endIndent: 16, color: AppColors.border),
+                              _buildSettingRow(
+                                title: 'Reset PIN via Partner',
+                                sub: '2-person mutual verification flow',
+                                icon: Icons.lock_reset_rounded,
+                                iconBg: AppColors.partnerSoft,
+                                iconColor: AppColors.partner,
+                                onTap: () {
+                                  VibrationService.light();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ResetVaultPinScreen(
+                                        partnerName: partnerName,
+                                        relId: relId,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              Divider(height: 1, indent: 64, endIndent: 16, color: AppColors.border),
+                              _buildSettingRow(
+                                title: 'Biometric Unlock',
+                                sub: 'Use fingerprint for instant access',
+                                icon: Icons.fingerprint_rounded,
+                                iconBg: AppColors.mintSoft,
+                                iconColor: AppColors.mintText,
+                                trailing: Switch(
+                                  value: rel?.getMyBiometricPreference(_cloudService.currentUid) ?? false,
+                                  activeColor: AppColors.primary,
+                                  onChanged: (val) async {
+                                    VibrationService.light();
+                                    if (val) {
+                                      final result = await _securityService.authenticateWithDetails(
+                                        reason: 'Scan fingerprint to enable Vault biometric unlock',
+                                      );
+                                      if (!result.success) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(result.errorMessage ?? 'Biometrics not available on this device'),
+                                              backgroundColor: Colors.redAccent,
+                                            ),
+                                          );
+                                        }
+                                        return;
+                                      }
+                                      if (relId.isNotEmpty) {
+                                        await _cloudService.updateBiometricPreference(relId, true);
+                                      }
+                                      await _securityService.setLocalBiometricEnabled(true);
+                                      VibrationService.success();
+                                    } else {
+                                      if (relId.isNotEmpty) {
+                                        await _cloudService.updateBiometricPreference(relId, false);
+                                      }
+                                      await _securityService.setLocalBiometricEnabled(false);
+                                    }
+                                    if (mounted) setState(() {});
+                                  },
+                                ),
+                              ),
+                              Divider(height: 1, indent: 64, endIndent: 16, color: AppColors.border),
+                              _buildSettingRow(
+                                title: 'Sensor Diagnostics',
+                                sub: 'Hardware enclave options & sensor tests',
+                                icon: Icons.security_rounded,
+                                iconBg: AppColors.butterSoft,
+                                iconColor: AppColors.butterText,
+                                onTap: rel != null ? () {
+                                  VibrationService.light();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => BiometricSecurityScreen(rel: rel)),
+                                  );
+                                } : null,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // SECTION 2: AUTO-LOCK & PRIVACY
+                        _buildSectionHeader('AUTO-LOCK & TIMEOUT'),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppRadius.hero),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildSettingRow(
+                                title: 'Auto-lock Timeout',
+                                sub: 'Locks when app switches or goes inactive',
+                                icon: Icons.timer_rounded,
+                                iconBg: AppColors.pinkSoft,
+                                iconColor: AppColors.primary,
+                                trailing: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.pinkSoft,
+                                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                                  ),
+                                  child: Text(
+                                    rel?.privateSpaceTimeout ?? 'Immediately',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                onTap: relId.isNotEmpty
+                                    ? () => _showTimeoutPicker(relId, rel?.privateSpaceTimeout ?? 'Immediately')
+                                    : null,
+                              ),
+                              Divider(height: 1, indent: 64, endIndent: 16, color: AppColors.border),
+                              _buildSettingRow(
+                                title: 'Lock Vault Now',
+                                sub: 'Instantly exit and require PIN to return',
+                                icon: Icons.lock_outline_rounded,
+                                iconBg: AppColors.partnerSoft,
+                                iconColor: AppColors.partner,
+                                onTap: () {
+                                  VibrationService.medium();
+                                  Navigator.of(context).popUntil((route) => route.isFirst);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // SECTION 3: STORAGE & BACKUP (Monetize.md)
+                        _buildSectionHeader('VAULT STORAGE & BACKUP'),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: relId.isNotEmpty ? _cloudService.streamPrivatePhotos(relId) : Stream.empty(),
+                          builder: (context, photoSnap) {
+                            final photoCount = photoSnap.data?.docs.length ?? 0;
+                            final maxPhotos = 30;
+                            final progress = isPlus ? 1.0 : (photoCount / maxPhotos).clamp(0.0, 1.0);
+
+                            return Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(AppRadius.hero),
+                                border: Border.all(color: AppColors.border, width: 1.5),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: isPlus ? AppColors.butterSoft : AppColors.pinkSoft,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          isPlus ? Icons.cloud_done_rounded : Icons.photo_library_rounded,
+                                          color: isPlus ? AppColors.butterText : AppColors.primary,
+                                          size: 22,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    isPlus ? 'Unlimited 4K Vault Active' : 'Basic Vault (Up to 30 Photos)',
+                                                    style: AppTextStyles.heading.copyWith(fontSize: 15),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (isPlus) ...[
+                                                  const SizedBox(width: 6),
+                                                  const Icon(Icons.stars_rounded, color: Colors.amber, size: 18),
+                                                ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              isPlus
+                                                  ? '$photoCount photos saved • 100% 4K original quality'
+                                                  : '$photoCount of $maxPhotos photos saved (Free tier)',
+                                              style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: isPlus ? 1.0 : progress,
+                                      minHeight: 6,
+                                      backgroundColor: AppColors.border.withValues(alpha: 0.5),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        isPlus ? AppColors.mint : (progress >= 0.9 ? Colors.orange : AppColors.primary),
+                                      ),
+                                    ),
+                                  ),
+                                  if (!isPlus) ...[
+                                    const SizedBox(height: 14),
+                                    GestureDetector(
+                                      onTap: () {
+                                        VibrationService.medium();
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => NextMeetPlusScreen(relId: relId)),
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.pinkSoft,
+                                          borderRadius: BorderRadius.circular(AppRadius.card),
+                                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.stars_rounded, color: AppColors.primary, size: 20),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                'Upgrade to NextMeet+ for Unlimited 4K Vault & Audio Archive ✨',
+                                                style: AppTextStyles.caption.copyWith(
+                                                  color: AppColors.primary,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                            const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // SECTION 4: DANGER ZONE
+                        _buildSectionHeader('DANGER ZONE'),
+                        GestureDetector(
+                          onTap: relId.isNotEmpty ? () => _showClearDataDialog(relId) : null,
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50.withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(AppRadius.hero),
+                              border: Border.all(color: Colors.red.shade200, width: 1.5),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 22),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Clear Private Vault Data',
+                                        style: AppTextStyles.heading.copyWith(color: Colors.redAccent, fontSize: 15),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Permanently delete secret photos & letters',
+                                        style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right_rounded, color: Colors.redAccent, size: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Footer version
+                        Center(
+                          child: Column(
+                            children: [
+                              Text(
+                                'NextMeet Sanctum Vault • v1.0.39',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'End-to-End Encrypted Couple Space 🔒',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -471,43 +641,53 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.m),
+      padding: const EdgeInsets.only(left: 6, bottom: 8),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.5,
-          color: AppColors.textSecondary.withValues(alpha: 0.6),
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.ink.withValues(alpha: 0.6),
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.0,
+          fontSize: 11,
         ),
       ),
     );
   }
 
-  Widget _buildSettingRow(String title, String sub, IconData icon, {VoidCallback? onTap, Widget? trailing}) {
+  Widget _buildSettingRow({
+    required String title,
+    required String sub,
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    VoidCallback? onTap,
+    Widget? trailing,
+  }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.hero),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, size: 20, color: AppColors.primary),
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, size: 20, color: iconColor),
             ),
-            const SizedBox(width: AppSpacing.m),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppTextStyles.bodyM.copyWith(fontWeight: FontWeight.bold)),
-                  Text(sub, style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary, fontSize: 11)),
+                  Text(title, style: AppTextStyles.heading.copyWith(fontSize: 14)),
+                  const SizedBox(height: 2),
+                  Text(sub, style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11)),
                 ],
               ),
             ),
-            trailing ?? Icon(Icons.chevron_right_rounded, color: AppColors.divider.withValues(alpha: 0.8)),
+            trailing ?? const Icon(Icons.chevron_right_rounded, color: AppColors.muted, size: 20),
           ],
         ),
       ),
@@ -515,6 +695,7 @@ class _PrivateSpaceSettingsScreenState extends State<PrivateSpaceSettingsScreen>
   }
 }
 
+/// Modern Tactile PIN Change Sheet
 class _ChangePinSheet extends StatefulWidget {
   final String relId;
   final RelationshipModel rel;
@@ -531,10 +712,7 @@ class _ChangePinSheet extends StatefulWidget {
 }
 
 class _ChangePinSheetState extends State<_ChangePinSheet> {
-  // Step 0: Enter current PIN (if PIN exists)
-  // Step 1: Enter new PIN
-  // Step 2: Confirm new PIN
-  int _step = 0;
+  int _step = 0; // 0: current, 1: new, 2: confirm
   String _entered = '';
   String? _newPin;
   bool _hasError = false;
@@ -542,7 +720,6 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
   @override
   void initState() {
     super.initState();
-    // If no existing PIN or reset was approved by partner, jump straight to new PIN
     final isResetApproved = widget.rel.pinResetRequestBy == widget.cloudService.currentUid && widget.rel.pinResetApproved;
     _step = (widget.rel.privateSpacePin == null || isResetApproved) ? 1 : 0;
   }
@@ -583,7 +760,6 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
         if (mounted) setState(() { _entered = ''; _hasError = false; });
       }
     } else if (_step == 1) {
-      // Entered new PIN
       VibrationService.medium();
       setState(() {
         _newPin = pin;
@@ -591,7 +767,6 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
         _entered = '';
       });
     } else if (_step == 2) {
-      // Confirm new PIN
       if (pin == _newPin) {
         await widget.cloudService.updatePrivateSpacePin(widget.relId, pin);
         try {
@@ -603,7 +778,7 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Sanctuary PIN updated successfully! 🔐✨'),
+              content: Text('Vault PIN updated successfully! 🔐✨'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -613,7 +788,7 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
         setState(() => _hasError = true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('PINs did not match. Try entering new PIN again.')),
+            const SnackBar(content: Text('PINs did not match. Enter new PIN again.')),
           );
         }
         await Future.delayed(const Duration(milliseconds: 500));
@@ -636,7 +811,7 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
 
     if (_step == 0) {
       titleText = 'Verify Current PIN 🔐';
-      subText = 'Enter your current 4-digit Sanctuary code';
+      subText = 'Enter your current 4-digit Vault code';
     } else if (_step == 1) {
       titleText = 'Set New PIN 🔒';
       subText = 'Choose a fresh 4-digit secret key';
@@ -647,7 +822,7 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
 
     return Container(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.88,
+        maxHeight: MediaQuery.of(context).size.height * 0.90,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -660,26 +835,29 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
           Container(
             width: 44,
             height: 4,
-            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const SizedBox(width: 32),
-              Text(
-                titleText,
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.textPrimary),
+              Expanded(
+                child: Text(
+                  titleText,
+                  style: AppTextStyles.title2.copyWith(fontSize: 18),
+                  textAlign: TextAlign.center,
+                ),
               ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                icon: const Icon(Icons.close_rounded, color: AppColors.muted, size: 20),
               ),
             ],
           ),
-          Text(subText, style: AppTextStyles.bodyS.copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 20),
-          // PIN Dots
+          Text(subText, style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
+          const SizedBox(height: 24),
+          // Romantic Heart PIN Dots
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(4, (index) {
@@ -687,27 +865,26 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 margin: const EdgeInsets.symmetric(horizontal: 10),
-                width: isFilled ? 18 : 16,
-                height: isFilled ? 18 : 16,
+                width: isFilled ? 20 : 16,
+                height: isFilled ? 20 : 16,
                 decoration: BoxDecoration(
-                  color: _hasError ? Colors.red : (isFilled ? AppColors.primary : Colors.white),
+                  color: _hasError ? Colors.redAccent : (isFilled ? AppColors.primary : Colors.white),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: _hasError ? Colors.red : (isFilled ? AppColors.primary : AppColors.primary.withValues(alpha: 0.3)),
+                    color: _hasError
+                        ? Colors.redAccent
+                        : (isFilled ? AppColors.primary : AppColors.border),
                     width: 2,
                   ),
-                  boxShadow: isFilled
-                      ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 8)]
-                      : null,
                 ),
                 child: isFilled
-                    ? const Center(child: Icon(Icons.favorite_rounded, size: 9, color: Colors.white))
+                    ? const Center(child: Icon(Icons.favorite_rounded, size: 10, color: Colors.white))
                     : null,
               );
             }),
           ),
-          const SizedBox(height: 24),
-          // Numeric Dialpad
+          const SizedBox(height: 28),
+          // Tactile Numeric Dialpad
           Column(
             children: [
               Row(
@@ -740,22 +917,19 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  const SizedBox(width: 64, height: 64),
+                  const SizedBox(width: 68, height: 68),
                   _buildNumBtn('0'),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _onBackspace,
-                      borderRadius: BorderRadius.circular(32),
-                      child: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.backspace_outlined, size: 20, color: AppColors.textPrimary),
+                  GestureDetector(
+                    onTap: _onBackspace,
+                    child: Container(
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.border, width: 1.5),
                       ),
+                      child: const Icon(Icons.backspace_outlined, size: 22, color: AppColors.ink),
                     ),
                   ),
                 ],
@@ -765,45 +939,55 @@ class _ChangePinSheetState extends State<_ChangePinSheet> {
           const SizedBox(height: 16),
           if (_step == 0)
             TextButton(
-              onPressed: () async {
+              onPressed: () {
                 Navigator.pop(context);
-                await widget.cloudService.requestPinReset(widget.relId);
-                VibrationService.success();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reset request sent to your partner for approval! ⏳')),
-                  );
-                }
+                final partnerName = widget.rel.getPartnerName(widget.cloudService.currentUid);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ResetVaultPinScreen(
+                      partnerName: partnerName,
+                      relId: widget.relId,
+                    ),
+                  ),
+                );
               },
-              child: const Text('Forgot current PIN?', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+              child: Text(
+                'Forgot current PIN? Reset via partner approval',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
             ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
 
   Widget _buildNumBtn(String n) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          VibrationService.light();
-          _onDigit(n);
-        },
-        borderRadius: BorderRadius.circular(32),
-        child: Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.pink.shade50),
-          ),
-          child: Center(
-            child: Text(
-              n,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+    return GestureDetector(
+      onTap: () {
+        VibrationService.light();
+        _onDigit(n);
+      },
+      child: Container(
+        width: 68,
+        height: 68,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border, width: 1.5),
+        ),
+        child: Center(
+          child: Text(
+            n,
+            style: GoogleFonts.nunito(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
             ),
           ),
         ),

@@ -7,7 +7,7 @@ import '../../core/services/vibration_service.dart';
 import 'nextmeet_plus_screen.dart';
 
 /// NextMeet Manage Subscription Screen
-/// Strictly following NextMeet Redesign.pdf (Page 78)
+/// Strictly following NextMeet Monetize.md & Design System
 class ManageSubscriptionScreen extends StatelessWidget {
   const ManageSubscriptionScreen({super.key});
 
@@ -20,9 +20,19 @@ class ManageSubscriptionScreen extends StatelessWidget {
       builder: (context, snapshot) {
         final rel = snapshot.data;
         final isPlus = rel?.isPlus ?? false;
-        final planType = rel?.premiumPlanType ?? 'Annual';
-        final isMonthly = planType.toLowerCase() == 'monthly';
-        final priceStr = isMonthly ? '₹49 / month' : '₹499 / year';
+        final planType = rel?.premiumPlanType ?? 'Annual Sanctuary';
+        final isLifetime = planType.toLowerCase().contains('lifetime');
+        final isMonthly = planType.toLowerCase().contains('monthly');
+
+        String priceStr;
+        if (isLifetime) {
+          priceStr = '₹1,499 One-Time';
+        } else if (isMonthly) {
+          priceStr = '₹49 / month';
+        } else {
+          priceStr = '₹499 / year';
+        }
+
         final renewalDate = rel?.premiumRenewalDate ??
             DateTime.now().add(Duration(days: isMonthly ? 30 : 365));
         final renewalStr = DateFormat('d MMM yyyy').format(renewalDate);
@@ -36,7 +46,7 @@ class ManageSubscriptionScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 12),
-                  // Top Bar
+                  // Modern Top Bar
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -68,7 +78,7 @@ class ManageSubscriptionScreen extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
-                  // Active Plan Card (Page 78)
+                  // Active Plan Card
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -76,7 +86,7 @@ class ManageSubscriptionScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppRadius.hero),
                       border: Border.all(
                         color: isPlus ? AppColors.primary : AppColors.border,
-                        width: isPlus ? 2 : 1.5,
+                        width: isPlus ? 2.0 : 1.5,
                       ),
                     ),
                     child: Column(
@@ -88,14 +98,18 @@ class ManageSubscriptionScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: isPlus ? AppColors.pinkSoft : AppColors.border.withValues(alpha: 0.4),
+                                color: isPlus ? AppColors.pinkSoft : AppColors.card,
                                 borderRadius: BorderRadius.circular(AppRadius.pill),
+                                border: Border.all(
+                                  color: isPlus ? AppColors.primary.withValues(alpha: 0.3) : AppColors.border,
+                                ),
                               ),
                               child: Text(
-                                isPlus ? 'ACTIVE PLAN' : 'FREE TIER',
+                                isPlus ? (isLifetime ? 'LIFETIME PASS 💎' : 'ACTIVE PLAN 👑') : 'FREE TIER',
                                 style: AppTextStyles.label.copyWith(
                                   color: isPlus ? AppColors.primary : AppColors.muted,
                                   fontSize: 10,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
@@ -110,21 +124,38 @@ class ManageSubscriptionScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          isPlus ? 'NextMeet+ Couple VIP' : 'NextMeet Free Plan',
+                          isPlus ? 'NextMeet+ Pro ($planType)' : 'NextMeet Free Plan',
                           style: AppTextStyles.title1.copyWith(fontSize: 22),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
                           isPlus
-                              ? 'One subscription covers both you and your partner with full VIP access across both devices.'
+                              ? 'The Golden Couple Rule is active: One subscription covers both you and your partner with full Pro access across all devices.'
                               : 'Enjoy unlimited chat, real-time distance sync, touch bar, and all 20 free games.',
                           style: AppTextStyles.body.copyWith(color: AppColors.muted, height: 1.4),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         if (isPlus)
-                          Text(
-                            'Next auto-renewal on $renewalStr',
-                            style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, color: AppColors.ink),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(AppRadius.card),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.event_repeat_rounded, color: AppColors.primary, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isLifetime
+                                        ? 'Permanent VIP access unlocked • No renewal required'
+                                        : 'Next auto-renewal on $renewalStr',
+                                    style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, color: AppColors.ink),
+                                  ),
+                                ),
+                              ],
+                            ),
                           )
                         else
                           GestureDetector(
@@ -138,14 +169,16 @@ class ManageSubscriptionScreen extends StatelessWidget {
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
                               decoration: BoxDecoration(
                                 color: AppColors.primary,
                                 borderRadius: BorderRadius.circular(AppRadius.pill),
                               ),
-                              child: Text(
-                                'Upgrade to NextMeet+ 👑',
-                                style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 13),
+                              child: Center(
+                                child: Text(
+                                  'Upgrade to NextMeet+ 👑',
+                                  style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 14),
+                                ),
                               ),
                             ),
                           ),
@@ -153,7 +186,41 @@ class ManageSubscriptionScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+
+                  // The Golden Couple Rule Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.pinkSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pay Once, Both Hearts Unlocked 💖',
+                                style: AppTextStyles.heading.copyWith(fontSize: 13, color: AppColors.primary),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Couples never pay twice. Subscription syncs seamlessly across iOS & Android.',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.ink, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
 
                   // Billing Platform Card
                   Container(
@@ -172,17 +239,15 @@ class ManageSubscriptionScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Billed via App Store / Google Play',
+                                'Billed via Google Play / App Store',
                                 style: AppTextStyles.heading.copyWith(fontSize: 14),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Manage payment methods through your store account',
+                                'Manage subscriptions and payment methods through your store account',
                                 style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -191,7 +256,7 @@ class ManageSubscriptionScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 28),
 
                   // Restore Purchases Button
                   GestureDetector(
@@ -220,10 +285,11 @@ class ManageSubscriptionScreen extends StatelessWidget {
                     child: Text(
                       'Manage or cancel anytime via Google Play / App Store Subscriptions',
                       style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
+                      textAlign: TextAlign.center,
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
