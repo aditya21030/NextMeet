@@ -344,6 +344,11 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
     );
   }
 
+  String _formatCompactSize(String size) {
+    final match = RegExp(r'\(([^)]+)\)').firstMatch(size);
+    return match != null ? match.group(1)! : size;
+  }
+
   Widget _buildStateSelector(String widgetId) {
     switch (widgetId) {
       case 'distance_battery':
@@ -351,8 +356,8 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
           current: _distanceBatteryState,
           options: const {
             DistanceBatteryState.normal: 'Normal',
-            DistanceBatteryState.lowBattery: 'Low Battery (12%)',
-            DistanceBatteryState.asleep: 'Probably Asleep (2:10 AM)',
+            DistanceBatteryState.lowBattery: 'Low (12%)',
+            DistanceBatteryState.asleep: 'Asleep',
           },
           onSelected: (val) => setState(() => _distanceBatteryState = val),
         );
@@ -360,9 +365,9 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         return _buildChipRow<HeartbeatWidgetState>(
           current: _heartbeatState,
           options: const {
-            HeartbeatWidgetState.touching: 'Touching (74 bpm)',
-            HeartbeatWidgetState.idle: 'Idle (Tap to send)',
-            HeartbeatWidgetState.offline: 'Partner Offline',
+            HeartbeatWidgetState.touching: 'Touching',
+            HeartbeatWidgetState.idle: 'Idle',
+            HeartbeatWidgetState.offline: 'Offline',
           },
           onSelected: (val) => setState(() => _heartbeatState = val),
         );
@@ -386,9 +391,9 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         return _buildChipRow<MomentsWidgetState>(
           current: _momentsState,
           options: const {
-            MomentsWidgetState.partnerMoment: 'Partner Moment',
-            MomentsWidgetState.waiting: 'Waiting for Partner',
-            MomentsWidgetState.sent: 'Your Moment Sent',
+            MomentsWidgetState.partnerMoment: 'Partner',
+            MomentsWidgetState.waiting: 'Waiting',
+            MomentsWidgetState.sent: 'Sent',
           },
           onSelected: (val) => setState(() => _momentsState = val),
         );
@@ -396,8 +401,8 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         return _buildChipRow<GameWidgetState>(
           current: _gameState,
           options: const {
-            GameWidgetState.yourMove: 'Your Move (Play)',
-            GameWidgetState.partnerTurn: "Partner's Turn (Nudge)",
+            GameWidgetState.yourMove: 'Your Move',
+            GameWidgetState.partnerTurn: "Partner's Turn",
           },
           onSelected: (val) => setState(() => _gameState = val),
         );
@@ -405,8 +410,8 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         return _buildChipRow<LoveNoteWidgetState>(
           current: _loveNoteState,
           options: const {
-            LoveNoteWidgetState.normal: 'Open Preview',
-            LoveNoteWidgetState.sealed: 'Sealed Letter 🔒',
+            LoveNoteWidgetState.normal: 'Preview',
+            LoveNoteWidgetState.sealed: 'Sealed 🔒',
           },
           onSelected: (val) => setState(() => _loveNoteState = val),
         );
@@ -414,8 +419,8 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         return _buildChipRow<TripWidgetState>(
           current: _tripState,
           options: const {
-            TripWidgetState.inTheAir: 'In the Air (62%)',
-            TripWidgetState.scheduled: 'Scheduled (Boarding)',
+            TripWidgetState.inTheAir: 'In Flight (62%)',
+            TripWidgetState.scheduled: 'Scheduled',
             TripWidgetState.landed: 'Landed',
           },
           onSelected: (val) => setState(() => _tripState = val),
@@ -784,6 +789,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
                   // Size Category Filters
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
                     child: Row(
                       children: ['All', 'Small', 'Medium', 'Wide', 'Large'].map((cat) {
                         final isSelected = _selectedCategory == cat;
@@ -794,10 +800,10 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
                               cat == 'All'
                                   ? 'All (14)'
                                   : (cat == 'Small'
-                                      ? 'Small 2x2 (5)'
+                                      ? 'Small (5)'
                                       : (cat == 'Medium'
-                                          ? 'Medium 4x2 (5)'
-                                          : (cat == 'Wide' ? 'Wide 4x1 (1)' : 'Large 4x4 (3)'))),
+                                          ? 'Medium (5)'
+                                          : (cat == 'Wide' ? 'Wide (1)' : 'Large (3)'))),
                               style: GoogleFonts.nunito(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
@@ -853,7 +859,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
 
                   // Quick Apply Button
                   PrimaryButton(
-                    text: 'Set "${activeItem['title']}" as Active Widget ✨',
+                    text: 'Set as Active Widget ✨',
                     isLoading: _isSyncing,
                     onPressed: () => _applyWidgetToHomeScreen(activeItem['id'] as String, rel, currentUid),
                   ),
@@ -928,29 +934,32 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Flexible(
-                                        child: Text(
-                                          widgetItem['title'] as String,
-                                          style: GoogleFonts.nunito(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w800,
-                                            color: const Color(0xFF2B1B26),
+                                      Expanded(
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            widgetItem['title'] as String,
+                                            style: GoogleFonts.nunito(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF2B1B26),
+                                            ),
+                                            maxLines: 1,
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      const SizedBox(width: 6),
+                                      const SizedBox(width: 8),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFFFF4F8),
                                           borderRadius: BorderRadius.circular(10),
                                         ),
                                         child: Text(
-                                          widgetItem['size'] as String,
+                                          _formatCompactSize(widgetItem['size'] as String),
                                           style: GoogleFonts.nunito(
-                                            fontSize: 9,
+                                            fontSize: 10,
                                             fontWeight: FontWeight.w800,
                                             color: const Color(0xFF7A6672),
                                           ),

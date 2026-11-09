@@ -601,8 +601,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentUid = AuthService().currentUser?.uid;
     final myName = rel.getMyName(currentUid);
     final partnerName = rel.getPartnerName(currentUid);
-    final myCity = rel.getMyLocation(currentUid);
-    final partnerCity = rel.getPartnerLocation(currentUid);
+    final rawMyCity = rel.getMyLocation(currentUid);
+    final rawPartnerCity = rel.getPartnerLocation(currentUid);
+    final myCity = rawMyCity.split(',').first.trim();
+    final partnerCity = rawPartnerCity.split(',').first.trim();
     final partnerBattery = rel.getPartnerBattery(currentUid) ?? 85;
     final partnerTimezone = rel.getPartnerTimezoneOffset(currentUid);
     final streak = rel.streakCount;
@@ -616,11 +618,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final isPartnerAsleep = partnerTime.hour >= 23 || partnerTime.hour < 7;
     String partnerStatusText;
     if (isPartnerCharging) {
-      partnerStatusText = '⚡ Charging • battery $partnerBattery%';
+      partnerStatusText = '⚡ Charging • $partnerBattery%';
     } else if (isPartnerAsleep) {
-      partnerStatusText = '🌙 Probably asleep • $partnerBattery%';
+      partnerStatusText = '🌙 Asleep • $partnerBattery%';
     } else {
-      partnerStatusText = 'Online now • battery $partnerBattery%';
+      partnerStatusText = 'Online now • $partnerBattery%';
     }
 
     return RefreshIndicator(
@@ -766,11 +768,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                Text(
-                                  partnerStatusText,
-                                  style: AppTextStyles.caption.copyWith(color: Colors.white.withValues(alpha: 0.9)),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    partnerStatusText,
+                                    style: AppTextStyles.caption.copyWith(color: Colors.white.withValues(alpha: 0.9)),
+                                    maxLines: 1,
+                                  ),
                                 ),
                               ],
                             ),
@@ -898,7 +903,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         VibrationService.light();
                         Navigator.push(context, MaterialPageRoute(builder: (context) => const CalendarScreen()));
                       },
-                      child: _metricPill('Next meetup', nextMeetStr, Icons.send_rounded, AppColors.butterSoft),
+                      child: _metricPill('Next meet', nextMeetStr, Icons.send_rounded, AppColors.butterSoft),
                     ),
                   ),
                 ],
@@ -944,19 +949,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 12),
                   // Dotted Arc Flight Path between pins with City Labels
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        children: [
-                          const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 26),
-                          const SizedBox(height: 2),
-                          Text(
-                            myCity.isNotEmpty ? myCity : 'You',
-                            style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                      SizedBox(
+                        width: 80,
+                        child: Column(
+                          children: [
+                            const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 24),
+                            const SizedBox(height: 2),
+                            Text(
+                              myCity.isNotEmpty ? myCity : 'You',
+                              style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700),
+                              maxLines: 1,
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
                       Expanded(
                         child: Padding(
@@ -984,17 +993,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-                      Column(
-                        children: [
-                          const Icon(Icons.location_on_rounded, color: AppColors.partner, size: 26),
-                          const SizedBox(height: 2),
-                          Text(
-                            partnerCity.isNotEmpty ? partnerCity : partnerName,
-                            style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                      SizedBox(
+                        width: 80,
+                        child: Column(
+                          children: [
+                            const Icon(Icons.location_on_rounded, color: AppColors.partner, size: 24),
+                            const SizedBox(height: 2),
+                            Text(
+                              partnerCity.isNotEmpty ? partnerCity : partnerName,
+                              style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700),
+                              maxLines: 1,
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -1060,9 +1073,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('Heartbeat sync', style: AppTextStyles.caption),
-                              Text('Hold together', style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                              Text('Heartbeat sync', style: AppTextStyles.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text('Hold together', style: AppTextStyles.heading.copyWith(fontSize: 15), maxLines: 1),
+                              ),
                             ],
                           ),
                         ),
@@ -1207,10 +1225,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Icon(icon, size: 14, color: AppColors.primary),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(
-                  title,
-                  style: AppTextStyles.caption.copyWith(fontSize: 11),
-                  overflow: TextOverflow.ellipsis,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    title,
+                    style: AppTextStyles.caption.copyWith(fontSize: 11),
+                    maxLines: 1,
+                  ),
                 ),
               ),
             ],

@@ -103,23 +103,30 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                       strokeWidth: 2.5,
                     ),
                   )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: widget.width != null ? MainAxisSize.min : MainAxisSize.max,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(widget.icon, size: 20, color: foregroundColor),
-                        const SizedBox(width: AppSpacing.s),
-                      ],
-                      Text(
-                        widget.text,
-                        style: AppTextStyles.button.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: foregroundColor,
-                        ),
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.icon != null) ...[
+                            Icon(widget.icon, size: 20, color: foregroundColor),
+                            const SizedBox(width: AppSpacing.s),
+                          ],
+                          Text(
+                            widget.text,
+                            style: AppTextStyles.button.copyWith(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: foregroundColor,
+                            ),
+                            maxLines: 1,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
           ),
         ),
