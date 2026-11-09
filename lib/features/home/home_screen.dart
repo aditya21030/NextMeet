@@ -14,6 +14,7 @@ import '../../core/models/memory_model.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/widget_service.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/theme_service.dart';
 import '../../widgets/flat_components.dart';
 import '../../widgets/primary_button.dart';
 import 'heartbeat_sync_modal.dart';
@@ -214,104 +215,113 @@ class _HomeScreenState extends State<HomeScreen> {
       return _buildOfflineScreen();
     }
 
-    return StreamBuilder<RelationshipModel?>(
-      stream: _cloudService.streamRelationship(),
-      builder: (context, snapshot) {
-        final rel = snapshot.data;
-        final isPaired = rel != null && rel.uid2 != null && rel.status != 'waiting';
+    return ListenableBuilder(
+      listenable: ThemeService.instance,
+      builder: (context, _) {
+        return StreamBuilder<RelationshipModel?>(
+          stream: _cloudService.streamRelationship(),
+          builder: (context, snapshot) {
+            final rel = snapshot.data;
+            final isPaired = rel != null && rel.uid2 != null && rel.status != 'waiting';
 
-        if (isPaired && rel != null && (_lastWidgetSyncTime == null || DateTime.now().difference(_lastWidgetSyncTime!).inMinutes >= 2)) {
-          _lastWidgetSyncTime = DateTime.now();
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            final uid = _cloudService.currentUid;
-            if (uid != null) {
-              WidgetService.updateWidgetData(rel, uid);
-            }
-          });
-        }
-
-        // Check for incoming touch from partner in real-time
-        if (rel != null && rel.lastTouchTime != null && rel.lastTouchFrom != null) {
-          final currentUid = AuthService().currentUid;
-          if (rel.lastTouchFrom != currentUid &&
-              (_lastObservedTouchTime == null || rel.lastTouchTime!.isAfter(_lastObservedTouchTime!))) {
-            _lastObservedTouchTime = rel.lastTouchTime;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              _triggerParticleEffect(rel.lastTouchType ?? 'miss');
-              VibrationService.success();
-              final pName = rel.getPartnerName(currentUid);
-              final touchType = rel.lastTouchType ?? 'touch';
-              final label = touchType == 'miss'
-                  ? 'Miss You ❤️'
-                  : (touchType == 'hug' ? 'Warm Hug 🤗' : 'Touch of Love ⚡');
-              _bannerTimer?.cancel();
-              setState(() {
-                _incomingTouchBanner = '$pName sent you a $label!';
-              });
-              _bannerTimer = Timer(const Duration(seconds: 4), () {
-                if (mounted) {
-                  setState(() => _incomingTouchBanner = null);
+            if (isPaired && rel != null && (_lastWidgetSyncTime == null || DateTime.now().difference(_lastWidgetSyncTime!).inMinutes >= 2)) {
+              _lastWidgetSyncTime = DateTime.now();
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                final uid = _cloudService.currentUid;
+                if (uid != null) {
+                  WidgetService.updateWidgetData(rel, uid);
                 }
               });
-            });
-          }
-        }
+            }
 
-        return Stack(
-          children: [
-            Scaffold(
-              backgroundColor: AppColors.background,
-              body: SafeArea(
-                child: isPaired ? _buildPairedHomeScreen(rel) : _buildUnpairedHomeScreen(rel),
-              ),
-            ),
-            // Floating Reaction Particles (Non-blocking)
-            ..._particles,
-            // Romantic Floating In-App Touch Banner
-            if (_incomingTouchBanner != null)
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 8,
-                left: 20,
-                right: 20,
-                child: IgnorePointer(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.18),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const MascotHeart(color: MascotColor.violet, size: 28),
-                        const SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            _incomingTouchBanner!,
-                            style: AppTextStyles.heading.copyWith(
-                              color: AppColors.ink,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+            // Check for incoming touch from partner in real-time
+            if (rel != null && rel.lastTouchTime != null && rel.lastTouchFrom != null) {
+              final currentUid = AuthService().currentUid;
+              if (rel.lastTouchFrom != currentUid &&
+                  (_lastObservedTouchTime == null || rel.lastTouchTime!.isAfter(_lastObservedTouchTime!))) {
+                _lastObservedTouchTime = rel.lastTouchTime;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _triggerParticleEffect(rel.lastTouchType ?? 'miss');
+                  VibrationService.success();
+                  final pName = rel.getPartnerName(currentUid);
+                  final touchType = rel.lastTouchType ?? 'touch';
+                  final label = touchType == 'miss'
+                      ? 'Miss You ❤️'
+                      : (touchType == 'hug' ? 'Warm Hug 🤗' : 'Touch of Love ⚡');
+                  _bannerTimer?.cancel();
+                  setState(() {
+                    _incomingTouchBanner = '$pName sent you a $label!';
+                  });
+                  _bannerTimer = Timer(const Duration(seconds: 4), () {
+                    if (mounted) {
+                      setState(() => _incomingTouchBanner = null);
+                    }
+                  });
+                });
+              }
+            }
+
+            return Stack(
+              children: [
+                Scaffold(
+                  backgroundColor: ThemeService.instance.backgroundColor,
+                  body: SafeArea(
+                    child: isPaired ? _buildPairedHomeScreen(rel) : _buildUnpairedHomeScreen(rel),
                   ),
                 ),
-              ),
-          ],
+                // Floating Reaction Particles (Non-blocking)
+                ..._particles,
+                // Romantic Floating In-App Touch Banner
+                if (_incomingTouchBanner != null)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    left: 20,
+                    right: 20,
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                          border: Border.all(color: ThemeService.instance.primaryColor.withValues(alpha: 0.3), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: ThemeService.instance.primaryColor.withValues(alpha: 0.18),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            MascotHeart(
+                              color: ThemeService.instance.partnerMascotColor,
+                              size: 28,
+                              accessory: ThemeService.instance.partnerMascotAccessory,
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                _incomingTouchBanner!,
+                                style: AppTextStyles.heading.copyWith(
+                                  color: AppColors.ink,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         );
       },
     );
@@ -422,7 +432,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const MascotHeart(color: MascotColor.pink, size: 76, leanRight: true),
+                    MascotHeart(
+                      color: ThemeService.instance.myMascotColor,
+                      size: 76,
+                      leanRight: true,
+                      accessory: ThemeService.instance.myMascotAccessory,
+                    ),
                     const SizedBox(width: 16),
                     Row(
                       children: List.generate(
@@ -745,7 +760,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: ThemeService.instance.primaryColor,
               borderRadius: BorderRadius.circular(AppRadius.hero),
             ),
             child: Column(
@@ -756,7 +771,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: Row(
                         children: [
-                          const MascotHeart(color: MascotColor.violet, size: 48),
+                          MascotHeart(
+                            color: ThemeService.instance.partnerMascotColor,
+                            size: 48,
+                            accessory: ThemeService.instance.partnerMascotAccessory,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -1407,13 +1426,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppColors.pinkSoft.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  child: const Stack(
+                  child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Icon(Icons.cloud_queue_rounded, color: Colors.white, size: 64),
+                      const Icon(Icons.cloud_queue_rounded, color: Colors.white, size: 64),
                       Positioned(
                         bottom: 24,
-                        child: MascotHeart(color: MascotColor.pink, size: 52),
+                        child: MascotHeart(
+                          color: ThemeService.instance.myMascotColor,
+                          size: 52,
+                          accessory: ThemeService.instance.myMascotAccessory,
+                        ),
                       ),
                     ],
                   ),

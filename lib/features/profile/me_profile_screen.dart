@@ -6,6 +6,7 @@ import '../../core/models/relationship_model.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/vibration_service.dart';
+import '../../core/services/theme_service.dart';
 import '../../widgets/flat_components.dart';
 import '../auth/login_screen.dart';
 import 'edit_profile_screen.dart';
@@ -66,112 +67,125 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
             ? 'Together since\n${DateFormat('d MMM yyyy').format(anniversary)}'
             : 'Together\nIn Love';
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: () async {
-                if (mounted) setState(() {});
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-                child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 12),
-                  // Top Bar: "Me" + Settings Cog
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return ListenableBuilder(
+          listenable: ThemeService.instance,
+          builder: (context, _) {
+            return Scaffold(
+              backgroundColor: ThemeService.instance.backgroundColor,
+              body: SafeArea(
+                child: RefreshIndicator(
+                  color: ThemeService.instance.primaryColor,
+                  onRefresh: () async {
+                    if (mounted) setState(() {});
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                    child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Me', style: AppTextStyles.display.copyWith(fontSize: 28)),
-                      IconButton(
-                        onPressed: () {
-                          VibrationService.light();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsScreen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.settings_outlined, color: AppColors.ink, size: 24),
+                      const SizedBox(height: 12),
+                      // Top Bar: "Me" + Settings Cog
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Me', style: AppTextStyles.display.copyWith(fontSize: 28)),
+                          IconButton(
+                            onPressed: () {
+                              VibrationService.light();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.settings_outlined, color: AppColors.ink, size: 24),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // Header Couple Card (Page 67)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.pinkSoft.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(AppRadius.hero),
-                      border: Border.all(color: AppColors.border, width: 1.5),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Column(
+                      // Header Couple Card (Page 67)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: ThemeService.instance.softColor.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(AppRadius.hero),
+                          border: Border.all(color: AppColors.border, width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            const MascotHeart(color: MascotColor.pink, size: 68),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: 84,
-                              child: Text(
-                                myName,
-                                style: AppTextStyles.heading.copyWith(fontSize: 16),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                              ),
+                            Column(
+                              children: [
+                                MascotHeart(
+                                  color: ThemeService.instance.myMascotColor,
+                                  size: 68,
+                                  leanRight: true,
+                                  accessory: ThemeService.instance.myMascotAccessory,
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: 84,
+                                  child: Text(
+                                    myName,
+                                    style: AppTextStyles.heading.copyWith(fontSize: 16),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.favorite_rounded, color: ThemeService.instance.primaryColor, size: 18),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  anniversaryStr,
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: ThemeService.instance.primaryColor,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 11,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                MascotHeart(
+                                  color: ThemeService.instance.partnerMascotColor,
+                                  size: 68,
+                                  leanLeft: true,
+                                  accessory: ThemeService.instance.partnerMascotAccessory,
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: 84,
+                                  child: Text(
+                                    partnerName,
+                                    style: AppTextStyles.heading.copyWith(fontSize: 16),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        Column(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 18),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              anniversaryStr,
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            const MascotHeart(color: MascotColor.violet, size: 68),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: 84,
-                              child: Text(
-                                partnerName,
-                                style: AppTextStyles.heading.copyWith(fontSize: 16),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
 
                   const SizedBox(height: 14),
 
@@ -422,6 +436,8 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
           ),
         ),
       );
+    },
+  );
       },
     );
   }

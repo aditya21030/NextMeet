@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants.dart';
 import '../../core/models/relationship_model.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
+import '../../core/services/theme_service.dart';
 import '../../core/services/vibration_service.dart';
 import '../../widgets/flat_components.dart';
 import '../../widgets/primary_button.dart';
@@ -19,10 +19,13 @@ class AppCustomiseScreen extends StatefulWidget {
 
 class _AppCustomiseScreenState extends State<AppCustomiseScreen> {
   final CloudRelationshipService _cloudService = CloudRelationshipService();
-  MascotColor _myColor = MascotColor.pink;
-  MascotAccessory _myAccessory = MascotAccessory.partyHat;
-  final MascotAccessory _partnerAccessory = MascotAccessory.crown;
-  int _selectedThemeIndex = 0;
+
+  int _customizingTarget = 0; // 0: My Mascot, 1: Partner's Mascot
+  late MascotColor _myColor;
+  late MascotAccessory _myAccessory;
+  late MascotColor _partnerColor;
+  late MascotAccessory _partnerAccessory;
+  late int _selectedThemeIndex;
   bool _isSaving = false;
 
   final List<Map<String, dynamic>> _accessories = [
@@ -39,30 +42,76 @@ class _AppCustomiseScreenState extends State<AppCustomiseScreen> {
     {'color': MascotColor.mint, 'name': 'Mint Breeze', 'fill': AppColors.mint},
   ];
 
-  final List<String> _themes = [
-    'Blush Romantic (Default)',
-    'Midnight Violet',
-    'Mint Garden',
-    'Sunset Glow',
+  final List<Map<String, dynamic>> _themes = [
+    {
+      'title': 'Blush Romantic (Default)',
+      'description': 'Warm pink & romantic blush hues',
+      'primary': const Color(0xFFD81B6A),
+      'background': const Color(0xFFFFF4F8),
+      'soft': const Color(0xFFFFE0ED),
+    },
+    {
+      'title': 'Midnight Violet',
+      'description': 'Deep violet & enchanting moonlight vibes',
+      'primary': const Color(0xFF7B5CF0),
+      'background': const Color(0xFFF7F4FF),
+      'soft': const Color(0xFFEDE4FF),
+    },
+    {
+      'title': 'Mint Garden',
+      'description': 'Fresh botanical greens & serene calm',
+      'primary': const Color(0xFF1F7A4F),
+      'background': const Color(0xFFF0FAF5),
+      'soft': const Color(0xFFE3F6EC),
+    },
+    {
+      'title': 'Sunset Glow',
+      'description': 'Radiant amber & cozy golden sunset',
+      'primary': const Color(0xFFE65100),
+      'background': const Color(0xFFFFF6EE),
+      'soft': const Color(0xFFFFE0D0),
+    },
   ];
 
   @override
   void initState() {
     super.initState();
-    _loadPreferences();
+    _myColor = ThemeService.instance.myMascotColor;
+    _myAccessory = ThemeService.instance.myMascotAccessory;
+    _partnerColor = ThemeService.instance.partnerMascotColor;
+    _partnerAccessory = ThemeService.instance.partnerMascotAccessory;
+    _selectedThemeIndex = ThemeService.instance.themeIndex;
   }
 
-  Future<void> _loadPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    final colorIdx = prefs.getInt('custom_mascot_color') ?? 0;
-    final accIdx = prefs.getInt('custom_mascot_accessory') ?? 1;
-    final themeIdx = prefs.getInt('custom_theme_index') ?? 0;
+  void _onThemeSelected(int index) {
+    VibrationService.light();
+    setState(() => _selectedThemeIndex = index);
+    ThemeService.instance.setThemeIndex(index);
+  }
 
+  void _onAccessorySelected(MascotAccessory accessory) {
+    VibrationService.light();
     setState(() {
-      _myColor = MascotColor.values[colorIdx.clamp(0, MascotColor.values.length - 1)];
-      _myAccessory = MascotAccessory.values[accIdx.clamp(0, MascotAccessory.values.length - 1)];
-      _selectedThemeIndex = themeIdx.clamp(0, _themes.length - 1);
+      if (_customizingTarget == 0) {
+        _myAccessory = accessory;
+        ThemeService.instance.setMyMascot(accessory: accessory);
+      } else {
+        _partnerAccessory = accessory;
+        ThemeService.instance.setPartnerMascot(accessory: accessory);
+      }
+    });
+  }
+
+  void _onColorSelected(MascotColor color) {
+    VibrationService.light();
+    setState(() {
+      if (_customizingTarget == 0) {
+        _myColor = color;
+        ThemeService.instance.setMyMascot(color: color);
+      } else {
+        _partnerColor = color;
+        ThemeService.instance.setPartnerMascot(color: color);
+      }
     });
   }
 
@@ -71,16 +120,21 @@ class _AppCustomiseScreenState extends State<AppCustomiseScreen> {
     setState(() => _isSaving = true);
     VibrationService.success();
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('custom_mascot_color', _myColor.index);
-    await prefs.setInt('custom_mascot_accessory', _myAccessory.index);
-    await prefs.setInt('custom_theme_index', _selectedThemeIndex);
+    await ThemeService.instance.setCustomization(
+      themeIndex: _selectedThemeIndex,
+      myColor: _myColor,
+      myAccessory: _myAccessory,
+      partnerColor: _partnerColor,
+      partnerAccessory: _partnerAccessory,
+    );
 
     if (relId != null && relId != 'default_rel') {
       try {
         await _cloudService.updateRelationshipDetails(relId, {
           'mascotColor': _myColor.name,
           'mascotAccessory': _myAccessory.name,
+          'partnerMascotColor': _partnerColor.name,
+          'partnerMascotAccessory': _partnerAccessory.name,
           'themeIndex': _selectedThemeIndex,
         });
       } catch (_) {}
@@ -108,309 +162,491 @@ class _AppCustomiseScreenState extends State<AppCustomiseScreen> {
         final myName = rel?.getMyName(currentUid) ?? 'You';
         final partnerName = rel?.getPartnerName(currentUid) ?? 'Partner';
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                // Top Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.border, width: 1.5),
-                          ),
-                          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Customize',
-                          style: AppTextStyles.title2.copyWith(fontSize: 18),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _isSaving ? null : () => _saveCustomization(rel?.id),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(AppRadius.pill),
-                          ),
-                          child: _isSaving
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                )
-                              : Text('Save', style: AppTextStyles.button.copyWith(fontSize: 14, color: Colors.white)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+        return ListenableBuilder(
+          listenable: ThemeService.instance,
+          builder: (context, _) {
+            final activeColor = _customizingTarget == 0 ? _myColor : _partnerColor;
+            final activeAccessory = _customizingTarget == 0 ? _myAccessory : _partnerAccessory;
 
-                const SizedBox(height: 16),
-
-                // Scrollable Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Live Mascot Preview Card (Page 75)
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(AppRadius.hero),
-                            border: Border.all(color: AppColors.border, width: 1.5),
-                          ),
-                          child: Column(
-                            children: [
-                              Text('LIVE PREVIEW', style: AppTextStyles.label.copyWith(color: AppColors.muted, fontSize: 10)),
-                              const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Column(
-                                    children: [
-                                      MascotHeart(
-                                        color: _myColor,
-                                        size: 72,
-                                        leanRight: true,
-                                        accessory: _myAccessory,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SizedBox(
-                                        width: 80,
-                                        child: Text(
-                                          myName,
-                                          style: AppTextStyles.heading.copyWith(fontSize: 14),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(width: 24),
-                                  Column(
-                                    children: [
-                                      MascotHeart(
-                                        color: MascotColor.violet,
-                                        size: 72,
-                                        leanLeft: true,
-                                        accessory: _partnerAccessory,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SizedBox(
-                                        width: 80,
-                                        child: Text(
-                                          partnerName,
-                                          style: AppTextStyles.heading.copyWith(fontSize: 14),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+            return Scaffold(
+              backgroundColor: ThemeService.instance.backgroundColor,
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    // Top Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: AppColors.border, width: 1.5),
                               ),
-                            ],
+                              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.ink),
+                            ),
                           ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Mascot Accessory Selector (Page 75)
-                        Text('Your Mascot Accessory', style: AppTextStyles.heading.copyWith(fontSize: 15)),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: _accessories.map((acc) {
-                            final isSelected = _myAccessory == acc['type'];
-                            return Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  VibrationService.light();
-                                  setState(() => _myAccessory = acc['type'] as MascotAccessory);
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? AppColors.pinkSoft : Colors.white,
-                                    borderRadius: BorderRadius.circular(AppRadius.card),
-                                    border: Border.all(
-                                      color: isSelected ? AppColors.primary : AppColors.border,
-                                      width: isSelected ? 2.0 : 1.5,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (acc['emoji'] != null)
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(acc['emoji'] as String, style: const TextStyle(fontSize: 22)),
-                                        )
-                                      else
-                                        const Icon(Icons.block_rounded, color: AppColors.muted, size: 22),
-                                      const SizedBox(height: 4),
-                                      FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            acc['name'] as String,
-                                            style: AppTextStyles.caption.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 10,
-                                              color: isSelected ? AppColors.primary : AppColors.ink,
-                                            ),
-                                            maxLines: 1,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                          Expanded(
+                            child: Text(
+                              'Customize Space',
+                              style: AppTextStyles.title2.copyWith(fontSize: 18),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _isSaving ? null : () => _saveCustomization(rel?.id),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: ThemeService.instance.primaryColor,
+                                borderRadius: BorderRadius.circular(AppRadius.pill),
                               ),
-                            );
-                          }).toList(),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Mascot Color Selector
-                        Text('Your Mascot Color', style: AppTextStyles.heading.copyWith(fontSize: 15)),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: _colorChoices.map((choice) {
-                            final isSelected = _myColor == choice['color'];
-                            return Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  VibrationService.light();
-                                  setState(() => _myColor = choice['color'] as MascotColor);
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(AppRadius.card),
-                                    border: Border.all(
-                                      color: isSelected ? AppColors.primary : AppColors.border,
-                                      width: isSelected ? 2.0 : 1.5,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          color: choice['fill'] as Color,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: isSelected
-                                            ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
-                                            : null,
-                                      ),
-                                      const SizedBox(height: 6),
-                                      FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            choice['name'] as String,
-                                            style: AppTextStyles.caption.copyWith(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: isSelected ? AppColors.primary : AppColors.ink,
-                                            ),
-                                            maxLines: 1,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // App Color Themes Section (Page 75)
-                        Text('App Theme', style: AppTextStyles.heading.copyWith(fontSize: 15)),
-                        const SizedBox(height: 10),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(AppRadius.card),
-                            border: Border.all(color: AppColors.border, width: 1.5),
+                              child: _isSaving
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : Text('Save', style: AppTextStyles.button.copyWith(fontSize: 14, color: Colors.white)),
+                            ),
                           ),
-                          child: Column(
-                            children: _themes.asMap().entries.map((entry) {
-                              final idx = entry.key;
-                              final name = entry.value;
-                              final isSelected = _selectedThemeIndex == idx;
-
-                              return Column(
-                                children: [
-                                  RadioListTile<int>(
-                                    value: idx,
-                                    groupValue: _selectedThemeIndex,
-                                    activeColor: AppColors.primary,
-                                    title: Text(name, style: AppTextStyles.body.copyWith(fontSize: 14)),
-                                    onChanged: (v) {
-                                      VibrationService.light();
-                                      setState(() => _selectedThemeIndex = v ?? 0);
-                                    },
-                                  ),
-                                  if (idx < _themes.length - 1)
-                                    const Divider(height: 1, color: AppColors.border),
-                                ],
-                              );
-                            }).toList(),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        PrimaryButton(
-                          text: 'Save Customization ✨',
-                          isLoading: _isSaving,
-                          onPressed: () => _saveCustomization(rel?.id),
-                        ),
-
-                        const SizedBox(height: 24),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+
+                    const SizedBox(height: 14),
+
+                    // Scrollable Content
+                    Expanded(
+                      child: SingleChildScrollView(
+                        clipBehavior: Clip.none,
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Live Mascot Preview Card (Page 75)
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(AppRadius.hero),
+                                border: Border.all(color: AppColors.border, width: 1.5),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text('LIVE PREVIEW', style: AppTextStyles.label.copyWith(color: AppColors.muted, fontSize: 10)),
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {
+                                          VibrationService.light();
+                                          setState(() => _customizingTarget = 0);
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 150),
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: _customizingTarget == 0
+                                                ? ThemeService.instance.softColor.withValues(alpha: 0.6)
+                                                : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(AppRadius.card),
+                                            border: Border.all(
+                                              color: _customizingTarget == 0
+                                                  ? ThemeService.instance.primaryColor
+                                                  : Colors.transparent,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              MascotHeart(
+                                                color: _myColor,
+                                                size: 72,
+                                                leanRight: true,
+                                                accessory: _myAccessory,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              SizedBox(
+                                                width: 80,
+                                                child: Text(
+                                                  myName,
+                                                  style: AppTextStyles.heading.copyWith(fontSize: 14),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      GestureDetector(
+                                        onTap: () {
+                                          VibrationService.light();
+                                          setState(() => _customizingTarget = 1);
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 150),
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: _customizingTarget == 1
+                                                ? ThemeService.instance.softColor.withValues(alpha: 0.6)
+                                                : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(AppRadius.card),
+                                            border: Border.all(
+                                              color: _customizingTarget == 1
+                                                  ? ThemeService.instance.primaryColor
+                                                  : Colors.transparent,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              MascotHeart(
+                                                color: _partnerColor,
+                                                size: 72,
+                                                leanLeft: true,
+                                                accessory: _partnerAccessory,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              SizedBox(
+                                                width: 80,
+                                                child: Text(
+                                                  partnerName,
+                                                  style: AppTextStyles.heading.copyWith(fontSize: 14),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 18),
+
+                            // Mascot Toggle Selector
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(AppRadius.pill),
+                                border: Border.all(color: AppColors.border, width: 1.5),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        VibrationService.light();
+                                        setState(() => _customizingTarget = 0);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: _customizingTarget == 0
+                                              ? ThemeService.instance.primaryColor
+                                              : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'My Mascot ($myName)',
+                                          style: AppTextStyles.button.copyWith(
+                                            fontSize: 13,
+                                            color: _customizingTarget == 0 ? Colors.white : AppColors.ink,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        VibrationService.light();
+                                        setState(() => _customizingTarget = 1);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: _customizingTarget == 1
+                                              ? ThemeService.instance.primaryColor
+                                              : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          "Partner's ($partnerName)",
+                                          style: AppTextStyles.button.copyWith(
+                                            fontSize: 13,
+                                            color: _customizingTarget == 1 ? Colors.white : AppColors.ink,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // Mascot Accessory Selector
+                            Text(
+                              _customizingTarget == 0 ? 'Your Mascot Accessory' : "$partnerName's Mascot Accessory",
+                              style: AppTextStyles.heading.copyWith(fontSize: 15),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: _accessories.map((acc) {
+                                final isSelected = activeAccessory == acc['type'];
+                                return Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => _onAccessorySelected(acc['type'] as MascotAccessory),
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? ThemeService.instance.softColor : Colors.white,
+                                        borderRadius: BorderRadius.circular(AppRadius.card),
+                                        border: Border.all(
+                                          color: isSelected ? ThemeService.instance.primaryColor : AppColors.border,
+                                          width: isSelected ? 2.0 : 1.5,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (acc['emoji'] != null)
+                                            FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(acc['emoji'] as String, style: const TextStyle(fontSize: 22)),
+                                            )
+                                          else
+                                            const Icon(Icons.block_rounded, color: AppColors.muted, size: 22),
+                                          const SizedBox(height: 4),
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              child: Text(
+                                                acc['name'] as String,
+                                                style: AppTextStyles.caption.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 10,
+                                                  color: isSelected ? ThemeService.instance.primaryColor : AppColors.ink,
+                                                ),
+                                                maxLines: 1,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // Mascot Color Selector
+                            Text(
+                              _customizingTarget == 0 ? 'Your Mascot Color' : "$partnerName's Mascot Color",
+                              style: AppTextStyles.heading.copyWith(fontSize: 15),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: _colorChoices.map((choice) {
+                                final isSelected = activeColor == choice['color'];
+                                return Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => _onColorSelected(choice['color'] as MascotColor),
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(AppRadius.card),
+                                        border: Border.all(
+                                          color: isSelected ? ThemeService.instance.primaryColor : AppColors.border,
+                                          width: isSelected ? 2.0 : 1.5,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: choice['fill'] as Color,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: isSelected
+                                                ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                                                : null,
+                                          ),
+                                          const SizedBox(height: 6),
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              child: Text(
+                                                choice['name'] as String,
+                                                style: AppTextStyles.caption.copyWith(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: isSelected ? ThemeService.instance.primaryColor : AppColors.ink,
+                                                ),
+                                                maxLines: 1,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+
+                            const SizedBox(height: 22),
+
+                            // App Color Themes Section
+                            Text('App Theme & Palette', style: AppTextStyles.heading.copyWith(fontSize: 15)),
+                            const SizedBox(height: 10),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(AppRadius.card),
+                                border: Border.all(color: AppColors.border, width: 1.5),
+                              ),
+                              child: Column(
+                                children: _themes.asMap().entries.map((entry) {
+                                  final idx = entry.key;
+                                  final theme = entry.value;
+                                  final isSelected = _selectedThemeIndex == idx;
+
+                                  return Column(
+                                    children: [
+                                      InkWell(
+                                        onTap: () => _onThemeSelected(idx),
+                                        borderRadius: BorderRadius.circular(AppRadius.card),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 24,
+                                                height: 24,
+                                                decoration: BoxDecoration(
+                                                  color: theme['primary'] as Color,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: isSelected ? AppColors.ink : Colors.transparent,
+                                                    width: 2,
+                                                  ),
+                                                ),
+                                                child: isSelected
+                                                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 14)
+                                                    : null,
+                                              ),
+                                              const SizedBox(width: 14),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      theme['title'] as String,
+                                                      style: AppTextStyles.body.copyWith(
+                                                        fontSize: 14,
+                                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                                        color: isSelected ? ThemeService.instance.primaryColor : AppColors.ink,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      theme['description'] as String,
+                                                      style: AppTextStyles.caption.copyWith(fontSize: 11, color: AppColors.muted),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    width: 14,
+                                                    height: 14,
+                                                    decoration: BoxDecoration(
+                                                      color: theme['soft'] as Color,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Container(
+                                                    width: 14,
+                                                    height: 14,
+                                                    decoration: BoxDecoration(
+                                                      color: theme['primary'] as Color,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      if (idx < _themes.length - 1)
+                                        const Divider(height: 1, color: AppColors.border),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            PrimaryButton(
+                              text: 'Save Customization ✨',
+                              isLoading: _isSaving,
+                              onPressed: () => _saveCustomization(rel?.id),
+                            ),
+
+                            const SizedBox(height: 28),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

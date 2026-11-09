@@ -47,15 +47,17 @@ class _PrimaryButtonState extends State<PrimaryButton> {
     Color foregroundColor;
     Border? border;
 
+    final themePrimary = Theme.of(context).primaryColor;
+
     switch (effectiveVariant) {
       case ButtonVariant.primary:
-        backgroundColor = widget.color ?? (_isPressed ? AppColors.primaryDark : AppColors.primary);
+        backgroundColor = widget.color ?? (_isPressed ? themePrimary.withValues(alpha: 0.85) : themePrimary);
         foregroundColor = widget.textColor ?? Colors.white;
         border = null;
         break;
       case ButtonVariant.soft:
-        backgroundColor = widget.color ?? AppColors.pinkSoft;
-        foregroundColor = widget.textColor ?? AppColors.primary;
+        backgroundColor = widget.color ?? themePrimary.withValues(alpha: 0.14);
+        foregroundColor = widget.textColor ?? themePrimary;
         border = null;
         break;
       case ButtonVariant.dark:

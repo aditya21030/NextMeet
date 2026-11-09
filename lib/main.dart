@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants.dart';
 import 'core/theme.dart';
+import 'core/services/theme_service.dart';
 import 'features/onboarding/splash_screen.dart';
 import 'features/auth/reset_password_screen.dart';
 import 'core/services/notification_service.dart';
@@ -45,6 +46,13 @@ void main() async {
     HomeWidget.registerInteractivityCallback(homeWidgetBackgroundCallback);
   } catch (e) {
     debugPrint('HomeWidget interactivity registration warning: $e');
+  }
+
+  // Initialize theme and mascot customizer preferences
+  try {
+    await ThemeService.instance.init();
+  } catch (e) {
+    debugPrint('ThemeService init warning: $e');
   }
 
   // Mount UI immediately so the user sees the Splash screen without delay
@@ -98,15 +106,20 @@ class _NextMeetAppState extends State<NextMeetApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: appNavigatorKey,
-      title: 'NextMeet',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-      ),
-      home: const SplashScreen(),
+    return ListenableBuilder(
+      listenable: ThemeService.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          navigatorKey: appNavigatorKey,
+          title: 'NextMeet',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.getTheme(ThemeService.instance.themeIndex),
+          scrollBehavior: const MaterialScrollBehavior().copyWith(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          ),
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }

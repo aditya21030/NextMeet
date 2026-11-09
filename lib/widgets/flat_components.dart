@@ -44,28 +44,34 @@ class MascotHeart extends StatelessWidget {
     if (leanRight) rotation = 0.12; // ~7 degrees
     if (leanLeft) rotation = -0.12;
 
-    return Transform.rotate(
-      angle: rotation,
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            CustomPaint(
-              size: Size(size, size),
-              painter: _HeartMascotPainter(
-                fillColor: _fillColor,
-                isWinking: isWinking,
+    final bool hasAccessory = accessory != MascotAccessory.none;
+    final double accessoryHeadroom = hasAccessory ? size * 0.32 : 0.0;
+
+    return Padding(
+      padding: EdgeInsets.only(top: accessoryHeadroom),
+      child: Transform.rotate(
+        angle: rotation,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              CustomPaint(
+                size: Size(size, size),
+                painter: _HeartMascotPainter(
+                  fillColor: _fillColor,
+                  isWinking: isWinking,
+                ),
               ),
-            ),
-            if (accessory != MascotAccessory.none)
-              Positioned(
-                top: -size * 0.22,
-                child: _buildAccessory(size),
-              ),
-          ],
+              if (hasAccessory)
+                Positioned(
+                  top: -size * 0.22,
+                  child: _buildAccessory(size),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -281,6 +287,8 @@ class _CapPainter extends CustomPainter {
 /// The Iconic Leaning Two Hearts Lockup (Pink & Violet)
 class TwoMascotsRow extends StatelessWidget {
   final double size;
+  final MascotColor leftColor;
+  final MascotColor rightColor;
   final MascotAccessory leftAccessory;
   final MascotAccessory rightAccessory;
   final double spacing;
@@ -288,6 +296,8 @@ class TwoMascotsRow extends StatelessWidget {
   const TwoMascotsRow({
     super.key,
     this.size = 80.0,
+    this.leftColor = MascotColor.pink,
+    this.rightColor = MascotColor.violet,
     this.leftAccessory = MascotAccessory.none,
     this.rightAccessory = MascotAccessory.none,
     this.spacing = 8.0,
@@ -298,16 +308,17 @@ class TwoMascotsRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         MascotHeart(
-          color: MascotColor.pink,
+          color: leftColor,
           size: size,
           leanRight: true,
           accessory: leftAccessory,
         ),
         SizedBox(width: spacing),
         MascotHeart(
-          color: MascotColor.violet,
+          color: rightColor,
           size: size,
           leanLeft: true,
           accessory: rightAccessory,

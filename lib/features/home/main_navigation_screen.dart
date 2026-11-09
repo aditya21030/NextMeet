@@ -7,6 +7,7 @@ import '../../core/services/auth_service.dart';
 import '../../core/models/relationship_model.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/in_app_update_service.dart';
+import '../../core/services/theme_service.dart';
 import 'home_screen.dart';
 import '../games/games_hub_screen.dart';
 import '../plan/plan_hub_screen.dart';
@@ -96,54 +97,63 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return StreamBuilder<RelationshipModel?>(
       stream: _cloudService.streamRelationship(),
       builder: (context, snapshot) {
-        return PopScope(
-          canPop: _selectedIndex == 0,
-          onPopInvokedWithResult: (didPop, result) {
-            if (didPop) return;
-            if (_selectedIndex == 3) {
-              _vaultKey.currentState?.lock();
-              setState(() => _selectedIndex = 0);
-            } else if (_selectedIndex != 0) {
-              setState(() => _selectedIndex = 0);
-            }
-          },
-          child: Scaffold(
-            backgroundColor: AppColors.background,
-            body: IndexedStack(
-              index: _selectedIndex,
-              children: [
-                HomeScreen(initialSynced: widget.initialSynced),
-                const GamesHubScreen(),
-                const PlanHubScreen(),
-                VaultHubScreen(key: _vaultKey),
-                const MeProfileScreen(),
-              ],
-            ),
-            bottomNavigationBar: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(
-                  top: BorderSide(color: AppColors.border, width: 1.5),
+        if (snapshot.hasData && snapshot.data != null) {
+          ThemeService.instance.syncFromRelationshipData(snapshot.data!.toFirestore());
+        }
+
+        return ListenableBuilder(
+          listenable: ThemeService.instance,
+          builder: (context, _) {
+            return PopScope(
+              canPop: _selectedIndex == 0,
+              onPopInvokedWithResult: (didPop, result) {
+                if (didPop) return;
+                if (_selectedIndex == 3) {
+                  _vaultKey.currentState?.lock();
+                  setState(() => _selectedIndex = 0);
+                } else if (_selectedIndex != 0) {
+                  setState(() => _selectedIndex = 0);
+                }
+              },
+              child: Scaffold(
+                backgroundColor: ThemeService.instance.backgroundColor,
+                body: IndexedStack(
+                  index: _selectedIndex,
+                  children: [
+                    HomeScreen(initialSynced: widget.initialSynced),
+                    const GamesHubScreen(),
+                    const PlanHubScreen(),
+                    VaultHubScreen(key: _vaultKey),
+                    const MeProfileScreen(),
+                  ],
                 ),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _navTab(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
-                      _navTab(1, Icons.sports_esports_outlined, Icons.sports_esports_rounded, 'Games'),
-                      _navTab(2, Icons.calendar_today_outlined, Icons.calendar_month_rounded, 'Plan'),
-                      _navTab(3, Icons.lock_outline_rounded, Icons.lock_rounded, 'Vault'),
-                      _navTab(4, Icons.person_outline_rounded, Icons.person_rounded, 'Me'),
-                    ],
+                bottomNavigationBar: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      top: BorderSide(color: AppColors.border, width: 1.5),
+                    ),
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _navTab(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
+                          _navTab(1, Icons.sports_esports_outlined, Icons.sports_esports_rounded, 'Games'),
+                          _navTab(2, Icons.calendar_today_outlined, Icons.calendar_month_rounded, 'Plan'),
+                          _navTab(3, Icons.lock_outline_rounded, Icons.lock_rounded, 'Vault'),
+                          _navTab(4, Icons.person_outline_rounded, Icons.person_rounded, 'Me'),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -165,7 +175,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.pinkSoft : Colors.transparent,
+          color: isSelected ? ThemeService.instance.softColor : Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
         child: Column(
@@ -173,14 +183,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           children: [
             Icon(
               isSelected ? solidIcon : outlineIcon,
-              color: isSelected ? AppColors.primary : AppColors.muted,
+              color: isSelected ? ThemeService.instance.primaryColor : AppColors.muted,
               size: 22,
             ),
             const SizedBox(height: 2),
             Text(
               label,
               style: AppTextStyles.caption.copyWith(
-                color: isSelected ? AppColors.primary : AppColors.muted,
+                color: isSelected ? ThemeService.instance.primaryColor : AppColors.muted,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 fontSize: 11,
               ),

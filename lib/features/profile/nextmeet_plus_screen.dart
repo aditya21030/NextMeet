@@ -168,10 +168,12 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
             // Scrollable Paywall Body
             Expanded(
               child: SingleChildScrollView(
+                clipBehavior: Clip.none,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const SizedBox(height: 18),
                     // Hero Mascot Crown Header
                     Center(
                       child: Column(
