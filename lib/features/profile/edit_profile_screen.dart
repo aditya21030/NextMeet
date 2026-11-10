@@ -7,6 +7,7 @@ import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/vibration_service.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/flat_components.dart';
+import '../../core/services/theme_service.dart';
 import 'app_customise_screen.dart';
 
 /// Modernized NextMeet Profile & Names Screen
@@ -122,7 +123,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ThemeService.instance.backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -180,20 +181,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: Column(
                         children: [
                           MascotHeart(
-                            color: widget.isPartner ? MascotColor.violet : MascotColor.pink,
+                            color: widget.isPartner
+                                ? ThemeService.instance.partnerMascotColor
+                                : ThemeService.instance.myMascotColor,
                             size: 80,
+                            accessory: widget.isPartner
+                                ? ThemeService.instance.partnerMascotAccessory
+                                : ThemeService.instance.myMascotAccessory,
                           ),
                           const SizedBox(height: 14),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.pinkSoft,
+                              color: ThemeService.instance.softColor,
                               borderRadius: BorderRadius.circular(AppRadius.pill),
                             ),
                             child: Text(
                               'MASCOT IDENTITY 💖',
                               style: AppTextStyles.label.copyWith(
-                                color: AppColors.primary,
+                                color: ThemeService.instance.primaryColor,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
                               ),

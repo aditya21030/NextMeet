@@ -5,6 +5,7 @@ import '../../core/models/relationship_model.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/services/vibration_service.dart';
+import '../../core/services/theme_service.dart';
 import '../auth/login_screen.dart';
 import '../auth/reset_password_screen.dart';
 import 'app_customise_screen.dart';
@@ -193,10 +194,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final myLocation = currentRel.getMyLocation(currentUid).split(',').first.trim();
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: ThemeService.instance.backgroundColor,
           body: SafeArea(
             child: RefreshIndicator(
-              color: AppColors.primary,
+              color: ThemeService.instance.primaryColor,
               onRefresh: () async {
                 if (mounted) setState(() {});
               },
