@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    if (rel != null) {
+    if (rel != null && rel.status == 'active' && rel.uid2 != null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainNavigationScreen()),

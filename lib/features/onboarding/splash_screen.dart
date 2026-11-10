@@ -70,7 +70,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
         if (!mounted) return;
 
-        if (relationship != null) {
+        final isActivelyPaired = relationship != null && relationship.status == 'active' && relationship.uid2 != null;
+
+        if (isActivelyPaired || (relationship != null && detectedCode == null)) {
           NotificationService().getToken().then((token) {
             if (token != null && relationship?.id != null) {
               CloudRelationshipService().updateFcmToken(relationship!.id!, token);

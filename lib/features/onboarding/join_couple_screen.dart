@@ -7,6 +7,8 @@ import '../../core/services/vibration_service.dart';
 import '../../widgets/flat_components.dart';
 import '../../widgets/primary_button.dart';
 import '../../core/services/cloud_relationship_service.dart';
+import '../../core/services/location_search_service.dart';
+import '../../core/services/auth_service.dart';
 import 'connection_success_screen.dart';
 import '../../core/services/auth_error_handler.dart';
 
@@ -79,10 +81,22 @@ class _JoinCoupleScreenState extends State<JoinCoupleScreen> {
     VibrationService.medium();
 
     try {
+      String joinCity = 'Our City';
+      try {
+        final detected = await LocationSearchService.getCurrentCity();
+        if (detected != null && detected.isNotEmpty) {
+          joinCity = detected;
+        }
+      } catch (_) {}
+
+      final resolvedName = (widget.userName != null && widget.userName!.isNotEmpty)
+          ? widget.userName!
+          : (AuthService().currentUser?.displayName ?? 'Partner');
+
       final rel = await _cloudService.joinJourney(
         code,
-        'Our City',
-        widget.userName ?? 'Partner',
+        joinCity,
+        resolvedName,
         'Love',
       );
 

@@ -92,13 +92,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
         if (user != null) {
           VibrationService.success();
-          // Navigate to Email Verification screen
-          Navigator.push(
+          // Seamless onboarding transition directly to Step 1: Tell Us About You
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => EmailVerificationScreen(
-                email: _emailController.text.trim(),
-                name: _nameController.text.trim(),
+              builder: (context) => TellUsAboutYouScreen(
+                initialName: _nameController.text.trim(),
                 initialInviteCode: widget.initialInviteCode,
               ),
             ),

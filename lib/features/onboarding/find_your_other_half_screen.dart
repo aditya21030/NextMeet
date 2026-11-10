@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,6 +47,7 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
   final _partnerCodeController = TextEditingController();
   bool _isConnecting = false;
   final CloudRelationshipService _relService = CloudRelationshipService();
+  StreamSubscription<RelationshipModel?>? _relSubscription;
 
   @override
   void initState() {
@@ -56,9 +58,30 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
 
     if (widget.initialInviteCode != null && widget.initialInviteCode!.length == 6) {
       _partnerCodeController.text = widget.initialInviteCode!;
+    } else {
+      _registerJourneyCode();
     }
 
-    _registerJourneyCode();
+    _listenForPartnerJoin();
+  }
+
+  void _listenForPartnerJoin() {
+    _relSubscription?.cancel();
+    _relSubscription = _relService.streamRelationship().listen((rel) {
+      if (!mounted) return;
+      if (rel != null && rel.status == 'active' && rel.uid2 != null) {
+        _relSubscription?.cancel();
+        VibrationService.success();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConnectionSuccessScreen(
+              relationship: rel,
+            ),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _registerJourneyCode() async {
@@ -88,6 +111,7 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
 
   @override
   void dispose() {
+    _relSubscription?.cancel();
     _partnerCodeController.dispose();
     super.dispose();
   }
@@ -127,7 +151,7 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
     try {
       final relationship = await _relService.joinJourney(
         code,
-        widget.theirCity,
+        widget.yourCity.isNotEmpty ? widget.yourCity : widget.theirCity,
         widget.userName,
         widget.nickname.isNotEmpty ? widget.nickname : 'Love',
       );

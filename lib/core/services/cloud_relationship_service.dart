@@ -24,6 +24,22 @@ class CloudRelationshipService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final NotificationService _notifications = NotificationService();
 
+  static bool _authListenerInitialized = false;
+
+  CloudRelationshipService() {
+    _initAuthListener();
+  }
+
+  void _initAuthListener() {
+    if (_authListenerInitialized) return;
+    _authListenerInitialized = true;
+    _auth.authStateChanges.listen((user) {
+      if (user == null) {
+        clearCache();
+      }
+    });
+  }
+
   // Collection References
   CollectionReference get _relationships => _firestore.collection('relationships');
   CollectionReference get _invites => _firestore.collection('invites');
@@ -39,6 +55,17 @@ class CloudRelationshipService {
   RelationshipModel? get cachedRelationship => _cachedRelationship;
   static RealtimeChannel? _relationshipChannel;
   static String? _subscribedRelUid;
+  static StreamSubscription<QuerySnapshot>? _firestoreRelSubscription;
+
+  static void clearCache() {
+    _cachedRelationship = null;
+    _subscribedRelUid = null;
+    _relationshipChannel?.unsubscribe();
+    _relationshipChannel = null;
+    _firestoreRelSubscription?.cancel();
+    _firestoreRelSubscription = null;
+    _relationshipStreamController.add(null);
+  }
 
   static final Map<String, StreamController<List<MemoryModel>>> _memoriesStreamControllers = {};
   static final Map<String, List<MemoryModel>> _cachedMemoriesMap = {};
@@ -434,15 +461,44 @@ class CloudRelationshipService {
 
   Future<String> createJourney(RelationshipModel localData) async {
     final uid = _currentUid ?? _auth.currentUid ?? _supabase.auth.currentUser?.id;
-    if (uid == null) throw Exception('User not authenticated');
+    if (uid == null) throw Exception('User not authenticated. Please log in first ❤️');
+
+    // Re-use existing waiting journey if available so we never spam duplicate documents
+    try {
+      final existingSnap = await _relationships
+          .where('uid1', isEqualTo: uid)
+          .where('status', isEqualTo: 'waiting')
+          .limit(1)
+          .get();
+      if (existingSnap.docs.isNotEmpty) {
+        final existingDoc = existingSnap.docs.first;
+        final existingData = existingDoc.data() as Map<String, dynamic>;
+        final existingCode = existingData['inviteCode'] as String?;
+        if (existingCode != null && existingCode.isNotEmpty) {
+          final rel = RelationshipModel.fromFirestore(existingData, id: existingDoc.id);
+          _cachedRelationship = rel;
+          _relationshipStreamController.add(rel);
+          // Ensure invite record exists
+          _invites.doc(existingCode).set({
+            'creatorUid': uid,
+            'relationshipId': existingDoc.id,
+            'status': 'pending',
+            'createdAt': FieldValue.serverTimestamp(),
+            'creatorEmail': _auth.currentUser?.email ?? 'Unknown Email'
+          }, SetOptions(merge: true));
+          return existingCode;
+        }
+      }
+    } catch (_) {}
+
     final String code = (math.Random().nextInt(900000) + 100000).toString();
     final relDocRef = _relationships.doc();
     final relationship = localData.copyWith(
-      id: relDocRef.id, 
-      uid1: uid, 
-      uids: [uid], 
-      inviteCode: code, 
-      createdAt: DateTime.now(), 
+      id: relDocRef.id,
+      uid1: uid,
+      uids: [uid],
+      inviteCode: code,
+      createdAt: DateTime.now(),
       status: 'waiting',
     );
 
@@ -458,25 +514,21 @@ class CloudRelationshipService {
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      debugPrint('Supabase createJourney sync warning: $e');
+      debugPrint('Supabase createJourney sync notice: $e');
     }
 
-    // 2. Firestore Sync & Invites
-    try {
-      await relDocRef.set(relationship.toFirestore());
-      final userEmail = _auth.currentUser?.email ?? 'Unknown Email';
-      await _invites.doc(code).set({
-        'creatorUid': uid, 
-        'relationshipId': relDocRef.id, 
-        'status': 'pending', 
-        'createdAt': FieldValue.serverTimestamp(),
-        'creatorEmail': userEmail
-      });
-    } catch (e) {
-      debugPrint('Firestore createJourney sync warning: $e');
-    }
+    // 2. Firestore Sync & Invites (Critical for realtime pairing)
+    await relDocRef.set(relationship.toFirestore());
+    final userEmail = _auth.currentUser?.email ?? 'Unknown Email';
+    await _invites.doc(code).set({
+      'creatorUid': uid,
+      'relationshipId': relDocRef.id,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+      'creatorEmail': userEmail
+    });
 
-    // 3. Admin Dashboard Sync
+    // 3. Admin Tracking (Non-blocking)
     try {
       await _firestore.collection('pending_relationships').doc(relDocRef.id).set({
         'relId': relDocRef.id,
@@ -492,87 +544,170 @@ class CloudRelationshipService {
         'lastUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error syncing createJourney to admin dashboard: $e');
+      debugPrint('Admin createJourney notice: $e');
     }
 
     // Update local cache so UI reacts immediately
     _cachedRelationship = relationship;
     _relationshipStreamController.add(relationship);
-    
+
     return code;
   }
 
-  Future<RelationshipModel?> joinJourney(String code, String partnerCity, String myName, String partnerPetName, {double? lat, double? lng}) async {
-    if (_currentUid == null) throw Exception('User not authenticated');
+  Future<RelationshipModel?> joinJourney(
+    String rawCode,
+    String partnerCity,
+    String myName,
+    String partnerPetName, {
+    double? lat,
+    double? lng,
+  }) async {
+    final code = rawCode.trim().replaceAll(RegExp(r'\s+'), '');
+    if (_currentUid == null) throw Exception('User not authenticated. Please log in first ❤️');
 
-    // Check if user is already in a relationship
-    final existingRel = await streamRelationship().first;
-    if (existingRel != null && existingRel.status == 'active') {
-      throw Exception('You are already in an active relationship! ❤️');
+    // 1. Direct active relationship check in Firestore (avoiding stale cache false-positives)
+    try {
+      final activeCheck = await _relationships
+          .where('uids', arrayContains: _currentUid)
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+      if (activeCheck.docs.isNotEmpty) {
+        final existingData = activeCheck.docs.first.data() as Map<String, dynamic>;
+        if (existingData['uid2'] != null) {
+          throw Exception('You are already connected in an active couple space! ❤️');
+        }
+      }
+    } catch (e) {
+      if (e.toString().contains('already connected')) rethrow;
     }
 
+    // 2. Locate relationship ID via invites collection, with fallback to relationships.inviteCode
+    String? targetRelId;
+    String? targetCreatorUid;
+
+    try {
+      final inviteDoc = await _invites.doc(code).get();
+      if (inviteDoc.exists) {
+        if (inviteDoc.get('status') == 'accepted') {
+          throw Exception('This invite code has already been used by another partner! ❤️');
+        }
+        targetCreatorUid = inviteDoc.get('creatorUid') as String?;
+        targetRelId = inviteDoc.get('relationshipId') as String?;
+      }
+    } catch (e) {
+      if (e.toString().contains('already been used')) rethrow;
+    }
+
+    // Fallback: If inviteDoc wasn't found, search relationships collection directly by inviteCode
+    if (targetRelId == null) {
+      try {
+        final querySnap = await _relationships
+            .where('inviteCode', isEqualTo: code)
+            .limit(1)
+            .get();
+        if (querySnap.docs.isNotEmpty) {
+          final doc = querySnap.docs.first;
+          final docData = doc.data() as Map<String, dynamic>;
+          if (docData['status'] == 'active' && docData['uid2'] != null) {
+            throw Exception('This invite code has already been accepted! ❤️');
+          }
+          targetRelId = doc.id;
+          targetCreatorUid = docData['uid1'] as String?;
+        }
+      } catch (e) {
+        if (e.toString().contains('already been accepted')) rethrow;
+      }
+    }
+
+    // Fallback: Check Supabase relationships
+    if (targetRelId == null) {
+      try {
+        final res = await _supabase
+            .from('relationships')
+            .select()
+            .eq('invite_code', code)
+            .maybeSingle();
+        if (res != null) {
+          if (res['status'] == 'active' && res['uid2'] != null) {
+            throw Exception('This invite code has already been accepted! ❤️');
+          }
+          targetRelId = res['id']?.toString();
+          targetCreatorUid = res['uid1']?.toString();
+        }
+      } catch (e) {
+        if (e.toString().contains('already been accepted')) rethrow;
+      }
+    }
+
+    if (targetRelId == null) {
+      throw Exception('Invalid invite code ($code). Please ask your partner to verify the code in their app ❤️');
+    }
+
+    if (targetCreatorUid == _currentUid) {
+      throw Exception('You cannot join your own journey! Send this 6-digit code to your partner instead ❤️');
+    }
+
+    // 3. Atomically join the relationship in Firestore
+    final relDocRef = _relationships.doc(targetRelId);
     final joinedRelationship = await _firestore.runTransaction((transaction) async {
-      final inviteDoc = await transaction.get(_invites.doc(code));
-      if (!inviteDoc.exists) {
-        throw Exception('Invalid invite code. Please check and try again! ❤️');
-      }
-      
-      if (inviteDoc.get('status') == 'accepted') {
-        throw Exception('This invite code has already been used! ❤️');
-      }
-
-      final creatorUid = inviteDoc.get('creatorUid');
-      if (creatorUid == _currentUid) {
-        throw Exception('You cannot join your own journey! Send the code to your partner instead. ❤️');
-      }
-
-      final relId = inviteDoc.get('relationshipId');
-      final relDocRef = _relationships.doc(relId);
       final relDoc = await transaction.get(relDocRef);
       if (!relDoc.exists) {
-        throw Exception('Relationship data not found. It might have been deleted. ❤️');
+        throw Exception('Relationship data not found. It may have been deleted. ❤️');
+      }
+
+      final data = relDoc.data() as Map<String, dynamic>;
+      if (data['status'] == 'active' && data['uid2'] != null && data['uid2'] != _currentUid) {
+        throw Exception('This invite code has already been accepted! ❤️');
       }
 
       double distance = 0.0;
-      final creatorLat = (relDoc.data() as Map<String, dynamic>)['user1Lat'] as double?;
-      final creatorLng = (relDoc.data() as Map<String, dynamic>)['user1Lng'] as double?;
+      final creatorLat = data['user1Lat'] as double?;
+      final creatorLng = data['user1Lng'] as double?;
       if (creatorLat != null && creatorLng != null && lat != null && lng != null) {
         distance = double.parse(CityData.calculateDistance(creatorLat, creatorLng, lat, lng).toStringAsFixed(1));
       }
 
+      final updatedUids = [targetCreatorUid, _currentUid];
+
       transaction.update(relDocRef, {
-        'uid2': _currentUid, 
-        'uids': [creatorUid, _currentUid], 
-        'userName2': myName, 
-        'user2PartnerNickname': partnerPetName, 
-        'userLocation2': partnerCity, 
-        'user2Lat': lat, 
-        'user2Lng': lng, 
-        'distanceKm': distance, 
-        'status': 'active'
+        'uid2': _currentUid,
+        'uids': updatedUids,
+        'userName2': myName,
+        'user2PartnerNickname': partnerPetName,
+        'userLocation2': partnerCity,
+        'user2Lat': lat,
+        'user2Lng': lng,
+        'distanceKm': distance,
+        'status': 'active',
+        'joinedAt': FieldValue.serverTimestamp(),
       });
-      transaction.update(_invites.doc(code), {'status': 'accepted'});
-      
-      final data = relDoc.data() as Map<String, dynamic>;
+
+      transaction.set(_invites.doc(code), {
+        'status': 'accepted',
+        'acceptedBy': _currentUid,
+        'acceptedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
       return RelationshipModel.fromFirestore({
-        ...data, 
-        'uid2': _currentUid, 
-        'uids': [creatorUid, _currentUid], 
-        'userName2': myName, 
-        'user2PartnerNickname': partnerPetName, 
-        'userLocation2': partnerCity, 
-        'user2Lat': lat, 
-        'user2Lng': lng, 
-        'distanceKm': distance, 
-        'status': 'active'
-      }, id: relId);
+        ...data,
+        'uid2': _currentUid,
+        'uids': updatedUids,
+        'userName2': myName,
+        'user2PartnerNickname': partnerPetName,
+        'userLocation2': partnerCity,
+        'user2Lat': lat,
+        'user2Lng': lng,
+        'distanceKm': distance,
+        'status': 'active',
+      }, id: targetRelId);
     });
 
     if (joinedRelationship != null && joinedRelationship.id != null) {
       final relId = joinedRelationship.id!;
       final creatorUid = joinedRelationship.uid1;
 
-      // Clean up any abandoned test journeys previously created by this user
+      // Clean up any abandoned waiting journeys previously created by this user
       try {
         final orphanedWaiting = await _relationships
             .where('uid1', isEqualTo: _currentUid)
@@ -580,11 +715,11 @@ class CloudRelationshipService {
             .get();
         for (final doc in orphanedWaiting.docs) {
           if (doc.id != relId) {
-            await doc.reference.delete();
+            await doc.reference.update({'status': 'abandoned'});
           }
         }
       } catch (e) {
-        debugPrint('Non-critical cleanup warning for orphaned waiting journeys: $e');
+        debugPrint('Non-critical cleanup notice for abandoned waiting journeys: $e');
       }
 
       // Non-blocking metrics & admin tracking
@@ -606,7 +741,7 @@ class CloudRelationshipService {
           'lastUpdatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (e) {
-        debugPrint('Non-critical admin sync warning in joinJourney: $e');
+        debugPrint('Non-critical admin sync notice: $e');
       }
 
       // Supabase sync
@@ -622,8 +757,12 @@ class CloudRelationshipService {
           'updated_at': DateTime.now().toIso8601String(),
         });
       } catch (e) {
-        debugPrint('Supabase joinJourney sync warning: $e');
+        debugPrint('Supabase joinJourney sync notice: $e');
       }
+
+      // Update in-memory cache and broadcast so UI updates instantly
+      _cachedRelationship = joinedRelationship;
+      _relationshipStreamController.add(joinedRelationship);
     }
 
     return joinedRelationship;
@@ -680,7 +819,14 @@ class CloudRelationshipService {
     }
 
     if (_cachedRelationship != null) {
-      yield _cachedRelationship;
+      // Validate that cached relationship belongs to current authenticated user
+      if (_cachedRelationship!.uids.contains(uid) ||
+          _cachedRelationship!.uid1 == uid ||
+          _cachedRelationship!.uid2 == uid) {
+        yield _cachedRelationship;
+      } else {
+        _cachedRelationship = null;
+      }
     }
 
     _setupRelationshipListener(uid);
@@ -688,79 +834,118 @@ class CloudRelationshipService {
   }
 
   void _setupRelationshipListener(String uid) {
-    Future<void> fetchAndEmit() async {
+    if (_subscribedRelUid == uid && _firestoreRelSubscription != null) {
+      return;
+    }
+    _subscribedRelUid = uid;
+
+    // 1. Live Firestore Snapshot Subscription (Immediate reactive updates across both phones)
+    _firestoreRelSubscription?.cancel();
+    _firestoreRelSubscription = _relationships
+        .where('uids', arrayContains: uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        final activeDoc = snapshot.docs.cast<QueryDocumentSnapshot?>().firstWhere(
+          (doc) {
+            final data = doc?.data() as Map<String, dynamic>?;
+            return data?['status'] == 'active' && data?['uid2'] != null;
+          },
+          orElse: () => null,
+        );
+        final target = activeDoc ?? snapshot.docs.first;
+        final model = RelationshipModel.fromFirestore(
+          target.data() as Map<String, dynamic>,
+          id: target.id,
+        );
+        _cachedRelationship = model;
+        _relationshipStreamController.add(model);
+      } else {
+        _checkDirectUid(uid);
+      }
+    }, onError: (e) {
+      debugPrint('Firestore real-time relationship listener notice: $e');
+    });
+
+    // 2. Supabase Realtime Channel
+    Future<void> fetchAndEmitSupabase() async {
       try {
         final res = await _supabase
             .from('relationships')
             .select()
             .or('uid1.eq.$uid,uid2.eq.$uid,uids.cs.{$uid}');
 
-        if (res.isEmpty) {
-          _cachedRelationship = null;
-          _relationshipStreamController.add(null);
-          return;
-        }
+        if (res.isNotEmpty) {
+          final activeRel = res.firstWhere(
+            (r) => r['status'] == 'active',
+            orElse: () => res.first,
+          );
 
-        final activeRel = res.firstWhere(
-          (r) => r['status'] == 'active',
-          orElse: () => res.first,
-        );
+          final dataMap = activeRel['data'] is Map
+              ? Map<String, dynamic>.from(activeRel['data'] as Map)
+              : <String, dynamic>{};
+          dataMap['id'] = activeRel['id'];
+          dataMap['uid1'] = activeRel['uid1'];
+          dataMap['uid2'] = activeRel['uid2'];
+          dataMap['status'] = activeRel['status'];
+          dataMap['inviteCode'] = activeRel['invite_code'];
 
-        final dataMap = activeRel['data'] is Map
-            ? Map<String, dynamic>.from(activeRel['data'] as Map)
-            : <String, dynamic>{};
-        dataMap['id'] = activeRel['id'];
-        dataMap['uid1'] = activeRel['uid1'];
-        dataMap['uid2'] = activeRel['uid2'];
-        dataMap['status'] = activeRel['status'];
-        dataMap['inviteCode'] = activeRel['invite_code'];
-
-        final model = RelationshipModel.fromFirestoreMap(dataMap, id: activeRel['id']?.toString());
-        _cachedRelationship = model;
-        _relationshipStreamController.add(model);
-      } catch (e) {
-        debugPrint('Supabase streamRelationship fetch warning: $e');
-        try {
-          final snap = await _relationships.where('uids', arrayContains: uid).get();
-          if (snap.docs.isNotEmpty) {
-            final activeDoc = snap.docs.cast<QueryDocumentSnapshot?>().firstWhere(
-              (doc) => (doc?.data() as Map<String, dynamic>?)?['status'] == 'active',
-              orElse: () => null,
-            );
-            final target = activeDoc ?? snap.docs.first;
-            final model = RelationshipModel.fromFirestore(target.data() as Map<String, dynamic>, id: target.id);
+          final model = RelationshipModel.fromFirestoreMap(dataMap, id: activeRel['id']?.toString());
+          if (_cachedRelationship == null || _cachedRelationship?.status != 'active' || model.status == 'active') {
             _cachedRelationship = model;
             _relationshipStreamController.add(model);
-            return;
           }
-        } catch (_) {}
-        if (_cachedRelationship == null) {
-          _relationshipStreamController.add(null);
         }
-      }
-    }
-
-    fetchAndEmit();
-
-    if (_subscribedRelUid != uid) {
-      _subscribedRelUid = uid;
-      _relationshipChannel?.unsubscribe();
-      try {
-        _relationshipChannel = _supabase
-            .channel('rel_stream_$uid')
-            .onPostgresChanges(
-              event: PostgresChangeEvent.all,
-              schema: 'public',
-              table: 'relationships',
-              callback: (payload) {
-                fetchAndEmit();
-              },
-            )
-            .subscribe();
       } catch (e) {
-        debugPrint('Realtime channel subscription warning: $e');
+        debugPrint('Supabase streamRelationship notice: $e');
       }
     }
+
+    fetchAndEmitSupabase();
+
+    _relationshipChannel?.unsubscribe();
+    try {
+      _relationshipChannel = _supabase
+          .channel('rel_stream_$uid')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'relationships',
+            callback: (payload) => fetchAndEmitSupabase(),
+          )
+          .subscribe();
+    } catch (_) {}
+  }
+
+  static void _checkDirectUid(String uid) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('relationships')
+          .where('uid1', isEqualTo: uid)
+          .limit(1)
+          .get();
+      if (snap.docs.isNotEmpty) {
+        final doc = snap.docs.first;
+        final model = RelationshipModel.fromFirestore(doc.data(), id: doc.id);
+        _cachedRelationship = model;
+        _relationshipStreamController.add(model);
+        return;
+      }
+      final snap2 = await FirebaseFirestore.instance
+          .collection('relationships')
+          .where('uid2', isEqualTo: uid)
+          .limit(1)
+          .get();
+      if (snap2.docs.isNotEmpty) {
+        final doc = snap2.docs.first;
+        final model = RelationshipModel.fromFirestore(doc.data(), id: doc.id);
+        _cachedRelationship = model;
+        _relationshipStreamController.add(model);
+        return;
+      }
+      _cachedRelationship = null;
+      _relationshipStreamController.add(null);
+    } catch (_) {}
   }
 
 
