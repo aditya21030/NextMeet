@@ -618,6 +618,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  static String _cleanCityName(String raw) {
+    if (raw.trim().isEmpty) return '';
+    final firstPart = raw.split(RegExp(r'[,;\n]')).first.trim();
+    return firstPart.isNotEmpty ? firstPart : raw.trim();
+  }
+
   // Page 18: Paired Home Dashboard
   Widget _buildPairedHomeScreen(RelationshipModel rel) {
     final currentUid = AuthService().currentUser?.uid;
@@ -625,8 +631,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final partnerName = rel.getPartnerName(currentUid);
     final rawMyCity = rel.getMyLocation(currentUid);
     final rawPartnerCity = rel.getPartnerLocation(currentUid);
-    final myCity = rawMyCity.split(',').first.trim();
-    final partnerCity = rawPartnerCity.split(',').first.trim();
+    final myCity = _cleanCityName(rawMyCity);
+    final partnerCity = _cleanCityName(rawPartnerCity);
     final partnerBattery = rel.getPartnerBattery(currentUid) ?? 85;
     final partnerTimezone = rel.getPartnerTimezoneOffset(currentUid);
     final streak = rel.streakCount;
@@ -975,17 +981,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 12),
                   // Dotted Arc Flight Path between pins with City Labels
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      SizedBox(
-                        width: 80,
+                      Expanded(
+                        flex: 3,
                         child: Column(
                           children: [
                             Icon(Icons.location_on_rounded, color: ThemeService.instance.primaryColor, size: 24),
                             const SizedBox(height: 2),
                             Text(
                               myCity.isNotEmpty ? myCity : 'You',
-                              style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700),
+                              style: AppTextStyles.caption.copyWith(fontSize: 12, fontWeight: FontWeight.w700),
                               maxLines: 1,
                               textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,
@@ -994,14 +999,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Expanded(
+                        flex: 4,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
                               Row(
                                 children: List.generate(
-                                  16,
+                                  12,
                                   (index) => Expanded(
                                     child: Container(
                                       height: 2,
@@ -1019,15 +1025,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(
-                        width: 80,
+                      Expanded(
+                        flex: 3,
                         child: Column(
                           children: [
                             const Icon(Icons.location_on_rounded, color: AppColors.partner, size: 24),
                             const SizedBox(height: 2),
                             Text(
                               partnerCity.isNotEmpty ? partnerCity : partnerName,
-                              style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700),
+                              style: AppTextStyles.caption.copyWith(fontSize: 12, fontWeight: FontWeight.w700),
                               maxLines: 1,
                               textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,

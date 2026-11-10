@@ -106,7 +106,7 @@ class CoupleLevelScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    const TwoMascotsRow(
+                    TwoMascotsRow(
                       spacing: 16,
                       leftAccessory: MascotAccessory.crown,
                       rightAccessory: MascotAccessory.none,

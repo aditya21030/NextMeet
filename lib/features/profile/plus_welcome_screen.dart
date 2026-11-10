@@ -22,7 +22,7 @@ class PlusWelcomeScreen extends StatelessWidget {
               const SizedBox(height: 28),
 
               // Crown Mascots with Stars
-              const TwoMascotsRow(
+              TwoMascotsRow(
                 spacing: 24,
                 leftAccessory: MascotAccessory.crown,
                 rightAccessory: MascotAccessory.crown,

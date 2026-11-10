@@ -82,7 +82,7 @@ class GameWinModal extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Two Mascots with Party Hats (Page 54)
-          const TwoMascotsRow(
+          TwoMascotsRow(
             spacing: 20,
             leftAccessory: MascotAccessory.crown,
             rightAccessory: MascotAccessory.partyHat,

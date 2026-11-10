@@ -6,6 +6,7 @@ import '../../core/constants.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/models/relationship_model.dart';
+import '../../core/services/theme_service.dart';
 import '../../widgets/flat_components.dart';
 import 'unpair_confirmation_modal.dart';
 
@@ -41,7 +42,7 @@ class PartnerDetailsScreen extends StatelessWidget {
         : 'Nearby';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ThemeService.instance.backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
@@ -92,10 +93,10 @@ class PartnerDetailsScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    const MascotHeart(
-                      color: MascotColor.violet,
+                    MascotHeart(
+                      color: ThemeService.instance.partnerMascotColor,
                       size: 80,
-                      accessory: MascotAccessory.crown,
+                      accessory: ThemeService.instance.partnerMascotAccessory,
                     ),
                     const SizedBox(height: 16),
                     Text(

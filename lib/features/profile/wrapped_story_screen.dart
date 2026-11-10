@@ -233,7 +233,7 @@ class _WrappedStoryScreenState extends State<WrappedStoryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const TwoMascotsRow(
+          TwoMascotsRow(
             spacing: 24,
             leftAccessory: MascotAccessory.partyHat,
             rightAccessory: MascotAccessory.partyHat,
@@ -487,7 +487,7 @@ class _WrappedStoryScreenState extends State<WrappedStoryScreen> {
               ),
               child: Column(
                 children: [
-                  const TwoMascotsRow(
+                  TwoMascotsRow(
                     spacing: 16,
                     leftAccessory: MascotAccessory.crown,
                     rightAccessory: MascotAccessory.crown,

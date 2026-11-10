@@ -236,7 +236,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -288,7 +288,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
               _stepItem(4, 'Select "${currentItem['title']}" and place it on your screen!'),
               const SizedBox(height: 20),
               PrimaryButton(
-                text: 'Apply "${currentItem['title']}" to Widget ✨',
+                text: 'Apply Widget to Home Screen ✨',
                 isLoading: _isSyncing,
                 onPressed: () {
                   Navigator.pop(ctx);

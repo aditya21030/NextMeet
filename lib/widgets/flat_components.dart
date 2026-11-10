@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
+import '../core/services/theme_service.dart';
 
 enum MascotColor { pink, violet, butter, mint }
 enum MascotAccessory { none, partyHat, cap, crown }
@@ -45,7 +46,7 @@ class MascotHeart extends StatelessWidget {
     if (leanLeft) rotation = -0.12;
 
     final bool hasAccessory = accessory != MascotAccessory.none;
-    final double accessoryHeadroom = hasAccessory ? size * 0.32 : 0.0;
+    final double accessoryHeadroom = hasAccessory ? size * 0.36 : 0.0;
 
     return Padding(
       padding: EdgeInsets.only(top: accessoryHeadroom),
@@ -67,7 +68,7 @@ class MascotHeart extends StatelessWidget {
               ),
               if (hasAccessory)
                 Positioned(
-                  top: -size * 0.22,
+                  top: -size * 0.18,
                   child: _buildAccessory(size),
                 ),
             ],
@@ -223,24 +224,54 @@ class _CrownPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
+    // Margin so strokes and jewel tips never get clipped by bounds
+    const double padX = 1.5;
+    const double padTop = 3.0;
+    const double padBottom = 1.0;
+
     final crownPath = Path();
-    crownPath.moveTo(0, h);
-    crownPath.lineTo(0, h * 0.3);
-    crownPath.lineTo(w * 0.25, h * 0.6);
-    crownPath.lineTo(w * 0.5, 0);
-    crownPath.lineTo(w * 0.75, h * 0.6);
-    crownPath.lineTo(w, h * 0.3);
-    crownPath.lineTo(w, h);
+    crownPath.moveTo(padX, h - padBottom);
+    crownPath.lineTo(padX, h * 0.35);
+    crownPath.lineTo(w * 0.28, h * 0.62);
+    crownPath.lineTo(w * 0.5, padTop + 2.0);
+    crownPath.lineTo(w * 0.72, h * 0.62);
+    crownPath.lineTo(w - padX, h * 0.35);
+    crownPath.lineTo(w - padX, h - padBottom);
     crownPath.close();
 
+    // 1. Fill base crown
     final crownPaint = Paint()..color = AppColors.butter;
     canvas.drawPath(crownPath, crownPaint);
 
+    // 2. Outline with clean ink border
     final strokePaint = Paint()
       ..color = AppColors.ink
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeWidth = 1.5
+      ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(crownPath, strokePaint);
+
+    // 3. Gold tips / spheres on the 3 peaks
+    final goldBallPaint = Paint()..color = const Color(0xFFFFB800);
+    final goldBallStroke = Paint()
+      ..color = AppColors.ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    void drawTip(Offset offset, double radius) {
+      canvas.drawCircle(offset, radius, goldBallPaint);
+      canvas.drawCircle(offset, radius, goldBallStroke);
+    }
+
+    drawTip(Offset(padX + 0.5, h * 0.35), 2.2);
+    drawTip(Offset(w * 0.5, padTop + 2.0), 3.0);
+    drawTip(Offset(w - padX - 0.5, h * 0.35), 2.2);
+
+    // 4. Subtle jewel accents on the crown band
+    final bandY = h - padBottom - 3.0;
+    canvas.drawCircle(Offset(w * 0.32, bandY), 1.5, Paint()..color = const Color(0xFFEF4444)); // Ruby
+    canvas.drawCircle(Offset(w * 0.50, bandY), 1.8, Paint()..color = const Color(0xFF3B82F6)); // Sapphire
+    canvas.drawCircle(Offset(w * 0.68, bandY), 1.5, Paint()..color = const Color(0xFF10B981)); // Emerald
   }
 
   @override
@@ -287,8 +318,8 @@ class _CapPainter extends CustomPainter {
 /// The Iconic Leaning Two Hearts Lockup (Pink & Violet)
 class TwoMascotsRow extends StatelessWidget {
   final double size;
-  final MascotColor leftColor;
-  final MascotColor rightColor;
+  final MascotColor? leftColor;
+  final MascotColor? rightColor;
   final MascotAccessory leftAccessory;
   final MascotAccessory rightAccessory;
   final double spacing;
@@ -296,8 +327,8 @@ class TwoMascotsRow extends StatelessWidget {
   const TwoMascotsRow({
     super.key,
     this.size = 80.0,
-    this.leftColor = MascotColor.pink,
-    this.rightColor = MascotColor.violet,
+    this.leftColor,
+    this.rightColor,
     this.leftAccessory = MascotAccessory.none,
     this.rightAccessory = MascotAccessory.none,
     this.spacing = 8.0,
@@ -305,20 +336,23 @@ class TwoMascotsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveLeft = leftColor ?? ThemeService.instance.myMascotColor;
+    final effectiveRight = rightColor ?? ThemeService.instance.partnerMascotColor;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         MascotHeart(
-          color: leftColor,
+          color: effectiveLeft,
           size: size,
           leanRight: true,
           accessory: leftAccessory,
         ),
         SizedBox(width: spacing),
         MascotHeart(
-          color: rightColor,
+          color: effectiveRight,
           size: size,
           leanLeft: true,
           accessory: rightAccessory,

@@ -3,6 +3,7 @@ import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/flat_components.dart';
+import '../../core/services/theme_service.dart';
 
 /// NextMeet Level-Up Celebration Modal
 /// Strictly following NextMeet Redesign.pdf (Page 57)
@@ -34,26 +35,29 @@ class LevelUpModal extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.hero)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Drag handle
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(2),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // Two Mascots with Crowns (Page 57)
-          const TwoMascotsRow(
-            spacing: 20,
-            leftAccessory: MascotAccessory.crown,
-            rightAccessory: MascotAccessory.crown,
-          ),
+            // Two Mascots with Crowns (Page 57)
+            TwoMascotsRow(
+              spacing: 20,
+              leftColor: ThemeService.instance.myMascotColor,
+              rightColor: ThemeService.instance.partnerMascotColor,
+              leftAccessory: MascotAccessory.crown,
+              rightAccessory: MascotAccessory.crown,
+            ),
 
           const SizedBox(height: 18),
 
@@ -127,6 +131,7 @@ class LevelUpModal extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

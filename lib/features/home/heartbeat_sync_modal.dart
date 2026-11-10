@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
+import '../../core/services/theme_service.dart';
 import '../../core/services/vibration_service.dart';
 import '../../widgets/flat_components.dart';
 
@@ -64,7 +65,7 @@ class _HeartbeatSyncModalState extends State<HeartbeatSyncModal> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary, // Immersive Glowing Pink Canvas (Page 19)
+      backgroundColor: ThemeService.instance.primaryColor, // Immersive Glowing Canvas
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -149,9 +150,19 @@ class _HeartbeatSyncModalState extends State<HeartbeatSyncModal> with SingleTick
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const MascotHeart(color: MascotColor.pink, size: 84, leanRight: true),
+                MascotHeart(
+                  color: ThemeService.instance.myMascotColor,
+                  size: 84,
+                  leanRight: true,
+                  accessory: ThemeService.instance.myMascotAccessory,
+                ),
                 const SizedBox(width: 48),
-                const MascotHeart(color: MascotColor.violet, size: 84, leanLeft: true),
+                MascotHeart(
+                  color: ThemeService.instance.partnerMascotColor,
+                  size: 84,
+                  leanLeft: true,
+                  accessory: ThemeService.instance.partnerMascotAccessory,
+                ),
               ],
             ),
 

@@ -45,7 +45,7 @@ class MilestoneUnlockedModal extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Celebratory Mascots with Party Hats (Page 38)
-          const TwoMascotsRow(
+          TwoMascotsRow(
             spacing: 24,
             leftAccessory: MascotAccessory.partyHat,
             rightAccessory: MascotAccessory.partyHat,
