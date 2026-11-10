@@ -115,10 +115,14 @@ class _AppCustomiseScreenState extends State<AppCustomiseScreen> {
     });
   }
 
-  Future<void> _saveCustomization(String? relId) async {
+  Future<void> _saveCustomization(RelationshipModel? rel) async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
     VibrationService.success();
+
+    final relId = rel?.id;
+    final currentUid = AuthService().currentUid;
+    final isUser2 = (currentUid != null && currentUid == rel?.uid2);
 
     await ThemeService.instance.setCustomization(
       themeIndex: _selectedThemeIndex,
@@ -130,13 +134,29 @@ class _AppCustomiseScreenState extends State<AppCustomiseScreen> {
 
     if (relId != null && relId != 'default_rel') {
       try {
-        await _cloudService.updateRelationshipDetails(relId, {
-          'mascotColor': _myColor.name,
-          'mascotAccessory': _myAccessory.name,
-          'partnerMascotColor': _partnerColor.name,
-          'partnerMascotAccessory': _partnerAccessory.name,
+        final updateMap = <String, dynamic>{
           'themeIndex': _selectedThemeIndex,
-        });
+        };
+
+        if (isUser2) {
+          updateMap['user2MascotColor'] = _myColor.name;
+          updateMap['user2MascotAccessory'] = _myAccessory.name;
+          updateMap['user1MascotColor'] = _partnerColor.name;
+          updateMap['user1MascotAccessory'] = _partnerAccessory.name;
+          // Backwards compatibility keys
+          updateMap['partnerMascotColor'] = _myColor.name;
+          updateMap['mascotColor'] = _partnerColor.name;
+        } else {
+          updateMap['user1MascotColor'] = _myColor.name;
+          updateMap['user1MascotAccessory'] = _myAccessory.name;
+          updateMap['user2MascotColor'] = _partnerColor.name;
+          updateMap['user2MascotAccessory'] = _partnerAccessory.name;
+          // Backwards compatibility keys
+          updateMap['mascotColor'] = _myColor.name;
+          updateMap['partnerMascotColor'] = _partnerColor.name;
+        }
+
+        await _cloudService.updateRelationshipDetails(relId, updateMap);
       } catch (_) {}
     }
 
@@ -203,7 +223,7 @@ class _AppCustomiseScreenState extends State<AppCustomiseScreen> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: _isSaving ? null : () => _saveCustomization(rel?.id),
+                            onTap: _isSaving ? null : () => _saveCustomization(rel),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
@@ -634,7 +654,7 @@ class _AppCustomiseScreenState extends State<AppCustomiseScreen> {
                             PrimaryButton(
                               text: 'Save Customization ✨',
                               isLoading: _isSaving,
-                              onPressed: () => _saveCustomization(rel?.id),
+                              onPressed: () => _saveCustomization(rel),
                             ),
 
                             const SizedBox(height: 28),

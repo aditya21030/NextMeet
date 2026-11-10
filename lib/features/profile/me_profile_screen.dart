@@ -39,6 +39,12 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
       stream: _cloudService.streamRelationship(),
       builder: (context, snapshot) {
         final rel = snapshot.data;
+        if (rel != null) {
+          ThemeService.instance.syncFromRelationshipData(
+            rel.toFirestore(),
+            currentUid: _cloudService.currentUid,
+          );
+        }
         final currentUid = _cloudService.currentUid;
         final myName = rel?.getMyName(currentUid) ?? 'You';
         final partnerName = rel?.getPartnerName(currentUid) ?? 'Partner';

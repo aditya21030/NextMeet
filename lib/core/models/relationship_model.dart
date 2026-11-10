@@ -120,6 +120,17 @@ class RelationshipModel {
   final Map<String, dynamic> dailyScratchNotes;
   final int coupleXp;
 
+  // Mascot & Theme Customizations
+  final int? themeIndex;
+  final String? user1MascotColor;
+  final String? user1MascotAccessory;
+  final String? user2MascotColor;
+  final String? user2MascotAccessory;
+  final String? mascotColor;
+  final String? mascotAccessory;
+  final String? partnerMascotColor;
+  final String? partnerMascotAccessory;
+
   RelationshipModel({
     this.id,
     this.uid1,
@@ -209,7 +220,37 @@ class RelationshipModel {
     this.dailyAnswers = const {},
     this.dailyScratchNotes = const {},
     this.coupleXp = 0,
+    this.themeIndex,
+    this.user1MascotColor,
+    this.user1MascotAccessory,
+    this.user2MascotColor,
+    this.user2MascotAccessory,
+    this.mascotColor,
+    this.mascotAccessory,
+    this.partnerMascotColor,
+    this.partnerMascotAccessory,
   });
+
+  // Mascot & Theme Customization Helpers
+  String? getMyMascotColor(String? currentUid) {
+    final isU2 = currentUid != null && currentUid == uid2;
+    return isU2 ? (user2MascotColor ?? partnerMascotColor) : (user1MascotColor ?? mascotColor);
+  }
+
+  String? getMyMascotAccessory(String? currentUid) {
+    final isU2 = currentUid != null && currentUid == uid2;
+    return isU2 ? (user2MascotAccessory ?? partnerMascotAccessory) : (user1MascotAccessory ?? mascotAccessory);
+  }
+
+  String? getPartnerMascotColor(String? currentUid) {
+    final isU2 = currentUid != null && currentUid == uid2;
+    return isU2 ? (user1MascotColor ?? mascotColor) : (user2MascotColor ?? partnerMascotColor);
+  }
+
+  String? getPartnerMascotAccessory(String? currentUid) {
+    final isU2 = currentUid != null && currentUid == uid2;
+    return isU2 ? (user1MascotAccessory ?? mascotAccessory) : (user2MascotAccessory ?? partnerMascotAccessory);
+  }
 
   // Battery Helpers
   int? getPartnerBattery(String? currentUid) => currentUid == uid1 ? user2Battery : user1Battery;
@@ -519,6 +560,15 @@ class RelationshipModel {
       dailyAnswers: map['dailyAnswers'] is Map ? Map<String, dynamic>.from(map['dailyAnswers'] as Map) : const {},
       dailyScratchNotes: map['dailyScratchNotes'] is Map ? Map<String, dynamic>.from(map['dailyScratchNotes'] as Map) : const {},
       coupleXp: (map['coupleXp'] as num?)?.toInt() ?? 0,
+      themeIndex: (map['themeIndex'] as num?)?.toInt(),
+      user1MascotColor: map['user1MascotColor'],
+      user1MascotAccessory: map['user1MascotAccessory'],
+      user2MascotColor: map['user2MascotColor'],
+      user2MascotAccessory: map['user2MascotAccessory'],
+      mascotColor: map['mascotColor'],
+      mascotAccessory: map['mascotAccessory'],
+      partnerMascotColor: map['partnerMascotColor'],
+      partnerMascotAccessory: map['partnerMascotAccessory'],
     );
   }
 
@@ -611,6 +661,15 @@ class RelationshipModel {
       'dailyAnswers': dailyAnswers,
       'dailyScratchNotes': dailyScratchNotes,
       'coupleXp': coupleXp,
+      'themeIndex': themeIndex,
+      'user1MascotColor': user1MascotColor,
+      'user1MascotAccessory': user1MascotAccessory,
+      'user2MascotColor': user2MascotColor,
+      'user2MascotAccessory': user2MascotAccessory,
+      'mascotColor': mascotColor,
+      'mascotAccessory': mascotAccessory,
+      'partnerMascotColor': partnerMascotColor,
+      'partnerMascotAccessory': partnerMascotAccessory,
     };
   }
 
@@ -727,6 +786,15 @@ class RelationshipModel {
     Map<String, dynamic>? dailyAnswers,
     Map<String, dynamic>? dailyScratchNotes,
     int? coupleXp,
+    int? themeIndex,
+    String? user1MascotColor,
+    String? user1MascotAccessory,
+    String? user2MascotColor,
+    String? user2MascotAccessory,
+    String? mascotColor,
+    String? mascotAccessory,
+    String? partnerMascotColor,
+    String? partnerMascotAccessory,
   }) {
     return RelationshipModel(
       id: id ?? this.id,
@@ -817,6 +885,15 @@ class RelationshipModel {
       dailyAnswers: dailyAnswers ?? this.dailyAnswers,
       dailyScratchNotes: dailyScratchNotes ?? this.dailyScratchNotes,
       coupleXp: coupleXp ?? this.coupleXp,
+      themeIndex: themeIndex ?? this.themeIndex,
+      user1MascotColor: user1MascotColor ?? this.user1MascotColor,
+      user1MascotAccessory: user1MascotAccessory ?? this.user1MascotAccessory,
+      user2MascotColor: user2MascotColor ?? this.user2MascotColor,
+      user2MascotAccessory: user2MascotAccessory ?? this.user2MascotAccessory,
+      mascotColor: mascotColor ?? this.mascotColor,
+      mascotAccessory: mascotAccessory ?? this.mascotAccessory,
+      partnerMascotColor: partnerMascotColor ?? this.partnerMascotColor,
+      partnerMascotAccessory: partnerMascotAccessory ?? this.partnerMascotAccessory,
     );
   }
 }

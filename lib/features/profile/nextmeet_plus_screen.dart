@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
+import '../../core/services/theme_service.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/flat_components.dart';
 import 'plus_welcome_screen.dart';
@@ -112,12 +113,15 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
+    return ListenableBuilder(
+      listenable: ThemeService.instance,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: ThemeService.instance.backgroundColor,
+          body: SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
             // Modern Top Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
@@ -156,7 +160,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                     },
                     child: Text(
                       'Manage',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800),
+                      style: AppTextStyles.caption.copyWith(color: ThemeService.instance.primaryColor, fontWeight: FontWeight.w800),
                     ),
                   ),
                 ],
@@ -178,8 +182,10 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                     Center(
                       child: Column(
                         children: [
-                          const TwoMascotsRow(
+                          TwoMascotsRow(
                             spacing: 16,
+                            leftColor: ThemeService.instance.myMascotColor,
+                            rightColor: ThemeService.instance.partnerMascotColor,
                             leftAccessory: MascotAccessory.crown,
                             rightAccessory: MascotAccessory.crown,
                           ),
@@ -200,13 +206,13 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: AppColors.pinkSoft,
+                        color: ThemeService.instance.softColor,
                         borderRadius: BorderRadius.circular(AppRadius.card),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25), width: 1.5),
+                        border: Border.all(color: ThemeService.instance.primaryColor.withValues(alpha: 0.25), width: 1.5),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 22),
+                          Icon(Icons.favorite_rounded, color: ThemeService.instance.primaryColor, size: 22),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -214,7 +220,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                               children: [
                                 Text(
                                   'The Golden Couple Rule 🌟',
-                                  style: AppTextStyles.heading.copyWith(fontSize: 13, color: AppColors.primary),
+                                  style: AppTextStyles.heading.copyWith(fontSize: 13, color: ThemeService.instance.primaryColor),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -250,7 +256,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                         _buildPlanCard(
                           choice: PlusPlanChoice.annual,
                           badge: 'SAVE 17% 👑',
-                          badgeBg: AppColors.primary,
+                          badgeBg: ThemeService.instance.primaryColor,
                           badgeColor: Colors.white,
                           title: 'Annual',
                           price: '₹499',
@@ -341,6 +347,8 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
         ),
       ),
     );
+      },
+    );
   }
 
   String _getCtaText() {
@@ -377,10 +385,10 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.pinkSoft.withValues(alpha: 0.85) : Colors.white,
+            color: isSelected ? ThemeService.instance.softColor.withValues(alpha: 0.85) : Colors.white,
             borderRadius: BorderRadius.circular(AppRadius.card),
             border: Border.all(
-              color: isSelected ? AppColors.primary : AppColors.border,
+              color: isSelected ? ThemeService.instance.primaryColor : AppColors.border,
               width: isSelected ? 2.0 : 1.5,
             ),
           ),
@@ -408,7 +416,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                   price,
                   style: AppTextStyles.title1.copyWith(
                     fontSize: 17,
-                    color: isSelected ? AppColors.primary : AppColors.ink,
+                    color: isSelected ? ThemeService.instance.primaryColor : AppColors.ink,
                   ),
                 ),
               ),
@@ -424,7 +432,7 @@ class _NextMeetPlusScreenState extends State<NextMeetPlusScreen> {
                 child: Text(
                   subtitle,
                   style: AppTextStyles.caption.copyWith(
-                    color: isSelected ? AppColors.primary : AppColors.muted,
+                    color: isSelected ? ThemeService.instance.primaryColor : AppColors.muted,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                   ),

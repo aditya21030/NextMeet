@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/flat_components.dart';
+import 'auth_service.dart';
 
 /// NextMeet Central Theme & Mascot Customization Service
 /// Controls dynamic app theming and couple mascot accessories across the entire app
@@ -139,20 +140,40 @@ class ThemeService extends ChangeNotifier {
     if (changed) notifyListeners();
   }
 
-  /// Sync live values from shared Firestore relationship document
-  void syncFromRelationshipData(Map<String, dynamic> data) {
+  /// Sync live values from shared Firestore relationship document with User 1 / User 2 awareness
+  void syncFromRelationshipData(Map<String, dynamic> data, {String? currentUid}) {
     bool changed = false;
 
-    if (data['themeIndex'] is int) {
-      final t = (data['themeIndex'] as int).clamp(0, 3);
+    if (data['themeIndex'] is num) {
+      final t = (data['themeIndex'] as num).toInt().clamp(0, 3);
       if (t != _themeIndex) {
         _themeIndex = t;
         changed = true;
       }
     }
-    if (data['mascotColor'] is String) {
+
+    final effectiveUid = currentUid ?? AuthService().currentUid;
+    final isUser2 = (effectiveUid != null && effectiveUid == data['uid2']);
+
+    final myColorStr = (isUser2
+            ? (data['user2MascotColor'] ?? data['partnerMascotColor'])
+            : (data['user1MascotColor'] ?? data['mascotColor'])) as String?;
+
+    final myAccStr = (isUser2
+            ? (data['user2MascotAccessory'] ?? data['partnerMascotAccessory'])
+            : (data['user1MascotAccessory'] ?? data['mascotAccessory'])) as String?;
+
+    final partnerColorStr = (isUser2
+            ? (data['user1MascotColor'] ?? data['mascotColor'])
+            : (data['user2MascotColor'] ?? data['partnerMascotColor'])) as String?;
+
+    final partnerAccStr = (isUser2
+            ? (data['user1MascotAccessory'] ?? data['mascotAccessory'])
+            : (data['user2MascotAccessory'] ?? data['partnerMascotAccessory'])) as String?;
+
+    if (myColorStr != null) {
       final c = MascotColor.values.firstWhere(
-        (e) => e.name == data['mascotColor'],
+        (e) => e.name == myColorStr,
         orElse: () => _myMascotColor,
       );
       if (c != _myMascotColor) {
@@ -160,9 +181,10 @@ class ThemeService extends ChangeNotifier {
         changed = true;
       }
     }
-    if (data['mascotAccessory'] is String) {
+
+    if (myAccStr != null) {
       final a = MascotAccessory.values.firstWhere(
-        (e) => e.name == data['mascotAccessory'],
+        (e) => e.name == myAccStr,
         orElse: () => _myMascotAccessory,
       );
       if (a != _myMascotAccessory) {
@@ -170,9 +192,10 @@ class ThemeService extends ChangeNotifier {
         changed = true;
       }
     }
-    if (data['partnerMascotColor'] is String) {
+
+    if (partnerColorStr != null) {
       final c = MascotColor.values.firstWhere(
-        (e) => e.name == data['partnerMascotColor'],
+        (e) => e.name == partnerColorStr,
         orElse: () => _partnerMascotColor,
       );
       if (c != _partnerMascotColor) {
@@ -180,9 +203,10 @@ class ThemeService extends ChangeNotifier {
         changed = true;
       }
     }
-    if (data['partnerMascotAccessory'] is String) {
+
+    if (partnerAccStr != null) {
       final a = MascotAccessory.values.firstWhere(
-        (e) => e.name == data['partnerMascotAccessory'],
+        (e) => e.name == partnerAccStr,
         orElse: () => _partnerMascotAccessory,
       );
       if (a != _partnerMascotAccessory) {

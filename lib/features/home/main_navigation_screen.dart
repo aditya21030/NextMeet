@@ -98,7 +98,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       stream: _cloudService.streamRelationship(),
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
-          ThemeService.instance.syncFromRelationshipData(snapshot.data!.toFirestore());
+          ThemeService.instance.syncFromRelationshipData(
+            snapshot.data!.toFirestore(),
+            currentUid: _cloudService.currentUid,
+          );
         }
 
         return ListenableBuilder(

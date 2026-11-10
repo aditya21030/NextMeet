@@ -224,6 +224,13 @@ class _HomeScreenState extends State<HomeScreen> {
             final rel = snapshot.data;
             final isPaired = rel != null && rel.uid2 != null && rel.status != 'waiting';
 
+            if (rel != null) {
+              ThemeService.instance.syncFromRelationshipData(
+                rel.toFirestore(),
+                currentUid: _cloudService.currentUid,
+              );
+            }
+
             if (isPaired && rel != null && (_lastWidgetSyncTime == null || DateTime.now().difference(_lastWidgetSyncTime!).inMinutes >= 2)) {
               _lastWidgetSyncTime = DateTime.now();
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -338,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final inviteCode = rel?.inviteCode ?? '------';
 
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: ThemeService.instance.primaryColor,
       backgroundColor: Colors.white,
       onRefresh: () async {
         VibrationService.light();
@@ -360,10 +367,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: AppColors.pinkSoft,
+                      backgroundColor: ThemeService.instance.softColor,
                       child: Text(
                         myName.isNotEmpty ? myName[0].toUpperCase() : 'A',
-                        style: AppTextStyles.heading.copyWith(color: AppColors.primary),
+                        style: AppTextStyles.heading.copyWith(color: ThemeService.instance.primaryColor),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -641,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: ThemeService.instance.primaryColor,
       backgroundColor: Colors.white,
       onRefresh: () async {
         VibrationService.light();
@@ -667,10 +674,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: AppColors.pinkSoft,
+                      backgroundColor: ThemeService.instance.softColor,
                       child: Text(
                         myName.isNotEmpty ? myName[0].toUpperCase() : 'A',
-                        style: AppTextStyles.heading.copyWith(color: AppColors.primary),
+                        style: AppTextStyles.heading.copyWith(color: ThemeService.instance.primaryColor),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -974,7 +981,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 80,
                         child: Column(
                           children: [
-                            const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 24),
+                            Icon(Icons.location_on_rounded, color: ThemeService.instance.primaryColor, size: 24),
                             const SizedBox(height: 2),
                             Text(
                               myCity.isNotEmpty ? myCity : 'You',
@@ -999,7 +1006,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: Container(
                                       height: 2,
                                       margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                      color: index % 2 == 0 ? AppColors.primary : Colors.transparent,
+                                      color: index % 2 == 0 ? ThemeService.instance.primaryColor : Colors.transparent,
                                     ),
                                   ),
                                 ),
@@ -1082,11 +1089,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         Container(
                           width: 52,
                           height: 52,
-                          decoration: const BoxDecoration(
-                            color: AppColors.pinkSoft,
+                          decoration: BoxDecoration(
+                            color: ThemeService.instance.softColor,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 26),
+                          child: Icon(Icons.favorite_rounded, color: ThemeService.instance.primaryColor, size: 26),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
