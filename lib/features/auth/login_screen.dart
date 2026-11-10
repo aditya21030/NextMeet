@@ -56,7 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text?.trim() ?? '';
-      final match = RegExp(r'\b\d{6}\b').firstMatch(text);
+      final cleanText = text.replaceAll(RegExp(r'[-\s]'), '');
+      final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
       if (match != null && mounted) {
         setState(() {
           _detectedInviteCode = match.group(0);

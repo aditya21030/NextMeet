@@ -3,7 +3,7 @@ import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../widgets/flat_components.dart';
-import '../onboarding/welcome_screen.dart';
+import '../onboarding/setup_couple_screen.dart';
 
 /// NextMeet Unpair Confirmation Bottom Sheet / Dialog
 /// Strictly following NextMeet Redesign.pdf (Page 70)
@@ -53,7 +53,7 @@ class _UnpairConfirmationModalState extends State<UnpairConfirmationModal> {
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+        MaterialPageRoute(builder: (context) => const SetupCoupleScreen()),
         (route) => false,
       );
     } catch (e) {

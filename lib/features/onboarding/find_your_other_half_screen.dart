@@ -11,6 +11,7 @@ import '../../widgets/flat_components.dart';
 import '../../widgets/primary_button.dart';
 import '../home/main_navigation_screen.dart';
 import 'connection_success_screen.dart';
+import '../../core/services/auth_error_handler.dart';
 
 /// Step 3 / 3: Find Your Other Half (Pairing Screen)
 /// Strictly following NextMeet Redesign.pdf (Page 9)
@@ -56,13 +57,30 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
     final rnd = Random();
     _myInviteCode = (100000 + rnd.nextInt(900000)).toString();
 
-    if (widget.initialInviteCode != null && widget.initialInviteCode!.length == 6) {
-      _partnerCodeController.text = widget.initialInviteCode!;
+    final initial = widget.initialInviteCode?.replaceAll(RegExp(r'[-\s]'), '');
+    if (initial != null && initial.length == 6) {
+      _partnerCodeController.text = initial;
     } else {
       _registerJourneyCode();
+      _checkClipboard();
     }
 
     _listenForPartnerJoin();
+  }
+
+  Future<void> _checkClipboard() async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text?.trim() ?? '';
+      final cleanText = text.replaceAll(RegExp(r'[-\s]'), '');
+      final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
+      if (match != null && mounted) {
+        setState(() {
+          _partnerCodeController.text = match.group(0)!;
+        });
+        VibrationService.light();
+      }
+    } catch (_) {}
   }
 
   void _listenForPartnerJoin() {
@@ -133,12 +151,12 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
   }
 
   Future<void> _handleConnect() async {
-    final code = _partnerCodeController.text.trim();
+    final code = _partnerCodeController.text.trim().replaceAll(RegExp(r'[-\s]'), '');
     if (code.length != 6) {
       VibrationService.error();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a valid 6-digit partner code'),
+          content: Text('Please enter a valid 6-digit partner code ❤️'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -173,7 +191,7 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
         VibrationService.error();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not find a journey with that code. Please check and try again.'),
+            content: Text('Could not find a journey with that code. Please check and try again ❤️'),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -182,9 +200,10 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
       if (!mounted) return;
       setState(() => _isConnecting = false);
       VibrationService.error();
+      final friendlyMsg = AuthErrorHandler.getPairingErrorMessage(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error connecting: $e'),
+          content: Text(friendlyMsg),
           backgroundColor: AppColors.danger,
         ),
       );

@@ -11,9 +11,9 @@ class ThemeService extends ChangeNotifier {
 
   int _themeIndex = 0;
   MascotColor _myMascotColor = MascotColor.pink;
-  MascotAccessory _myMascotAccessory = MascotAccessory.partyHat;
+  MascotAccessory _myMascotAccessory = MascotAccessory.none;
   MascotColor _partnerMascotColor = MascotColor.violet;
-  MascotAccessory _partnerMascotAccessory = MascotAccessory.crown;
+  MascotAccessory _partnerMascotAccessory = MascotAccessory.none;
 
   int get themeIndex => _themeIndex;
   MascotColor get myMascotColor => _myMascotColor;
@@ -90,29 +90,32 @@ class ThemeService extends ChangeNotifier {
       final myColorIdx = prefs.getInt('custom_mascot_color') ?? MascotColor.pink.index;
       _myMascotColor = MascotColor.values[myColorIdx.clamp(0, MascotColor.values.length - 1)];
 
-      final myAccIdx = prefs.getInt('custom_mascot_accessory') ?? MascotAccessory.partyHat.index;
+      final myAccIdx = prefs.getInt('custom_mascot_accessory') ?? MascotAccessory.none.index;
       _myMascotAccessory = MascotAccessory.values[myAccIdx.clamp(0, MascotAccessory.values.length - 1)];
 
       final partnerColorIdx = prefs.getInt('partner_mascot_color') ?? MascotColor.violet.index;
       _partnerMascotColor = MascotColor.values[partnerColorIdx.clamp(0, MascotColor.values.length - 1)];
 
-      final partnerAccIdx = prefs.getInt('partner_mascot_accessory') ?? MascotAccessory.crown.index;
+      final partnerAccIdx = prefs.getInt('partner_mascot_accessory') ?? MascotAccessory.none.index;
       _partnerMascotAccessory = MascotAccessory.values[partnerAccIdx.clamp(0, MascotAccessory.values.length - 1)];
 
       notifyListeners();
     } catch (_) {}
   }
 
-  /// Switch theme immediately with listener notification
+  /// Switch theme immediately with listener notification and local persistence
   void setThemeIndex(int index) {
     final clamped = index.clamp(0, 3);
     if (_themeIndex != clamped) {
       _themeIndex = clamped;
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setInt('custom_theme_index', clamped);
+      }).catchError((_) {});
       notifyListeners();
     }
   }
 
-  /// Update my mascot live with listener notification
+  /// Update my mascot live with listener notification and local persistence
   void setMyMascot({MascotColor? color, MascotAccessory? accessory}) {
     bool changed = false;
     if (color != null && color != _myMascotColor) {
@@ -123,10 +126,16 @@ class ThemeService extends ChangeNotifier {
       _myMascotAccessory = accessory;
       changed = true;
     }
-    if (changed) notifyListeners();
+    if (changed) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setInt('custom_mascot_color', _myMascotColor.index);
+        prefs.setInt('custom_mascot_accessory', _myMascotAccessory.index);
+      }).catchError((_) {});
+      notifyListeners();
+    }
   }
 
-  /// Update partner mascot live with listener notification
+  /// Update partner mascot live with listener notification and local persistence
   void setPartnerMascot({MascotColor? color, MascotAccessory? accessory}) {
     bool changed = false;
     if (color != null && color != _partnerMascotColor) {
@@ -137,7 +146,13 @@ class ThemeService extends ChangeNotifier {
       _partnerMascotAccessory = accessory;
       changed = true;
     }
-    if (changed) notifyListeners();
+    if (changed) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setInt('partner_mascot_color', _partnerMascotColor.index);
+        prefs.setInt('partner_mascot_accessory', _partnerMascotAccessory.index);
+      }).catchError((_) {});
+      notifyListeners();
+    }
   }
 
   /// Sync live values from shared Firestore relationship document with User 1 / User 2 awareness

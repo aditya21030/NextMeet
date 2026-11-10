@@ -140,6 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       VibrationService.medium();
                       Navigator.pop(dialogCtx);
                       try {
+                        CloudRelationshipService.clearCache();
                         await AuthService().signOut();
                       } catch (e) {
                         debugPrint('Signout notice: $e');

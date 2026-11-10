@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
@@ -35,8 +36,32 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   bool _isPasswordVisible = false;
   bool _agreedToTerms = false;
   bool _isLoading = false;
+  String? _detectedInviteCode;
 
   final FirebaseAuthService _authService = FirebaseAuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    _detectedInviteCode = widget.initialInviteCode?.replaceAll(RegExp(r'[-\s]'), '');
+    if (_detectedInviteCode == null) {
+      _checkClipboard();
+    }
+  }
+
+  Future<void> _checkClipboard() async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text?.trim() ?? '';
+      final cleanText = text.replaceAll(RegExp(r'[-\s]'), '');
+      final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
+      if (match != null && mounted) {
+        setState(() {
+          _detectedInviteCode = match.group(0);
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -98,7 +123,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
             MaterialPageRoute(
               builder: (context) => TellUsAboutYouScreen(
                 initialName: _nameController.text.trim(),
-                initialInviteCode: widget.initialInviteCode,
+                initialInviteCode: _detectedInviteCode ?? widget.initialInviteCode,
               ),
             ),
           );
@@ -144,7 +169,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           MaterialPageRoute(
             builder: (context) => TellUsAboutYouScreen(
               initialName: user.displayName ?? _nameController.text.trim(),
-              initialInviteCode: widget.initialInviteCode,
+              initialInviteCode: _detectedInviteCode ?? widget.initialInviteCode,
             ),
           ),
         );

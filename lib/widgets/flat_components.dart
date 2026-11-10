@@ -320,8 +320,8 @@ class TwoMascotsRow extends StatelessWidget {
   final double size;
   final MascotColor? leftColor;
   final MascotColor? rightColor;
-  final MascotAccessory leftAccessory;
-  final MascotAccessory rightAccessory;
+  final MascotAccessory? leftAccessory;
+  final MascotAccessory? rightAccessory;
   final double spacing;
 
   const TwoMascotsRow({
@@ -329,8 +329,8 @@ class TwoMascotsRow extends StatelessWidget {
     this.size = 80.0,
     this.leftColor,
     this.rightColor,
-    this.leftAccessory = MascotAccessory.none,
-    this.rightAccessory = MascotAccessory.none,
+    this.leftAccessory,
+    this.rightAccessory,
     this.spacing = 8.0,
   });
 
@@ -338,6 +338,8 @@ class TwoMascotsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveLeft = leftColor ?? ThemeService.instance.myMascotColor;
     final effectiveRight = rightColor ?? ThemeService.instance.partnerMascotColor;
+    final effectiveLeftAcc = leftAccessory ?? ThemeService.instance.myMascotAccessory;
+    final effectiveRightAcc = rightAccessory ?? ThemeService.instance.partnerMascotAccessory;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -348,14 +350,14 @@ class TwoMascotsRow extends StatelessWidget {
           color: effectiveLeft,
           size: size,
           leanRight: true,
-          accessory: leftAccessory,
+          accessory: effectiveLeftAcc,
         ),
         SizedBox(width: spacing),
         MascotHeart(
           color: effectiveRight,
           size: size,
           leanLeft: true,
-          accessory: rightAccessory,
+          accessory: effectiveRightAcc,
         ),
       ],
     );

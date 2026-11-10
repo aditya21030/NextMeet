@@ -562,7 +562,7 @@ class CloudRelationshipService {
     double? lat,
     double? lng,
   }) async {
-    final code = rawCode.trim().replaceAll(RegExp(r'\s+'), '');
+    final code = rawCode.trim().replaceAll(RegExp(r'[-\s]'), '');
     if (_currentUid == null) throw Exception('User not authenticated. Please log in first ❤️');
 
     // 1. Direct active relationship check in Firestore (avoiding stale cache false-positives)
@@ -805,6 +805,7 @@ class CloudRelationshipService {
       } catch (_) {}
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cached_relationship_id');
+      clearCache();
     } catch (e) {
       debugPrint('Error unpairing relationship: $e');
       rethrow;

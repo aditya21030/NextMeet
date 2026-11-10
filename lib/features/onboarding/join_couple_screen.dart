@@ -25,6 +25,7 @@ class _JoinCoupleScreenState extends State<JoinCoupleScreen> {
   final _pinController = TextEditingController();
   final CloudRelationshipService _cloudService = CloudRelationshipService();
   final _focusNode = FocusNode();
+  StreamSubscription? _relSubscription;
   bool _isConnecting = false;
   bool _isCodeAutoDetected = false;
 
@@ -32,11 +33,30 @@ class _JoinCoupleScreenState extends State<JoinCoupleScreen> {
   void initState() {
     super.initState();
     if (widget.initialCode != null && widget.initialCode!.isNotEmpty) {
-      _pinController.text = widget.initialCode!;
+      final sanitized = widget.initialCode!.replaceAll(RegExp(r'[-\s]'), '');
+      _pinController.text = sanitized;
       _isCodeAutoDetected = true;
     } else {
       _checkClipboardForCode();
     }
+    _listenForRelationship();
+  }
+
+  void _listenForRelationship() {
+    _relSubscription?.cancel();
+    _relSubscription = _cloudService.streamRelationship().listen((rel) {
+      if (!mounted) return;
+      if (rel != null && rel.status == 'active' && rel.uid2 != null) {
+        _relSubscription?.cancel();
+        VibrationService.success();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConnectionSuccessScreen(relationship: rel),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _checkClipboardForCode() async {
@@ -44,7 +64,8 @@ class _JoinCoupleScreenState extends State<JoinCoupleScreen> {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text?.trim();
       if (text != null && text.isNotEmpty) {
-        final match = RegExp(r'\b\d{6}\b').firstMatch(text);
+        final cleanText = text.replaceAll(RegExp(r'[-\s]'), '');
+        final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
         if (match != null && mounted) {
           final code = match.group(0)!;
           setState(() {
@@ -59,13 +80,14 @@ class _JoinCoupleScreenState extends State<JoinCoupleScreen> {
 
   @override
   void dispose() {
+    _relSubscription?.cancel();
     _pinController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
   void _handleJoin() async {
-    final code = _pinController.text.trim();
+    final code = _pinController.text.trim().replaceAll(RegExp(r'[-\s]'), '');
     if (code.length != 6) {
       VibrationService.error();
       ScaffoldMessenger.of(context).showSnackBar(

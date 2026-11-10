@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/constants.dart';
 import '../../core/services/vibration_service.dart';
+import '../../core/services/cloud_relationship_service.dart';
+import '../../core/models/relationship_model.dart';
 import '../../widgets/flat_components.dart';
 import '../../widgets/primary_button.dart';
 import 'tell_us_about_you_screen.dart';
 import 'join_couple_screen.dart';
+import 'connection_success_screen.dart';
 
 /// NextMeet Setup Couple Screen
 /// Flat, accessible, zero-friction pairing hub
@@ -21,6 +25,7 @@ class SetupCoupleScreen extends StatefulWidget {
 
 class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
   String? _detectedCode;
+  StreamSubscription<RelationshipModel?>? _relSubscription;
 
   @override
   void initState() {
@@ -29,13 +34,38 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
     if (_detectedCode == null) {
       _checkClipboard();
     }
+    _listenForRelationship();
+  }
+
+  void _listenForRelationship() {
+    _relSubscription?.cancel();
+    _relSubscription = CloudRelationshipService().streamRelationship().listen((rel) {
+      if (!mounted) return;
+      if (rel != null && rel.status == 'active' && rel.uid2 != null) {
+        _relSubscription?.cancel();
+        VibrationService.success();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConnectionSuccessScreen(relationship: rel),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _relSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkClipboard() async {
     try {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text?.trim() ?? '';
-      final match = RegExp(r'\b\d{6}\b').firstMatch(text);
+      final cleanText = text.replaceAll(RegExp(r'[-\s]'), '');
+      final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
       if (match != null && mounted) {
         setState(() {
           _detectedCode = match.group(0);

@@ -51,7 +51,8 @@ class _SplashScreenState extends State<SplashScreen> {
       try {
         final clipData = await Clipboard.getData(Clipboard.kTextPlain);
         final clipText = clipData?.text?.trim() ?? '';
-        final match = RegExp(r'\b\d{6}\b').firstMatch(clipText);
+        final cleanText = clipText.replaceAll(RegExp(r'[-\s]'), '');
+        final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
         if (match != null) {
           detectedCode = match.group(0);
         }
