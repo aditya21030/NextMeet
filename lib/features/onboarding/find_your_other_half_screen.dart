@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -44,7 +43,9 @@ class FindYourOtherHalfScreen extends StatefulWidget {
 }
 
 class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
-  late String _myInviteCode;
+  String _myInviteCode = '------';
+  bool _isGeneratingCode = true;
+  bool _codeGenerationError = false;
   final _partnerCodeController = TextEditingController();
   bool _isConnecting = false;
   final CloudRelationshipService _relService = CloudRelationshipService();
@@ -53,18 +54,14 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
   @override
   void initState() {
     super.initState();
-    // Generate a random 6-digit code or read initial code
-    final rnd = Random();
-    _myInviteCode = (100000 + rnd.nextInt(900000)).toString();
-
     final initial = widget.initialInviteCode?.replaceAll(RegExp(r'[-\s]'), '');
     if (initial != null && initial.length == 6) {
       _partnerCodeController.text = initial;
     } else {
-      _registerJourneyCode();
       _checkClipboard();
     }
 
+    _registerJourneyCode();
     _listenForPartnerJoin();
   }
 
@@ -75,10 +72,13 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
       final cleanText = text.replaceAll(RegExp(r'[-\s]'), '');
       final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
       if (match != null && mounted) {
-        setState(() {
-          _partnerCodeController.text = match.group(0)!;
-        });
-        VibrationService.light();
+        final foundCode = match.group(0)!;
+        if (foundCode != _myInviteCode) {
+          setState(() {
+            _partnerCodeController.text = foundCode;
+          });
+          VibrationService.light();
+        }
       }
     } catch (_) {}
   }
@@ -103,6 +103,12 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
   }
 
   Future<void> _registerJourneyCode() async {
+    if (mounted) {
+      setState(() {
+        _isGeneratingCode = true;
+        _codeGenerationError = false;
+      });
+    }
     try {
       final code = await _relService.createJourney(
         RelationshipModel(
@@ -117,13 +123,22 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
           loveQuote: 'Close, even when you are apart.',
         ),
       );
-      if (mounted) {
-        setState(() {
-          _myInviteCode = code;
-        });
+      if (!mounted) return;
+      setState(() {
+        _myInviteCode = code.length == 6 ? code : '------';
+        _isGeneratingCode = false;
+        _codeGenerationError = code.length != 6;
+      });
+      if (_partnerCodeController.text == _myInviteCode) {
+        _partnerCodeController.clear();
       }
     } catch (e) {
       debugPrint('Error starting journey: $e');
+      if (!mounted) return;
+      setState(() {
+        _isGeneratingCode = false;
+        _codeGenerationError = true;
+      });
     }
   }
 
@@ -134,7 +149,10 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
     super.dispose();
   }
 
+  bool get _hasValidCode => !_isGeneratingCode && _myInviteCode.length == 6 && !_myInviteCode.contains('-');
+
   void _copyCode() {
+    if (!_hasValidCode) return;
     Clipboard.setData(ClipboardData(text: _myInviteCode));
     VibrationService.success();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -146,6 +164,7 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
   }
 
   void _shareCode() {
+    if (!_hasValidCode) return;
     VibrationService.light();
     Share.share(AppLinks.getInviteMessage(_myInviteCode));
   }
@@ -326,78 +345,155 @@ class _FindYourOtherHalfScreenState extends State<FindYourOtherHalfScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Your invite code', style: AppTextStyles.label.copyWith(color: AppColors.ink)),
-                            const SizedBox(height: 12),
-                            // 6 Code Digits
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: _myInviteCode.split('').map((char) {
-                                return Container(
-                                  width: 44,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.background,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: AppColors.border, width: 1.5),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    char,
-                                    style: AppTextStyles.display.copyWith(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.ink,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 14),
-                            // Copy & Share Buttons
-                            Row(
                               children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: _copyCode,
-                                    child: Container(
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.pinkSoft,
-                                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        'Copy',
-                                        style: AppTextStyles.button.copyWith(
-                                          color: AppColors.primary,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
+                                Text('Your invite code', style: AppTextStyles.label.copyWith(color: AppColors.ink)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _codeGenerationError
+                                        ? AppColors.pinkSoft
+                                        : (_isGeneratingCode ? AppColors.butterSoft : AppColors.mintSoft),
+                                    borderRadius: BorderRadius.circular(AppRadius.badge),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: _shareCode,
-                                    child: Container(
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        'Share',
-                                        style: AppTextStyles.button.copyWith(
-                                          color: Colors.white,
-                                          fontSize: 14,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (_isGeneratingCode)
+                                        const SizedBox(
+                                          width: 10,
+                                          height: 10,
+                                          child: CircularProgressIndicator(strokeWidth: 1.8, color: AppColors.butterText),
+                                        )
+                                      else
+                                        Container(
+                                          width: 7,
+                                          height: 7,
+                                          decoration: BoxDecoration(
+                                            color: _codeGenerationError ? AppColors.danger : AppColors.mintText,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _codeGenerationError
+                                            ? 'Offline'
+                                            : (_isGeneratingCode ? 'Creating...' : 'Waiting for partner'),
+                                        style: AppTextStyles.caption.copyWith(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: _codeGenerationError
+                                              ? AppColors.danger
+                                              : (_isGeneratingCode ? AppColors.butterText : AppColors.mintText),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: 12),
+                            // 6 Code Digits
+                            if (_codeGenerationError)
+                              GestureDetector(
+                                onTap: _registerJourneyCode,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.background,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: AppColors.danger.withValues(alpha: 0.4), width: 1.5),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Could not create code. Tap to retry',
+                                        style: AppTextStyles.button.copyWith(color: AppColors.primary, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else
+                              GestureDetector(
+                                onTap: _copyCode,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: _myInviteCode.padRight(6, '-').split('').take(6).map((char) {
+                                    return Container(
+                                      width: 44,
+                                      height: 52,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.background,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: AppColors.border, width: 1.5),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        char,
+                                        style: AppTextStyles.display.copyWith(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w800,
+                                          color: _hasValidCode ? AppColors.ink : AppColors.muted,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            const SizedBox(height: 14),
+                            // Copy & Share Buttons
+                            Opacity(
+                              opacity: _hasValidCode ? 1.0 : 0.45,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: _copyCode,
+                                      child: Container(
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.pinkSoft,
+                                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'Copy',
+                                          style: AppTextStyles.button.copyWith(
+                                            color: AppColors.primary,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: _shareCode,
+                                      child: Container(
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'Share',
+                                          style: AppTextStyles.button.copyWith(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),

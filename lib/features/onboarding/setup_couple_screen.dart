@@ -7,7 +7,7 @@ import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../core/models/relationship_model.dart';
 import '../../widgets/flat_components.dart';
-import '../../widgets/primary_button.dart';
+import '../home/main_navigation_screen.dart';
 import 'tell_us_about_you_screen.dart';
 import 'join_couple_screen.dart';
 import 'connection_success_screen.dart';
@@ -25,13 +25,14 @@ class SetupCoupleScreen extends StatefulWidget {
 
 class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
   String? _detectedCode;
+  RelationshipModel? _waitingRel;
   StreamSubscription<RelationshipModel?>? _relSubscription;
 
   @override
   void initState() {
     super.initState();
-    _detectedCode = widget.initialInviteCode;
-    if (_detectedCode == null) {
+    _detectedCode = widget.initialInviteCode?.replaceAll(RegExp(r'[-\s]'), '');
+    if (_detectedCode == null || _detectedCode!.isEmpty) {
       _checkClipboard();
     }
     _listenForRelationship();
@@ -50,6 +51,17 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
             builder: (context) => ConnectionSuccessScreen(relationship: rel),
           ),
         );
+      } else if (rel != null && rel.status == 'waiting') {
+        setState(() {
+          _waitingRel = rel;
+          if (_detectedCode != null && rel.inviteCode == _detectedCode) {
+            _detectedCode = null;
+          }
+        });
+      } else if (_waitingRel != null) {
+        setState(() {
+          _waitingRel = null;
+        });
       }
     });
   }
@@ -67,9 +79,12 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
       final cleanText = text.replaceAll(RegExp(r'[-\s]'), '');
       final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
       if (match != null && mounted) {
-        setState(() {
-          _detectedCode = match.group(0);
-        });
+        final found = match.group(0);
+        if (_waitingRel?.inviteCode != found) {
+          setState(() {
+            _detectedCode = found;
+          });
+        }
       }
     } catch (_) {}
   }
@@ -133,6 +148,55 @@ class _SetupCoupleScreenState extends State<SetupCoupleScreen> {
               ),
 
               const SizedBox(height: 24),
+
+              // Active Waiting Journey Banner (if already created & waiting)
+              if (_waitingRel != null && _waitingRel!.inviteCode != null) ...[
+                NextMeetCard(
+                  color: AppColors.mintSoft.withValues(alpha: 0.45),
+                  borderColor: AppColors.mint,
+                  borderWidth: 1.5,
+                  onTap: () {
+                    VibrationService.light();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+                      (route) => false,
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.hourglass_top_rounded, color: AppColors.mintText, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Your code: ${_waitingRel!.inviteCode}',
+                              style: AppTextStyles.heading.copyWith(fontSize: 16, color: AppColors.mintText),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Waiting for partner — tap to view your waiting space.',
+                              style: AppTextStyles.caption.copyWith(fontSize: 12, color: AppColors.mintText),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.mintText, size: 16),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Clipboard Banner (if detected)
               if (_detectedCode != null) ...[

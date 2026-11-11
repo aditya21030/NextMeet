@@ -55,6 +55,11 @@ class _JoinCoupleScreenState extends State<JoinCoupleScreen> {
             builder: (context) => ConnectionSuccessScreen(relationship: rel),
           ),
         );
+      } else if (rel != null && rel.status == 'waiting' && _pinController.text == rel.inviteCode) {
+        setState(() {
+          _pinController.clear();
+          _isCodeAutoDetected = false;
+        });
       }
     });
   }
@@ -68,6 +73,8 @@ class _JoinCoupleScreenState extends State<JoinCoupleScreen> {
         final match = RegExp(r'\b\d{6}\b').firstMatch(cleanText) ?? RegExp(r'\d{6}').firstMatch(cleanText);
         if (match != null && mounted) {
           final code = match.group(0)!;
+          final ownCode = _cloudService.cachedRelationship?.inviteCode;
+          if (ownCode != null && ownCode == code) return;
           setState(() {
             _pinController.text = code;
             _isCodeAutoDetected = true;

@@ -66,7 +66,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
         final allGames = _buildAllGamesList(relId, myName, partnerName, partnerUid);
         final filteredGames = _filterGames(allGames);
 
-        final isPaired = rel != null && rel.uid2 != null && rel.status != 'waiting';
+        final isPaired = rel != null && rel.status == 'active' && rel.uid2 != null;
         final partnerLastActive = rel?.getPartnerLastActive(myUid);
         final bool isOnline = isPaired &&
             partnerLastActive != null &&

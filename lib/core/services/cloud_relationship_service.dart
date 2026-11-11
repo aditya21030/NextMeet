@@ -52,6 +52,7 @@ class CloudRelationshipService {
   static final StreamController<RelationshipModel?> _relationshipStreamController =
       StreamController<RelationshipModel?>.broadcast();
   static RelationshipModel? _cachedRelationship;
+  static bool _hasLoadedRelationship = false;
   RelationshipModel? get cachedRelationship => _cachedRelationship;
   static RealtimeChannel? _relationshipChannel;
   static String? _subscribedRelUid;
@@ -59,6 +60,7 @@ class CloudRelationshipService {
 
   static void clearCache() {
     _cachedRelationship = null;
+    _hasLoadedRelationship = false;
     _subscribedRelUid = null;
     _relationshipChannel?.unsubscribe();
     _relationshipChannel = null;
@@ -463,35 +465,90 @@ class CloudRelationshipService {
     final uid = _currentUid ?? _auth.currentUid ?? _supabase.auth.currentUser?.id;
     if (uid == null) throw Exception('User not authenticated. Please log in first ❤️');
 
+    // 0. If already in an active relationship, reuse & emit it safely
+    try {
+      final activeSnap = await _relationships
+          .where('uids', arrayContains: uid)
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 6));
+      if (activeSnap.docs.isNotEmpty) {
+        final activeDoc = activeSnap.docs.first;
+        final activeData = activeDoc.data() as Map<String, dynamic>;
+        if (activeData['uid2'] != null) {
+          final rel = RelationshipModel.fromFirestore(activeData, id: activeDoc.id);
+          _cachedRelationship = rel;
+          _relationshipStreamController.add(rel);
+          return rel.inviteCode ?? '';
+        }
+      }
+    } catch (_) {}
+
     // Re-use existing waiting journey if available so we never spam duplicate documents
     try {
       final existingSnap = await _relationships
           .where('uid1', isEqualTo: uid)
           .where('status', isEqualTo: 'waiting')
           .limit(1)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 6));
       if (existingSnap.docs.isNotEmpty) {
         final existingDoc = existingSnap.docs.first;
-        final existingData = existingDoc.data() as Map<String, dynamic>;
+        final existingData = Map<String, dynamic>.from(existingDoc.data() as Map);
         final existingCode = existingData['inviteCode'] as String?;
         if (existingCode != null && existingCode.isNotEmpty) {
+          final refreshedUpdates = <String, dynamic>{
+            if (localData.userName1 != null && localData.userName1!.isNotEmpty) 'userName1': localData.userName1,
+            if (localData.userLocation1 != null && localData.userLocation1!.isNotEmpty) 'userLocation1': localData.userLocation1,
+            if (localData.userLocation2 != null && localData.userLocation2!.isNotEmpty) 'userLocation2': localData.userLocation2,
+            if (localData.user1PartnerNickname != null && localData.user1PartnerNickname!.isNotEmpty) 'user1PartnerNickname': localData.user1PartnerNickname,
+            'anniversaryDate': Timestamp.fromDate(localData.anniversaryDate),
+            'lastMeetingDate': Timestamp.fromDate(localData.lastMeetingDate),
+            'nextMeetingDate': Timestamp.fromDate(localData.nextMeetingDate),
+          };
+          existingData.addAll(refreshedUpdates);
           final rel = RelationshipModel.fromFirestore(existingData, id: existingDoc.id);
+          await existingDoc.reference.update(refreshedUpdates).timeout(const Duration(seconds: 6));
+          try {
+            await _supabase.from('relationships').upsert({
+              'id': existingDoc.id,
+              'uid1': uid,
+              'uids': [uid],
+              'invite_code': existingCode,
+              'status': 'waiting',
+              'data': rel.toFirestoreMap(),
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+          } catch (_) {}
           _cachedRelationship = rel;
           _relationshipStreamController.add(rel);
-          // Ensure invite record exists
-          _invites.doc(existingCode).set({
+          // Ensure invite record exists & is pending
+          await _invites.doc(existingCode).set({
             'creatorUid': uid,
             'relationshipId': existingDoc.id,
             'status': 'pending',
             'createdAt': FieldValue.serverTimestamp(),
             'creatorEmail': _auth.currentUser?.email ?? 'Unknown Email'
-          }, SetOptions(merge: true));
+          }, SetOptions(merge: true)).timeout(const Duration(seconds: 6));
           return existingCode;
         }
       }
     } catch (_) {}
 
-    final String code = (math.Random().nextInt(900000) + 100000).toString();
+    // Pick a collision-free 6-digit invite code
+    String code = (math.Random().nextInt(900000) + 100000).toString();
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final existingInvite = await _invites.doc(code).get().timeout(const Duration(seconds: 3));
+        if (!existingInvite.exists || (existingInvite.data() as Map<String, dynamic>?)?['status'] == 'abandoned') {
+          break;
+        }
+        code = (math.Random().nextInt(900000) + 100000).toString();
+      } catch (_) {
+        break;
+      }
+    }
     final relDocRef = _relationships.doc();
     final relationship = localData.copyWith(
       id: relDocRef.id,
@@ -587,16 +644,21 @@ class CloudRelationshipService {
     String? targetCreatorUid;
 
     try {
-      final inviteDoc = await _invites.doc(code).get();
+      final inviteDoc = await _invites.doc(code).get().timeout(const Duration(seconds: 6));
       if (inviteDoc.exists) {
-        if (inviteDoc.get('status') == 'accepted') {
+        final invStatus = inviteDoc.get('status') as String?;
+        if (invStatus == 'accepted') {
           throw Exception('This invite code has already been used by another partner! ❤️');
+        }
+        if (invStatus == 'abandoned' || invStatus == 'unpaired') {
+          throw Exception('This invite code has expired. Please ask your partner for a new code ❤️');
         }
         targetCreatorUid = inviteDoc.get('creatorUid') as String?;
         targetRelId = inviteDoc.get('relationshipId') as String?;
       }
     } catch (e) {
-      if (e.toString().contains('already been used')) rethrow;
+      final msg = e.toString();
+      if (msg.contains('already been used') || msg.contains('expired')) rethrow;
     }
 
     // Fallback: If inviteDoc wasn't found, search relationships collection directly by inviteCode
@@ -604,39 +666,61 @@ class CloudRelationshipService {
       try {
         final querySnap = await _relationships
             .where('inviteCode', isEqualTo: code)
-            .limit(1)
-            .get();
+            .limit(5)
+            .get()
+            .timeout(const Duration(seconds: 6));
         if (querySnap.docs.isNotEmpty) {
-          final doc = querySnap.docs.first;
-          final docData = doc.data() as Map<String, dynamic>;
-          if (docData['status'] == 'active' && docData['uid2'] != null) {
-            throw Exception('This invite code has already been accepted! ❤️');
+          QueryDocumentSnapshot? waitingMatch;
+          QueryDocumentSnapshot? activeMatch;
+          for (final d in querySnap.docs) {
+            final dData = d.data() as Map<String, dynamic>;
+            final s = dData['status'] as String?;
+            if (s == 'waiting') {
+              waitingMatch = d;
+              break;
+            } else if (s == 'active' && dData['uid2'] != null) {
+              activeMatch = d;
+            }
           }
-          targetRelId = doc.id;
-          targetCreatorUid = docData['uid1'] as String?;
+          if (waitingMatch != null) {
+            final docData = waitingMatch.data() as Map<String, dynamic>;
+            targetRelId = waitingMatch.id;
+            targetCreatorUid = docData['uid1'] as String?;
+          } else if (activeMatch != null) {
+            throw Exception('This invite code has already been accepted! ❤️');
+          } else {
+            throw Exception('This invite code has expired. Please ask your partner for a new code ❤️');
+          }
         }
       } catch (e) {
-        if (e.toString().contains('already been accepted')) rethrow;
+        final msg = e.toString();
+        if (msg.contains('already been accepted') || msg.contains('expired')) rethrow;
       }
     }
 
     // Fallback: Check Supabase relationships
     if (targetRelId == null) {
       try {
-        final res = await _supabase
+        final resList = await _supabase
             .from('relationships')
             .select()
             .eq('invite_code', code)
-            .maybeSingle();
-        if (res != null) {
-          if (res['status'] == 'active' && res['uid2'] != null) {
-            throw Exception('This invite code has already been accepted! ❤️');
+            .timeout(const Duration(seconds: 6));
+        if (resList.isNotEmpty) {
+          final bestRow = _pickBestSupabaseRow(resList);
+          if (bestRow != null) {
+            if (bestRow['status'] == 'active' && bestRow['uid2'] != null) {
+              throw Exception('This invite code has already been accepted! ❤️');
+            }
+            targetRelId = bestRow['id']?.toString();
+            targetCreatorUid = bestRow['uid1']?.toString();
+          } else {
+            throw Exception('This invite code has expired. Please ask your partner for a new code ❤️');
           }
-          targetRelId = res['id']?.toString();
-          targetCreatorUid = res['uid1']?.toString();
         }
       } catch (e) {
-        if (e.toString().contains('already been accepted')) rethrow;
+        final msg = e.toString();
+        if (msg.contains('already been accepted') || msg.contains('expired')) rethrow;
       }
     }
 
@@ -657,7 +741,11 @@ class CloudRelationshipService {
       }
 
       final data = relDoc.data() as Map<String, dynamic>;
-      if (data['status'] == 'active' && data['uid2'] != null && data['uid2'] != _currentUid) {
+      final currentStatus = data['status'] as String?;
+      if (currentStatus == 'abandoned' || currentStatus == 'unpaired') {
+        throw Exception('This invite code has expired. Please ask your partner for a new code ❤️');
+      }
+      if (currentStatus == 'active' && data['uid2'] != null && data['uid2'] != _currentUid) {
         throw Exception('This invite code has already been accepted! ❤️');
       }
 
@@ -701,7 +789,7 @@ class CloudRelationshipService {
         'distanceKm': distance,
         'status': 'active',
       }, id: targetRelId);
-    });
+    }).timeout(const Duration(seconds: 10));
 
     if (joinedRelationship != null && joinedRelationship.id != null) {
       final relId = joinedRelationship.id!;
@@ -712,10 +800,24 @@ class CloudRelationshipService {
         final orphanedWaiting = await _relationships
             .where('uid1', isEqualTo: _currentUid)
             .where('status', isEqualTo: 'waiting')
-            .get();
+            .get()
+            .timeout(const Duration(seconds: 6));
         for (final doc in orphanedWaiting.docs) {
           if (doc.id != relId) {
+            final orphanData = doc.data() as Map<String, dynamic>?;
+            final oldCode = orphanData?['inviteCode'] as String?;
             await doc.reference.update({'status': 'abandoned'});
+            if (oldCode != null && oldCode.isNotEmpty) {
+              try {
+                await _invites.doc(oldCode).set({'status': 'abandoned'}, SetOptions(merge: true));
+              } catch (_) {}
+            }
+            try {
+              await _supabase.from('relationships').update({
+                'status': 'abandoned',
+                'updated_at': DateTime.now().toIso8601String(),
+              }).eq('id', doc.id);
+            } catch (_) {}
           }
         }
       } catch (e) {
@@ -812,6 +914,37 @@ class CloudRelationshipService {
     }
   }
 
+  static QueryDocumentSnapshot? _pickBestRelationshipDoc(List<QueryDocumentSnapshot> docs) {
+    QueryDocumentSnapshot? waitingDoc;
+    for (final doc in docs) {
+      final data = doc.data() as Map<String, dynamic>?;
+      final status = data?['status'] as String?;
+      if (status == 'active' && data?['uid2'] != null) {
+        return doc;
+      }
+      if (waitingDoc == null && status == 'waiting') {
+        waitingDoc = doc;
+      }
+    }
+    return waitingDoc;
+  }
+
+  static Map<String, dynamic>? _pickBestSupabaseRow(List<dynamic> rows) {
+    Map<String, dynamic>? waitingRow;
+    for (final raw in rows) {
+      if (raw is! Map) continue;
+      final row = Map<String, dynamic>.from(raw);
+      final status = row['status'] as String?;
+      if (status == 'active' && row['uid2'] != null) {
+        return row;
+      }
+      if (waitingRow == null && status == 'waiting') {
+        waitingRow = row;
+      }
+    }
+    return waitingRow;
+  }
+
   Stream<RelationshipModel?> streamRelationship() async* {
     final uid = _currentUid;
     if (uid == null) {
@@ -820,14 +953,20 @@ class CloudRelationshipService {
     }
 
     if (_cachedRelationship != null) {
-      // Validate that cached relationship belongs to current authenticated user
-      if (_cachedRelationship!.uids.contains(uid) ||
+      // Validate that cached relationship belongs to current authenticated user & is not unpaired/abandoned
+      final belongsToUser = _cachedRelationship!.uids.contains(uid) ||
           _cachedRelationship!.uid1 == uid ||
-          _cachedRelationship!.uid2 == uid) {
+          _cachedRelationship!.uid2 == uid;
+      final isLiveStatus =
+          _cachedRelationship!.status == 'active' || _cachedRelationship!.status == 'waiting';
+      if (belongsToUser && isLiveStatus) {
         yield _cachedRelationship;
       } else {
         _cachedRelationship = null;
       }
+    } else if (_hasLoadedRelationship && _subscribedRelUid == uid) {
+      // Avoid hanging for timeout when cached result is already known to be null
+      yield null;
     }
 
     _setupRelationshipListener(uid);
@@ -846,26 +985,21 @@ class CloudRelationshipService {
         .where('uids', arrayContains: uid)
         .snapshots()
         .listen((snapshot) {
-      if (snapshot.docs.isNotEmpty) {
-        final activeDoc = snapshot.docs.cast<QueryDocumentSnapshot?>().firstWhere(
-          (doc) {
-            final data = doc?.data() as Map<String, dynamic>?;
-            return data?['status'] == 'active' && data?['uid2'] != null;
-          },
-          orElse: () => null,
-        );
-        final target = activeDoc ?? snapshot.docs.first;
+      final target = _pickBestRelationshipDoc(snapshot.docs);
+      if (target != null) {
         final model = RelationshipModel.fromFirestore(
           target.data() as Map<String, dynamic>,
           id: target.id,
         );
         _cachedRelationship = model;
+        _hasLoadedRelationship = true;
         _relationshipStreamController.add(model);
       } else {
         _checkDirectUid(uid);
       }
     }, onError: (e) {
       debugPrint('Firestore real-time relationship listener notice: $e');
+      _hasLoadedRelationship = true;
     });
 
     // 2. Supabase Realtime Channel
@@ -874,14 +1008,11 @@ class CloudRelationshipService {
         final res = await _supabase
             .from('relationships')
             .select()
-            .or('uid1.eq.$uid,uid2.eq.$uid,uids.cs.{$uid}');
+            .or('uid1.eq.$uid,uid2.eq.$uid,uids.cs.{$uid}')
+            .timeout(const Duration(seconds: 6));
 
-        if (res.isNotEmpty) {
-          final activeRel = res.firstWhere(
-            (r) => r['status'] == 'active',
-            orElse: () => res.first,
-          );
-
+        final activeRel = _pickBestSupabaseRow(res);
+        if (activeRel != null) {
           final dataMap = activeRel['data'] is Map
               ? Map<String, dynamic>.from(activeRel['data'] as Map)
               : <String, dynamic>{};
@@ -894,6 +1025,7 @@ class CloudRelationshipService {
           final model = RelationshipModel.fromFirestoreMap(dataMap, id: activeRel['id']?.toString());
           if (_cachedRelationship == null || _cachedRelationship?.status != 'active' || model.status == 'active') {
             _cachedRelationship = model;
+            _hasLoadedRelationship = true;
             _relationshipStreamController.add(model);
           }
         }
@@ -923,30 +1055,29 @@ class CloudRelationshipService {
       final snap = await FirebaseFirestore.instance
           .collection('relationships')
           .where('uid1', isEqualTo: uid)
-          .limit(1)
-          .get();
-      if (snap.docs.isNotEmpty) {
-        final doc = snap.docs.first;
-        final model = RelationshipModel.fromFirestore(doc.data(), id: doc.id);
-        _cachedRelationship = model;
-        _relationshipStreamController.add(model);
-        return;
-      }
+          .get()
+          .timeout(const Duration(seconds: 6));
       final snap2 = await FirebaseFirestore.instance
           .collection('relationships')
           .where('uid2', isEqualTo: uid)
-          .limit(1)
-          .get();
-      if (snap2.docs.isNotEmpty) {
-        final doc = snap2.docs.first;
-        final model = RelationshipModel.fromFirestore(doc.data(), id: doc.id);
+          .get()
+          .timeout(const Duration(seconds: 6));
+      final bestDoc = _pickBestRelationshipDoc([...snap.docs, ...snap2.docs]);
+      _hasLoadedRelationship = true;
+      if (bestDoc != null) {
+        final model = RelationshipModel.fromFirestore(
+          bestDoc.data() as Map<String, dynamic>,
+          id: bestDoc.id,
+        );
         _cachedRelationship = model;
         _relationshipStreamController.add(model);
         return;
       }
       _cachedRelationship = null;
       _relationshipStreamController.add(null);
-    } catch (_) {}
+    } catch (_) {
+      _hasLoadedRelationship = true;
+    }
   }
 
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:battery_plus/battery_plus.dart';
@@ -26,6 +27,7 @@ import 'shared_map_screen.dart';
 import 'calendar_screen.dart';
 import '../moments/moments_screen.dart';
 import '../onboarding/join_couple_screen.dart';
+import '../onboarding/tell_us_about_you_screen.dart';
 import '../profile/widgets_showcase_screen.dart';
 
 /// NextMeet Home Screen (Paired Dashboard & Unpaired State)
@@ -52,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _lastWidgetSyncTime;
   String? _incomingTouchBanner;
   Timer? _bannerTimer;
+  bool _wasUnpairedView = false;
 
   @override
   void initState() {
@@ -222,7 +225,28 @@ class _HomeScreenState extends State<HomeScreen> {
           stream: _cloudService.streamRelationship(),
           builder: (context, snapshot) {
             final rel = snapshot.data;
-            final isPaired = rel != null && rel.uid2 != null && rel.status != 'waiting';
+            final isPaired = rel != null && rel.status == 'active' && rel.uid2 != null;
+
+            if (!isPaired) {
+              _wasUnpairedView = true;
+            } else if (_wasUnpairedView) {
+              _wasUnpairedView = false;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                VibrationService.success();
+                _triggerParticleEffect('miss');
+                final pName = rel.getPartnerName(_cloudService.currentUid);
+                _bannerTimer?.cancel();
+                setState(() {
+                  _incomingTouchBanner = '$pName joined your couple space! ❤️';
+                });
+                _bannerTimer = Timer(const Duration(seconds: 4), () {
+                  if (mounted) {
+                    setState(() => _incomingTouchBanner = null);
+                  }
+                });
+              });
+            }
 
             if (rel != null) {
               ThemeService.instance.syncFromRelationshipData(
@@ -342,7 +366,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ? AuthService().currentUser!.displayName!
             : 'You');
     final partnerName = rel?.getPartnerName(currentUid) ?? 'Partner';
-    final inviteCode = rel?.inviteCode ?? '------';
+    final inviteCode = (rel?.inviteCode ?? '').trim();
+    final hasValidCode = inviteCode.length == 6;
 
     return RefreshIndicator(
       color: ThemeService.instance.primaryColor,
@@ -497,82 +522,132 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Invite your partner', style: AppTextStyles.label.copyWith(color: AppColors.ink)),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: inviteCode.split('').map((digit) {
-                    return Container(
-                      width: 44,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border, width: 1.5),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        digit,
-                        style: AppTextStyles.display.copyWith(
-                          fontSize: 22,
-                          color: AppColors.ink,
-                          fontWeight: FontWeight.w800,
+                if (hasValidCode) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Invite your partner', style: AppTextStyles.label.copyWith(color: AppColors.ink)),
+                      GestureDetector(
+                        onTap: () => _copyInviteCode(inviteCode),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.pinkSoft,
+                            borderRadius: BorderRadius.circular(AppRadius.badge),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.copy_rounded, color: AppColors.primary, size: 13),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Copy',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => _copyInviteCode(inviteCode),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: inviteCode.split('').map((digit) {
+                        return Container(
+                          width: 44,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.border, width: 1.5),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            digit,
+                            style: AppTextStyles.display.copyWith(
+                              fontSize: 22,
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _unpairedActionPill(
+                        label: 'Share my code',
+                        filled: true,
                         onTap: () {
                           VibrationService.light();
                           Share.share(AppLinks.getInviteMessage(inviteCode));
                         },
-                        child: Container(
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(AppRadius.pill),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Share my code',
-                            style: AppTextStyles.button.copyWith(fontSize: 14),
-                          ),
-                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: GestureDetector(
+                      const SizedBox(width: 10),
+                      _unpairedActionPill(
+                        label: 'Enter theirs',
+                        filled: false,
                         onTap: () {
+                          VibrationService.light();
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const JoinCoupleScreen()),
+                            MaterialPageRoute(
+                              builder: (context) => JoinCoupleScreen(userName: myName),
+                            ),
                           );
                         },
-                        child: Container(
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: AppColors.pinkSoft,
-                            borderRadius: BorderRadius.circular(AppRadius.pill),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Enter theirs',
-                            style: AppTextStyles.button.copyWith(
-                              color: AppColors.primary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ] else ...[
+                  Text('Connect with your partner', style: AppTextStyles.label.copyWith(color: AppColors.ink)),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Create a 6-digit invite code to invite them, or enter the code they shared.',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _unpairedActionPill(
+                        label: 'Get invite code',
+                        filled: true,
+                        onTap: () {
+                          VibrationService.light();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TellUsAboutYouScreen(initialName: myName),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _unpairedActionPill(
+                        label: 'Enter theirs',
+                        filled: false,
+                        onTap: () {
+                          VibrationService.light();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => JoinCoupleScreen(userName: myName),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -599,6 +674,46 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 }
+
+  /// Copies the active waiting invite code and gives haptic + snackbar feedback.
+  void _copyInviteCode(String inviteCode) {
+    Clipboard.setData(ClipboardData(text: inviteCode));
+    VibrationService.success();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Invite code copied! Send it to your partner ❤️'),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  /// Renders a pill CTA for the unpaired / waiting HomeScreen action row.
+  Widget _unpairedActionPill({
+    required String label,
+    required bool filled,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 46,
+          decoration: BoxDecoration(
+            color: filled ? AppColors.primary : AppColors.pinkSoft,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTextStyles.button.copyWith(
+              color: filled ? Colors.white : AppColors.primary,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _lockedFeatureTile(String label, IconData icon) {
     return Container(

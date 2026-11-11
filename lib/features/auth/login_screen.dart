@@ -77,7 +77,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    if (rel != null && rel.status == 'active' && rel.uid2 != null) {
+    String? inviteCodeForSetup = _detectedInviteCode;
+    if (rel != null && inviteCodeForSetup != null && rel.inviteCode == inviteCodeForSetup) {
+      inviteCodeForSetup = null;
+    }
+
+    final isActivelyPaired = rel != null && rel.status == 'active' && rel.uid2 != null;
+    final isWaitingState = rel != null && rel.status == 'waiting';
+
+    if (isActivelyPaired || (isWaitingState && inviteCodeForSetup == null)) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
@@ -86,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => SetupCoupleScreen(initialInviteCode: _detectedInviteCode),
+          builder: (context) => SetupCoupleScreen(initialInviteCode: inviteCodeForSetup),
         ),
       );
     }
