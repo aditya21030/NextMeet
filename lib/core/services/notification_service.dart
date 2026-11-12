@@ -43,6 +43,10 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
 
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+
     const initializationSettings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/launcher_icon'),
       iOS: DarwinInitializationSettings(),
@@ -59,13 +63,14 @@ class NotificationService {
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
-      final android = message.notification?.android;
+      final title = notification?.title ?? message.data['title']?.toString();
+      final body = notification?.body ?? message.data['body']?.toString() ?? message.data['message']?.toString();
 
-      if (notification != null && android != null) {
+      if (title != null && title.isNotEmpty) {
         _localNotifications.show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
+          message.hashCode,
+          title,
+          body,
           NotificationDetails(
             android: AndroidNotificationDetails(
               channel.id,
@@ -75,6 +80,11 @@ class NotificationService {
               importance: Importance.max,
               priority: Priority.high,
               vibrationPattern: channel.vibrationPattern,
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
             ),
           ),
         );

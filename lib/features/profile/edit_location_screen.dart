@@ -154,9 +154,13 @@ class _EditLocationScreenState extends State<EditLocationScreen> {
       double? lng = _selectedLng;
 
       if (lat == null || lng == null) {
-        final clean = cityName.toLowerCase();
+        final clean = cityName.toLowerCase().trim();
+        final primary = clean.split(',').first.trim();
         for (final c in CityData.majorCities) {
-          if (clean.contains(c.name.toLowerCase()) || c.name.toLowerCase().contains(clean)) {
+          final cName = c.name.toLowerCase();
+          if (primary == cName ||
+              clean.contains(cName) ||
+              (primary.length >= 3 && cName.startsWith(primary))) {
             lat = c.lat;
             lng = c.lng;
             break;
@@ -167,34 +171,30 @@ class _EditLocationScreenState extends State<EditLocationScreen> {
       if (lat == null || lng == null) {
         try {
           final results = await _searchService.search(cityName);
-          if (results.isNotEmpty) {
+          if (results.isNotEmpty && results.first.hasValidCoordinates) {
             lat = results.first.lat;
             lng = results.first.lng;
           }
         } catch (_) {}
       }
 
-      final currentUid = AuthService().currentUid;
-      final rel = widget.relationship ??
-          RelationshipModel(
-            uid1: currentUid ?? 'u1',
-            uid2: 'u2',
-            userName1: 'You',
-            userName2: 'Partner',
-            anniversaryDate: DateTime.now(),
-            lastMeetingDate: DateTime.now(),
-            nextMeetingDate: DateTime.now(),
-            distanceKm: 0.0,
-            loveQuote: '',
-          );
+      if (widget.relationshipId.isEmpty || widget.relationshipId == 'default_rel' || widget.relationship == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please pair with your partner before saving your location.')),
+        );
+        return;
+      }
 
-      await _cloudService.updateMyStatus(
-        widget.relationshipId,
-        rel,
-        city: cityName,
-        lat: lat,
-        lng: lng,
-      );
+      await _cloudService
+          .updateMyStatus(
+            widget.relationshipId,
+            widget.relationship!,
+            city: cityName,
+            lat: lat,
+            lng: lng,
+          )
+          .timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
       VibrationService.success();
@@ -222,7 +222,7 @@ class _EditLocationScreenState extends State<EditLocationScreen> {
     final pLng = widget.relationship?.getPartnerLng(currentUid);
 
     if (_selectedLat != null && _selectedLng != null && pLat != null && pLng != null) {
-      if (_selectedLat == 0.0 || _selectedLng == 0.0 || pLat == 0.0 || pLng == 0.0) return null;
+      if ((_selectedLat == 0.0 && _selectedLng == 0.0) || (pLat == 0.0 && pLng == 0.0)) return null;
       return CityData.calculateDistance(_selectedLat!, _selectedLng!, pLat, pLng);
     }
     return null;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants.dart';
 import '../../core/models/relationship_model.dart';
@@ -24,8 +25,39 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
 
   int _selectedWidgetIndex = 0;
   String _selectedCategory = 'All';
+  String _activeHomeWidgetId = 'distance_battery';
   WidgetPalette _selectedPalette = WidgetPalette.pink;
   bool _isSyncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedWidgetPreferences();
+  }
+
+  Future<void> _loadSavedWidgetPreferences() async {
+    try {
+      final savedId = await HomeWidget.getWidgetData<String>('active_widget_id');
+      final savedPalette = await HomeWidget.getWidgetData<String>('widget_palette');
+      if (!mounted) return;
+
+      setState(() {
+        if (savedId != null && savedId.isNotEmpty) {
+          _activeHomeWidgetId = savedId;
+          final idx = _allWidgets.indexWhere((w) => w['id'] == savedId);
+          if (idx != -1) {
+            _selectedWidgetIndex = idx;
+          }
+        }
+        if (savedPalette != null && savedPalette.isNotEmpty) {
+          _selectedPalette = WidgetPalette.values.firstWhere(
+            (p) => p.name == savedPalette,
+            orElse: () => WidgetPalette.pink,
+          );
+        }
+      });
+    } catch (_) {}
+  }
 
   // State variations for each widget
   DistanceBatteryState _distanceBatteryState = DistanceBatteryState.normal;
@@ -201,14 +233,11 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
     );
   }
 
-  Future<void> _syncWidgets(RelationshipModel? rel, String currentUid) async {
-    if (rel == null) return;
-    final currentItem = _filteredWidgets[_selectedWidgetIndex.clamp(0, _filteredWidgets.length - 1)];
-    await _applyWidgetToHomeScreen(currentItem['id'] as String, rel, currentUid);
-  }
-
   Future<void> _applyWidgetToHomeScreen(String widgetId, RelationshipModel? rel, String currentUid) async {
-    if (rel == null) return;
+    if (rel == null) {
+      _showReactionFeedback('Pair with your partner first to sync a live home widget ✨');
+      return;
+    }
     setState(() => _isSyncing = true);
     VibrationService.medium();
     await WidgetService.updateWidgetData(
@@ -218,7 +247,10 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
       palette: _selectedPalette,
     );
     if (!mounted) return;
-    setState(() => _isSyncing = false);
+    setState(() {
+      _activeHomeWidgetId = widgetId;
+      _isSyncing = false;
+    });
     VibrationService.success();
     final widgetTitle = _allWidgets.firstWhere((w) => w['id'] == widgetId, orElse: () => {'title': 'Widget'})['title'];
     _showReactionFeedback('Applied "$widgetTitle" as your Home Screen Widget! ✨');
@@ -292,7 +324,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
                 isLoading: _isSyncing,
                 onPressed: () {
                   Navigator.pop(ctx);
-                  _syncWidgets(rel, currentUid);
+                  _applyWidgetToHomeScreen(currentItem['id'] as String, rel, currentUid);
                 },
               ),
               const SizedBox(height: 8),
@@ -479,21 +511,29 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         final colors = WidgetPaletteColors.of(p);
         final isSelected = _selectedPalette == p;
 
-        return GestureDetector(
-          onTap: () {
-            VibrationService.light();
-            setState(() => _selectedPalette = p);
-          },
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5),
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: colors.primary,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isSelected ? const Color(0xFF2B1B26) : Colors.transparent,
-                width: 2.5,
+        return Semantics(
+          button: true,
+          selected: isSelected,
+          label: '${p.name} palette',
+          child: Tooltip(
+            message: p.name.toUpperCase(),
+            child: GestureDetector(
+              onTap: () {
+                VibrationService.light();
+                setState(() => _selectedPalette = p);
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: colors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFF2B1B26) : Colors.transparent,
+                    width: 2.5,
+                  ),
+                ),
               ),
             ),
           ),
@@ -510,14 +550,27 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
     required String distanceText,
     required String myTime,
     required String pTime,
+    required String pTimeZoneLabel,
     required RelationshipModel? rel,
   }) {
-    final daysTogether = rel != null ? DateTime.now().difference(rel.anniversaryDate).inDays : 992;
-    final years = daysTogether ~/ 365;
-    final remainingDays = daysTogether % 365;
-    final months = remainingDays ~/ 30;
-    final days = remainingDays % 30;
-    final breakdownStr = '${years}y ${months}m ${days}d';
+    final now = DateTime.now();
+    final daysTogether = rel != null
+        ? now.difference(rel.anniversaryDate).inDays.clamp(0, 999999)
+        : 992;
+    final breakdownStr = rel != null
+        ? WidgetService.formatTogetherBreakdown(rel.anniversaryDate, now)
+        : '2y 8m 24d';
+    final milestone = WidgetService.computeMilestoneProgress(daysTogether);
+    final currentUid = AuthService().currentUid ?? '';
+    final fromCity = rel != null && rel.getMyLocation(currentUid).split(',').first.trim().isNotEmpty
+        ? rel.getMyLocation(currentUid).split(',').first.trim()
+        : 'Chennai';
+    final toCity = rel != null && rel.getPartnerLocation(currentUid).split(',').first.trim().isNotEmpty
+        ? rel.getPartnerLocation(currentUid).split(',').first.trim()
+        : 'Frankfurt';
+    final partnerLastActive = rel?.getPartnerLastActive(currentUid);
+    final isOnline = rel == null ||
+        (partnerLastActive != null && now.difference(partnerLastActive).inMinutes.abs() < 10);
 
     Widget childWidget;
 
@@ -525,15 +578,11 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
       case 'distance_battery':
         childWidget = DistanceBatteryWidget(
           distance: distanceText.isNotEmpty ? distanceText : '8,420 km',
-          fromCity: rel?.getMyLocation(AuthService().currentUid ?? '').split(',').first.trim().isNotEmpty == true
-              ? rel!.getMyLocation(AuthService().currentUid ?? '').split(',').first.trim()
-              : 'Chennai',
-          toCity: rel?.getPartnerLocation(AuthService().currentUid ?? '').split(',').first.trim().isNotEmpty == true
-              ? rel!.getPartnerLocation(AuthService().currentUid ?? '').split(',').first.trim()
-              : 'Frankfurt',
+          fromCity: fromCity,
+          toCity: toCity,
           partnerName: partnerName,
           battery: battery,
-          timeText: 'CET, $pTime',
+          timeText: '$pTimeZoneLabel, $pTime',
           state: _distanceBatteryState,
           onTap: () => _showReactionFeedback('Distance: $distanceText • Battery: $battery%'),
         );
@@ -552,15 +601,27 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         break;
 
       case 'reunion_countdown':
+        final meetupDiff = rel?.nextMeetingDate.difference(now);
+        final cdText = meetupDiff != null && !meetupDiff.isNegative
+            ? '${meetupDiff.inDays}d ${meetupDiff.inHours % 24}h'
+            : '23d 14h';
+        final cdSub = rel != null
+            ? '${DateFormat('EEE d MMM').format(rel.nextMeetingDate)}, $fromCity to $toCity'
+            : 'Wed 25 Nov, $fromCity to $toCity';
         childWidget = ReunionCountdownWidget(
           state: _countdownState,
           palette: _selectedPalette,
-          countdownText: '23d 14h',
-          subText: 'Wed 25 Nov, Frankfurt to Chennai',
-          originAirport: 'FRA',
-          destAirport: 'MAA',
+          partnerName: partnerName,
+          countdownText: cdText,
+          subText: cdSub,
+          originAirport: WidgetService.formatAirportCode(fromCity, fallback: 'YOU'),
+          destAirport: WidgetService.formatAirportCode(toCity, fallback: 'PRT'),
           progress: 0.70,
-          onTap: () => _showReactionFeedback('Reunion date: Wed 25 Nov ✈️'),
+          onTap: () => _showReactionFeedback(
+            rel != null
+                ? 'Reunion date: ${DateFormat('EEE d MMM').format(rel.nextMeetingDate)} ✈️'
+                : 'Reunion date: Wed 25 Nov ✈️',
+          ),
         );
         break;
 
@@ -572,7 +633,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         childWidget = DailyMomentsPhotoWidget(
           state: _momentsState,
           partnerName: partnerName,
-          timeText: 'Today, 9:30 PM',
+          timeText: 'Today, $pTime',
           caption: momentCaption,
           onHeartReact: () => _showReactionFeedback('Reacted with ❤️ to $partnerName\'s moment!'),
           onSendFirst: () => _showReactionFeedback('Ready to snap your moment! 📸'),
@@ -614,10 +675,12 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
 
       case 'next_milestone':
         childWidget = NextMilestoneWidget(
-          daysLeft: 8,
-          targetMilestone: '1000 days',
-          progress: 0.92,
-          onTap: () => _showReactionFeedback('8 days left to celebrate 1,000 days! 🎉'),
+          daysLeft: milestone.daysLeft,
+          targetMilestone: '${milestone.nextTarget} days',
+          progress: milestone.progress,
+          onTap: () => _showReactionFeedback(
+            '${milestone.daysLeft} days left to celebrate ${milestone.nextTarget} days! 🎉',
+          ),
         );
         break;
 
@@ -636,9 +699,10 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         break;
 
       case 'love_note':
+        final quote = rel?.loveQuote;
         childWidget = LoveNoteWidget(
           partnerName: partnerName,
-          noteSnippet: 'Thinking of you, always.',
+          noteSnippet: (quote != null && quote.isNotEmpty) ? quote : 'Thinking of you, always.',
           timeAgo: '1 hr ago',
           state: _loveNoteState,
           onTap: () => _showReactionFeedback('Opening love note from $partnerName 💌'),
@@ -646,52 +710,69 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
         break;
 
       case 'trip_tracker':
+        final tripDest = (rel?.tripDestination != null && rel!.tripDestination!.trim().isNotEmpty)
+            ? rel.tripDestination!.trim()
+            : toCity;
         childWidget = TripTrackerWidget(
           state: _tripState,
-          flightNumber: 'Flight XX 214',
-          originCode: 'FRA',
-          originCity: 'Frankfurt',
-          destCode: 'MAA',
-          destCity: 'Chennai',
-          timeText: '12:30 PM',
-          onTap: () => _showReactionFeedback('Tracking flight FRA ✈️ MAA'),
+          partnerName: partnerName,
+          flightNumber: (rel?.tripTransport != null && rel!.tripTransport!.trim().isNotEmpty)
+              ? rel.tripTransport!.trim()
+              : 'Flight XX 214',
+          originCode: WidgetService.formatAirportCode(fromCity, fallback: 'FRA'),
+          originCity: fromCity,
+          destCode: WidgetService.formatAirportCode(tripDest, fallback: 'MAA'),
+          destCity: tripDest,
+          timeText: rel?.tripDate != null ? DateFormat('MMM d').format(rel!.tripDate!) : '12:30 PM',
+          onTap: () => _showReactionFeedback('Tracking trip $fromCity ✈️ $tripDest'),
         );
         break;
 
       case 'next_event':
         childWidget = NextEventWidget(
-          event1Title: 'Video call night',
-          event1Sub: 'Tonight',
-          event1Time: '9:30 PM',
-          event2Title: 'Movie night',
-          event2Sub: 'Fri 6 Nov, watch together',
-          event2Time: '8:00 PM',
+          event1Title: rel != null ? 'Next Reunion' : 'Video call night',
+          event1Sub: rel != null ? DateFormat('EEE, d MMM').format(rel.nextMeetingDate) : 'Tonight',
+          event1Time: rel != null ? '${rel.nextMeetingDate.difference(now).inDays.clamp(0, 999)}d' : '9:30 PM',
+          event2Title: (rel?.tripDestination != null && rel!.tripDestination!.trim().isNotEmpty)
+              ? 'Trip to ${rel.tripDestination!.trim()}'
+              : 'Movie night',
+          event2Sub: rel?.tripDate != null
+              ? DateFormat('EEE d MMM').format(rel!.tripDate!)
+              : 'Fri 6 Nov, watch together',
+          event2Time: rel?.tripDate != null ? DateFormat('h:mm a').format(rel!.tripDate!) : '8:00 PM',
           onTap: () => _showReactionFeedback('Opening couple calendar 📅'),
         );
         break;
 
       case 'memory_of_the_day':
         childWidget = MemoryOfTheDayWidget(
-          dateTitle: 'ON THIS DAY, 1 YEAR AGO',
-          memoryTitle: 'Hill trek',
-          memoryDate: '3 Nov 2025',
+          dateTitle: rel != null ? 'OUR JOURNEY STARTED' : 'ON THIS DAY, 1 YEAR AGO',
+          memoryTitle: rel != null ? 'Memory with $partnerName' : 'Hill trek',
+          memoryDate: rel != null ? DateFormat('d MMM yyyy').format(rel.anniversaryDate) : '3 Nov 2025',
           onSeeMemory: () => _showReactionFeedback('Opening memory details 📸'),
         );
         break;
 
       case 'couple_dashboard':
       default:
+        final meetupDiff = rel?.nextMeetingDate.difference(now);
+        final dashCountdown = meetupDiff != null && !meetupDiff.isNegative
+            ? '${meetupDiff.inDays}d ${meetupDiff.inHours % 24}h'
+            : '23d 14h';
         childWidget = CoupleDashboardWidget(
           partnerName: partnerName,
           battery: battery,
           streak: rel?.streakCount ?? 42,
+          isOnline: isOnline,
           myTime: myTime,
           partnerTime: pTime,
           distance: distanceText.isNotEmpty ? distanceText : '8,420 km',
-          meetupCountdown: '23d 14h',
-          meetupDate: 'Wed 25 Nov',
-          togetherDuration: breakdownStr,
-          lastMet: 'Last met 3 mo ago',
+          meetupCountdown: dashCountdown,
+          meetupDate: rel != null ? DateFormat('EEE d MMM').format(rel.nextMeetingDate) : 'Wed 25 Nov',
+          togetherDuration: 'Together $breakdownStr',
+          lastMet: rel != null
+              ? WidgetService.formatLastMetAgo(rel.lastMeetingDate, now)
+              : 'Last met 3 mo ago',
           onHeartHold: () {
             VibrationService.medium();
             _showReactionFeedback('Heart held! Syncing with $partnerName... 💓');
@@ -725,8 +806,9 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
 
         final now = DateTime.now();
         final myTime = DateFormat('h:mm a').format(now);
-        final pOffset = rel?.getPartnerTimezoneOffset(currentUid) ?? 0;
+        final pOffset = rel != null ? rel.getPartnerTimezoneOffset(currentUid) : 60;
         final pTime = DateFormat('h:mm a').format(now.toUtc().add(Duration(minutes: pOffset)));
+        final pTimeZoneLabel = rel != null ? WidgetService.formatTimezoneLabel(pOffset) : 'CET';
 
         final filteredList = _filteredWidgets;
         final activeItem = filteredList[_selectedWidgetIndex.clamp(0, filteredList.length - 1)];
@@ -848,6 +930,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
                       distanceText: distanceText,
                       myTime: myTime,
                       pTime: pTime,
+                      pTimeZoneLabel: pTimeZoneLabel,
                       rel: rel,
                     ),
                   ),
@@ -895,6 +978,7 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
                     final idx = entry.key;
                     final widgetItem = entry.value;
                     final isSelected = _selectedWidgetIndex == idx;
+                    final isActiveOnHome = widgetItem['id'] == _activeHomeWidgetId;
 
                     return GestureDetector(
                       onTap: () {
@@ -950,6 +1034,24 @@ class _WidgetsShowcaseScreenState extends State<WidgetsShowcaseScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
+                                      if (isActiveOnHome) ...[
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE3F6EC),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Text(
+                                            'ACTIVE',
+                                            style: GoogleFonts.nunito(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF1F7A4F),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                         decoration: BoxDecoration(

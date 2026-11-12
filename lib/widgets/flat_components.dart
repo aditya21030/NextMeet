@@ -448,12 +448,16 @@ class TagChip extends StatelessWidget {
             Icon(icon, size: 14, color: textColor ?? AppColors.primary),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: textColor ?? AppColors.primary,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
+          Flexible(
+            child: Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: textColor ?? AppColors.primary,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

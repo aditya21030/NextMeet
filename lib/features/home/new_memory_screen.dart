@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../../core/cities.dart';
 import '../../core/constants.dart';
+import '../../core/services/location_search_service.dart';
 import '../../core/services/vibration_service.dart';
 import '../../core/services/cloud_relationship_service.dart';
 import '../../widgets/app_inputs.dart';
@@ -13,8 +15,17 @@ import '../../widgets/flat_components.dart';
 /// Strictly following NextMeet Redesign.pdf (Page 24)
 class NewMemoryScreen extends StatefulWidget {
   final String? relId;
+  final String? initialLocation;
+  final double? initialLat;
+  final double? initialLng;
 
-  const NewMemoryScreen({super.key, this.relId});
+  const NewMemoryScreen({
+    super.key,
+    this.relId,
+    this.initialLocation,
+    this.initialLat,
+    this.initialLng,
+  });
 
   @override
   State<NewMemoryScreen> createState() => _NewMemoryScreenState();
@@ -27,6 +38,18 @@ class _NewMemoryScreenState extends State<NewMemoryScreen> {
   int _selectedEmotionIndex = 0;
   bool _saveToVault = false;
   bool _isSaving = false;
+  double? _resolvedLat;
+  double? _resolvedLng;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialLocation != null && widget.initialLocation!.trim().isNotEmpty) {
+      _locationController.text = widget.initialLocation!.trim();
+    }
+    _resolvedLat = widget.initialLat;
+    _resolvedLng = widget.initialLng;
+  }
 
   final List<Map<String, dynamic>> _emotions = [
     {'label': 'Happy', 'emoji': '😊', 'color': AppColors.mintText, 'bg': AppColors.mintSoft},
@@ -99,24 +122,70 @@ class _NewMemoryScreenState extends State<NewMemoryScreen> {
 
     try {
       String? targetRelId = widget.relId;
-      if (targetRelId == null) {
-        final rel = await _cloudService.streamRelationship().first;
+      if (targetRelId == null || targetRelId.isEmpty || targetRelId == 'default_rel') {
+        final rel = await _cloudService
+            .streamRelationship()
+            .first
+            .timeout(const Duration(seconds: 5), onTimeout: () => _cloudService.cachedRelationship);
         targetRelId = rel?.id;
       }
 
-      if (targetRelId != null) {
-        await _cloudService.createMemory(
-          targetRelId,
-          title,
-          _selectedDate,
-          _locationController.text.trim().isNotEmpty
-              ? _locationController.text.trim()
-              : 'Somewhere special',
-          imageFile: _imageFile,
-          emotion: _emotions[_selectedEmotionIndex]['label'] as String,
-          isPrivate: _saveToVault,
+      if (targetRelId == null || targetRelId.isEmpty || targetRelId == 'default_rel') {
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pair with your partner first to save shared memories.')),
         );
+        return;
       }
+
+      final typedLoc = _locationController.text.trim();
+      final effectiveLoc = typedLoc.isNotEmpty ? typedLoc : 'Somewhere special';
+      final initialLoc = widget.initialLocation?.trim() ?? '';
+      double? lat = (typedLoc.isNotEmpty && typedLoc.toLowerCase() == initialLoc.toLowerCase())
+          ? _resolvedLat
+          : null;
+      double? lng = (typedLoc.isNotEmpty && typedLoc.toLowerCase() == initialLoc.toLowerCase())
+          ? _resolvedLng
+          : null;
+
+      if (typedLoc.isNotEmpty && (lat == null || lng == null)) {
+        final clean = typedLoc.toLowerCase();
+        final primary = clean.split(',').first.trim();
+        for (final c in CityData.majorCities) {
+          final cName = c.name.toLowerCase();
+          if (primary == cName ||
+              clean.contains(cName) ||
+              (primary.length >= 3 && cName.startsWith(primary))) {
+            lat = c.lat;
+            lng = c.lng;
+            break;
+          }
+        }
+        if (lat == null || lng == null) {
+          try {
+            final results = await LocationSearchService().search(typedLoc);
+            if (results.isNotEmpty && results.first.hasValidCoordinates) {
+              lat = results.first.lat;
+              lng = results.first.lng;
+            }
+          } catch (_) {}
+        }
+      }
+
+      await _cloudService
+          .createMemory(
+            targetRelId,
+            title,
+            _selectedDate,
+            effectiveLoc,
+            imageFile: _imageFile,
+            emotion: _emotions[_selectedEmotionIndex]['label'] as String,
+            isPrivate: _saveToVault,
+            lat: lat,
+            lng: lng,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -295,9 +364,13 @@ class _NewMemoryScreenState extends State<NewMemoryScreen> {
                                     children: [
                                       const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primary),
                                       const SizedBox(width: 8),
-                                      Text(
-                                        DateFormat('dd MMM yyyy').format(_selectedDate),
-                                        style: AppTextStyles.body.copyWith(color: AppColors.ink),
+                                      Expanded(
+                                        child: Text(
+                                          DateFormat('dd MMM yyyy').format(_selectedDate),
+                                          style: AppTextStyles.body.copyWith(color: AppColors.ink),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     ],
                                   ),

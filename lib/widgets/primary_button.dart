@@ -73,16 +73,22 @@ class _PrimaryButtonState extends State<PrimaryButton> {
         break;
     }
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: () {
-        if (!widget.isLoading) {
-          VibrationService.light();
-          widget.onPressed();
-        }
-      },
+    return Semantics(
+      button: true,
+      enabled: !widget.isLoading,
+      label: widget.text,
+      child: GestureDetector(
+        onTapDown: widget.isLoading ? null : (_) => setState(() => _isPressed = true),
+        onTapUp: widget.isLoading ? null : (_) => setState(() => _isPressed = false),
+        onTapCancel: () {
+          if (_isPressed) setState(() => _isPressed = false);
+        },
+        onTap: () {
+          if (!widget.isLoading) {
+            VibrationService.light();
+            widget.onPressed();
+          }
+        },
       child: AnimatedScale(
         scale: _isPressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 120),
@@ -132,6 +138,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                   ),
           ),
         ),
+      ),
       ),
     );
   }

@@ -28,16 +28,35 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   late StreamSubscription<AppUser?> _authSubscription;
+  StreamSubscription<RelationshipModel?>? _relationshipSubscription;
   StreamSubscription<Uri?>? _widgetClickSubscription;
   final GlobalKey<VaultHubScreenState> _vaultKey = GlobalKey<VaultHubScreenState>();
   final CloudRelationshipService _cloudService = CloudRelationshipService();
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+    _pages = [
+      HomeScreen(initialSynced: widget.initialSynced),
+      const GamesHubScreen(),
+      const PlanHubScreen(),
+      VaultHubScreen(key: _vaultKey),
+      const MeProfileScreen(),
+    ];
+
     _checkWidgetLaunch();
     _widgetClickSubscription = HomeWidget.widgetClicked.listen((uri) {
       if (uri != null) _handleWidgetUri(uri);
+    });
+
+    _relationshipSubscription = _cloudService.streamRelationship().listen((rel) {
+      if (rel != null) {
+        ThemeService.instance.syncFromRelationshipData(
+          rel.toFirestore(),
+          currentUid: _cloudService.currentUid,
+        );
+      }
     });
 
     _authSubscription = AuthService().authStateChanges.listen((user) {
@@ -89,47 +108,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void dispose() {
     _widgetClickSubscription?.cancel();
     _authSubscription.cancel();
+    _relationshipSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<RelationshipModel?>(
-      stream: _cloudService.streamRelationship(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData && snapshot.data != null) {
-          ThemeService.instance.syncFromRelationshipData(
-            snapshot.data!.toFirestore(),
-            currentUid: _cloudService.currentUid,
-          );
-        }
-
-        return ListenableBuilder(
-          listenable: ThemeService.instance,
-          builder: (context, _) {
-            return PopScope(
-              canPop: _selectedIndex == 0,
-              onPopInvokedWithResult: (didPop, result) {
-                if (didPop) return;
-                if (_selectedIndex == 3) {
-                  _vaultKey.currentState?.lock();
-                  setState(() => _selectedIndex = 0);
-                } else if (_selectedIndex != 0) {
-                  setState(() => _selectedIndex = 0);
-                }
-              },
-              child: Scaffold(
-                backgroundColor: ThemeService.instance.backgroundColor,
-                body: IndexedStack(
-                  index: _selectedIndex,
-                  children: [
-                    HomeScreen(initialSynced: widget.initialSynced),
-                    const GamesHubScreen(),
-                    const PlanHubScreen(),
-                    VaultHubScreen(key: _vaultKey),
-                    const MeProfileScreen(),
-                  ],
-                ),
+    return ListenableBuilder(
+      listenable: ThemeService.instance,
+      builder: (context, _) {
+        return PopScope(
+          canPop: _selectedIndex == 0,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (_selectedIndex == 3) {
+              _vaultKey.currentState?.lock();
+              setState(() => _selectedIndex = 0);
+            } else if (_selectedIndex != 0) {
+              setState(() => _selectedIndex = 0);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: ThemeService.instance.backgroundColor,
+            body: IndexedStack(
+              index: _selectedIndex,
+              children: _pages,
+            ),
                 bottomNavigationBar: Container(
                   decoration: const BoxDecoration(
                     color: Colors.white,
@@ -158,8 +162,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             );
           },
         );
-      },
-    );
   }
 
   Widget _navTab(int index, IconData outlineIcon, IconData solidIcon, String label) {

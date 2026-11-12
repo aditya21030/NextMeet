@@ -37,6 +37,8 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
 
   String? _cachedLocalPin;
   bool _hasLoadedPrefs = false;
+  bool _isAuthenticatingBiometric = false;
+  DateTime? _pausedTime;
 
   final CloudRelationshipService _cloudService = CloudRelationshipService();
 
@@ -55,8 +57,17 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_isAuthenticatingBiometric) return;
     if (state == AppLifecycleState.paused) {
-      lock();
+      _pausedTime = DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      if (_pausedTime != null) {
+        final elapsed = DateTime.now().difference(_pausedTime!);
+        if (elapsed.inSeconds >= 60) {
+          lock();
+        }
+        _pausedTime = null;
+      }
     }
   }
 
@@ -94,16 +105,20 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
     if (_isVerifying) return;
     if (_enteredPin.length < 4) {
       VibrationService.light();
+      final updated = _enteredPin + d;
       setState(() {
-        _enteredPin += d;
+        _enteredPin = updated;
         _errorMessage = null;
       });
-      if (_enteredPin.length == 4) {
-        if (isSetupMode) {
-          _handleSetupStep(rel);
-        } else {
-          _verifyPin(rel);
-        }
+      if (updated.length == 4) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (isSetupMode) {
+            _handleSetupStep(rel);
+          } else {
+            _verifyPin(rel);
+          }
+        });
       }
     }
   }
@@ -184,6 +199,7 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
   }
 
   Future<void> _verifyPin(RelationshipModel? rel) async {
+    if (_isVerifying) return;
     setState(() => _isVerifying = true);
     final cloudPin = (rel?.privateSpacePin != null && rel!.privateSpacePin!.isNotEmpty)
         ? rel.privateSpacePin
@@ -204,14 +220,18 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
       return;
     }
 
-    if (_enteredPin == cloudPin || _enteredPin == localPin) {
+    final isMatch = (cloudPin != null)
+        ? (_enteredPin == cloudPin)
+        : (_enteredPin == localPin);
+
+    if (isMatch) {
       // Synchronize missing store so local and cloud never desynchronize
       if (localPin != _enteredPin) {
         _cachedLocalPin = _enteredPin;
         SharedPreferences.getInstance().then((prefs) => prefs.setString('vault_pin', _enteredPin));
       }
       final relId = rel?.id;
-      if (relId != null && relId.isNotEmpty && cloudPin != _enteredPin) {
+      if (relId != null && relId.isNotEmpty && cloudPin == null) {
         _cloudService.updatePrivateSpacePin(relId, _enteredPin);
       }
 
@@ -235,26 +255,34 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
   }
 
   Future<void> _handleBiometricUnlock() async {
+    if (_isAuthenticatingBiometric) return;
+    _isAuthenticatingBiometric = true;
     VibrationService.light();
-    final result = await SecurityService().authenticateWithDetails(
-      reason: 'Scan fingerprint to open your private Vault',
-      biometricOnly: true,
-    );
-    if (!mounted) return;
-    if (result.success) {
-      VibrationService.success();
-      setState(() {
-        _isUnlocked = true;
-        _errorMessage = null;
-      });
-    } else if (result.errorMessage != null && result.errorCode != 'UserCanceled') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.errorMessage!),
-          backgroundColor: AppColors.danger,
-          duration: const Duration(seconds: 2),
-        ),
+    try {
+      final result = await SecurityService().authenticateWithDetails(
+        reason: 'Scan fingerprint to open your private Vault',
+        biometricOnly: true,
       );
+      if (!mounted) return;
+      if (result.success) {
+        VibrationService.success();
+        setState(() {
+          _isUnlocked = true;
+          _errorMessage = null;
+        });
+      } else if (result.errorMessage != null && result.errorCode != 'UserCanceled') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: AppColors.danger,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      Future.delayed(const Duration(milliseconds: 600), () {
+        _isAuthenticatingBiometric = false;
+      });
     }
   }
 
@@ -265,7 +293,7 @@ class VaultHubScreenState extends State<VaultHubScreen> with WidgetsBindingObser
       builder: (context, snapshot) {
         final rel = snapshot.data;
         if (!_isUnlocked) {
-          if (!_hasLoadedPrefs) {
+          if (!_hasLoadedPrefs || (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData && _cachedLocalPin == null)) {
             return const Scaffold(
               backgroundColor: AppColors.background,
               body: Center(

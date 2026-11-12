@@ -36,6 +36,7 @@ class NotificationsScreen extends StatelessWidget {
           'color': AppColors.partner,
         };
       case 'touch':
+      case 'nudge':
         return {
           'icon': Icons.touch_app_rounded,
           'bg': AppColors.pinkSoft,
@@ -49,6 +50,7 @@ class NotificationsScreen extends StatelessWidget {
           'color': AppColors.primary,
         };
       case 'memory':
+      case 'moment':
         return {
           'icon': Icons.photo_rounded,
           'bg': AppColors.mintSoft,
@@ -65,6 +67,25 @@ class NotificationsScreen extends StatelessWidget {
           'icon': Icons.flight_takeoff_rounded,
           'bg': AppColors.partnerSoft,
           'color': AppColors.partner,
+        };
+      case 'voice_note':
+      case 'whisper':
+        return {
+          'icon': Icons.mic_rounded,
+          'bg': AppColors.partnerSoft,
+          'color': AppColors.partner,
+        };
+      case 'mood':
+        return {
+          'icon': Icons.mood_rounded,
+          'bg': AppColors.butterSoft,
+          'color': AppColors.butterText,
+        };
+      case 'location':
+        return {
+          'icon': Icons.location_on_rounded,
+          'bg': AppColors.mintSoft,
+          'color': AppColors.mintText,
         };
       default:
         return {
@@ -168,16 +189,22 @@ class NotificationsScreen extends StatelessWidget {
                                 final doc = docs[index];
                                 final data = doc.data() as Map<String, dynamic>;
                                 final type = data['type']?.toString() ?? 'general';
-                                final message = data['message']?.toString() ?? 'Activity update';
+                                final title = data['title']?.toString() ?? data['message']?.toString() ?? 'Activity update';
+                                final detail = data['detail']?.toString();
                                 final ts = (data['timestamp'] as Timestamp?)?.toDate();
                                 final style = _getActivityStyle(type);
+
+                                final timeAgo = _formatTimeAgo(ts);
+                                final subtitle = (detail != null && detail.isNotEmpty)
+                                    ? '$detail • $timeAgo'
+                                    : timeAgo;
 
                                 return _notificationCard(
                                   icon: style['icon'] as IconData,
                                   iconBg: style['bg'] as Color,
                                   iconColor: style['color'] as Color,
-                                  title: message,
-                                  subtitle: _formatTimeAgo(ts),
+                                  title: title,
+                                  subtitle: subtitle,
                                   onTap: () {
                                     VibrationService.light();
                                     if (type == 'letter') {
@@ -185,12 +212,12 @@ class NotificationsScreen extends StatelessWidget {
                                         context,
                                         MaterialPageRoute(builder: (context) => const LoveLettersScreen()),
                                       );
-                                    } else if (type == 'memory') {
+                                    } else if (type == 'memory' || type == 'moment') {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(builder: (context) => const MemoriesScreen()),
                                       );
-                                    } else if (type == 'heartbeat' || type == 'touch' || type == 'hug' || type == 'miss') {
+                                    } else if (type == 'heartbeat' || type == 'touch' || type == 'hug' || type == 'miss' || type == 'nudge') {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(

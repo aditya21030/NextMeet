@@ -3,6 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../flat_components.dart';
 
+Widget _withClampedTextScale(BuildContext context, Widget child) {
+  final mq = MediaQuery.of(context);
+  return MediaQuery(
+    data: mq.copyWith(
+      textScaler: mq.textScaler.clamp(minScaleFactor: 1.0, maxScaleFactor: 1.12),
+    ),
+    child: child,
+  );
+}
+
 /// Available Color Palettes for Widgets (from WIDGET_SPEC.md)
 enum WidgetPalette { pink, violet, butter, mint, ink }
 
@@ -29,7 +39,7 @@ class WidgetPaletteColors {
         return const WidgetPaletteColors(
           primary: Color(0xFFD81B6A),
           accent: Color(0xFFE8478A),
-          subtext: Color(0xFFFFD6E7),
+          subtext: Color(0xFFFFEEF5),
           track: Color(0xFFE8478A),
           fill: Color(0xFFFFD66B),
           text: Colors.white,
@@ -38,7 +48,7 @@ class WidgetPaletteColors {
         return const WidgetPaletteColors(
           primary: Color(0xFF7B5CF0),
           accent: Color(0xFF9B87F5),
-          subtext: Color(0xFFEDE4FF),
+          subtext: Color(0xFFF3EEFF),
           track: Color(0xFF9B87F5),
           fill: Color(0xFFFFD66B),
           text: Colors.white,
@@ -104,15 +114,18 @@ class DistanceBatteryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int displayBattery = state == DistanceBatteryState.lowBattery
-        ? 12
-        : (state == DistanceBatteryState.asleep ? 88 : battery);
+    final int displayBattery = (state == DistanceBatteryState.lowBattery
+            ? 12
+            : (state == DistanceBatteryState.asleep ? 88 : battery))
+        .clamp(0, 100);
     final String displayTime = state == DistanceBatteryState.asleep ? 'CET, 2:10 AM' : timeText;
     final Color batteryBarColor = state == DistanceBatteryState.lowBattery
         ? const Color(0xFFD13A4F)
         : const Color(0xFF6FCFA0);
 
-    return GestureDetector(
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
       onTap: onTap,
       child: Container(
         width: 358,
@@ -302,6 +315,7 @@ class DistanceBatteryWidget extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -424,11 +438,13 @@ class HeartbeatSyncWidget extends StatelessWidget {
         break;
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 174,
-        height: 174,
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 174,
+          height: 174,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: bg,
@@ -531,6 +547,7 @@ class HeartbeatSyncWidget extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -544,6 +561,7 @@ enum CountdownWidgetState { daysHours, tomorrow, today }
 class ReunionCountdownWidget extends StatelessWidget {
   final CountdownWidgetState state;
   final WidgetPalette palette;
+  final String partnerName;
   final String countdownText;
   final String subText;
   final String originAirport;
@@ -555,6 +573,7 @@ class ReunionCountdownWidget extends StatelessWidget {
     super.key,
     this.state = CountdownWidgetState.daysHours,
     this.palette = WidgetPalette.pink,
+    this.partnerName = 'Rahul',
     this.countdownText = '23d 14h',
     this.subText = 'Wed 25 Nov, Frankfurt to Chennai',
     this.originAirport = 'FRA',
@@ -573,15 +592,17 @@ class ReunionCountdownWidget extends StatelessWidget {
 
     if (state == CountdownWidgetState.tomorrow) {
       displayMain = 'Tomorrow';
-      displaySub = 'Rahul flies at 10:30 PM tonight';
+      displaySub = '$partnerName flies at 10:30 PM tonight';
       displayProgress = 0.92;
     } else if (state == CountdownWidgetState.today) {
       displayMain = 'Today!';
-      displaySub = 'Rahul lands at 12:30 PM';
+      displaySub = '$partnerName lands at 12:30 PM';
       displayProgress = 1.0;
     }
 
-    return GestureDetector(
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
       onTap: onTap,
       child: Container(
         width: 358,
@@ -752,6 +773,7 @@ class ReunionCountdownWidget extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -783,9 +805,11 @@ class DailyMomentsPhotoWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state == MomentsWidgetState.waiting) {
-      return Container(
-        width: 358,
-        height: 358,
+      return _withClampedTextScale(
+        context,
+        Container(
+          width: 358,
+          height: 358,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: const Color(0xFFFFE0ED),
@@ -831,7 +855,7 @@ class DailyMomentsPhotoWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'His moment will appear here',
+                    "$partnerName's moment will appear here",
                     style: GoogleFonts.nunito(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
@@ -844,36 +868,45 @@ class DailyMomentsPhotoWidget extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 64,
-              right: 64,
+              left: 44,
+              right: 44,
               bottom: 40,
               child: GestureDetector(
                 onTap: onSendFirst,
                 child: Container(
                   height: 54,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     color: const Color(0xFFD81B6A),
                     borderRadius: BorderRadius.circular(27),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Send yours first',
-                        style: GoogleFonts.nunito(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Send yours first',
+                            style: GoogleFonts.nunito(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
           ],
+        ),
         ),
       );
     }
@@ -881,14 +914,16 @@ class DailyMomentsPhotoWidget extends StatelessWidget {
     // Partner moment or Your moment sent
     final bool isSent = state == MomentsWidgetState.sent;
 
-    return Container(
-      width: 358,
-      height: 358,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5C65B),
-        borderRadius: BorderRadius.circular(36),
-      ),
+    return _withClampedTextScale(
+      context,
+      Container(
+        width: 358,
+        height: 358,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5C65B),
+          borderRadius: BorderRadius.circular(36),
+        ),
       child: Stack(
         children: [
           // Scenic sunset background art
@@ -936,7 +971,7 @@ class DailyMomentsPhotoWidget extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            isSent ? 'Sent 9:42 PM, seen by $partnerName' : timeText,
+                            isSent ? 'Sent $timeText, seen by $partnerName' : timeText,
                             style: GoogleFonts.nunito(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
@@ -1023,6 +1058,7 @@ class DailyMomentsPhotoWidget extends StatelessWidget {
             ),
         ],
       ),
+      ),
     );
   }
 }
@@ -1045,11 +1081,13 @@ class TogetherCounterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 174,
-        height: 174,
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 174,
+          height: 174,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: const Color(0xFFEDE4FF),
@@ -1076,14 +1114,21 @@ class TogetherCounterWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '$days',
-                    style: GoogleFonts.nunito(
-                      fontSize: 60,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF4B3A8C),
-                      letterSpacing: -2,
-                      height: 1.0,
+                  SizedBox(
+                    width: 146,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '$days',
+                        style: GoogleFonts.nunito(
+                          fontSize: 60,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF4B3A8C),
+                          letterSpacing: -2,
+                          height: 1.0,
+                        ),
+                      ),
                     ),
                   ),
                   Text(
@@ -1101,12 +1146,17 @@ class TogetherCounterWidget extends StatelessWidget {
             Positioned(
               left: 16,
               bottom: 14,
-              child: Text(
-                breakdown,
-                style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF4B3A8C),
+              child: SizedBox(
+                width: 96,
+                child: Text(
+                  breakdown,
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF4B3A8C),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -1130,6 +1180,7 @@ class TogetherCounterWidget extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -1150,15 +1201,17 @@ class QuickTouchWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 174,
-      height: 174,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: const Color(0xFFF8D8E6), width: 1.5),
-      ),
+    return _withClampedTextScale(
+      context,
+      Container(
+        width: 174,
+        height: 174,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: const Color(0xFFF8D8E6), width: 1.5),
+        ),
       child: Stack(
         children: [
           Positioned(
@@ -1232,6 +1285,7 @@ class QuickTouchWidget extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -1298,11 +1352,13 @@ class TwoClocksWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 358,
-        height: 84,
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 358,
+          height: 84,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1434,6 +1490,7 @@ class TwoClocksWidget extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -1458,11 +1515,13 @@ class NextMilestoneWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 174,
-        height: 174,
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 174,
+          height: 174,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: const Color(0xFFFFD66B),
@@ -1501,12 +1560,18 @@ class NextMilestoneWidget extends StatelessWidget {
                         strokeWidth: 10,
                       ),
                     ),
-                    Text(
-                      '$daysLeft',
-                      style: GoogleFonts.nunito(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF2B1B26),
+                    SizedBox(
+                      width: 66,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '$daysLeft',
+                          style: GoogleFonts.nunito(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF2B1B26),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -1531,6 +1596,7 @@ class NextMilestoneWidget extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1558,16 +1624,18 @@ class GameStatusWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isYourMove = state == GameWidgetState.yourMove;
 
-    return GestureDetector(
-      onTap: onAction,
-      child: Container(
-        width: 174,
-        height: 174,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: const Color(0xFF7B5CF0),
-          borderRadius: BorderRadius.circular(32),
-        ),
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
+        onTap: onAction,
+        child: Container(
+          width: 174,
+          height: 174,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: const Color(0xFF7B5CF0),
+            borderRadius: BorderRadius.circular(32),
+          ),
         child: Stack(
           children: [
             // Ambient corner circle
@@ -1681,6 +1749,7 @@ class GameStatusWidget extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -1711,16 +1780,18 @@ class LoveNoteWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isSealed = state == LoveNoteWidgetState.sealed;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 358,
-        height: 174,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: const Color(0xFFEDE4FF),
-          borderRadius: BorderRadius.circular(32),
-        ),
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 358,
+          height: 174,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEDE4FF),
+            borderRadius: BorderRadius.circular(32),
+          ),
         child: Stack(
           children: [
             // Left photo / envelope thumbnail
@@ -1812,6 +1883,7 @@ class LoveNoteWidget extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -1824,6 +1896,7 @@ enum TripWidgetState { inTheAir, scheduled, landed }
 
 class TripTrackerWidget extends StatelessWidget {
   final TripWidgetState state;
+  final String partnerName;
   final String flightNumber;
   final String originCode;
   final String originCity;
@@ -1835,6 +1908,7 @@ class TripTrackerWidget extends StatelessWidget {
   const TripTrackerWidget({
     super.key,
     this.state = TripWidgetState.inTheAir,
+    this.partnerName = 'Rahul',
     this.flightNumber = 'Flight XX 214',
     this.originCode = 'FRA',
     this.originCity = 'Frankfurt',
@@ -1871,22 +1945,24 @@ class TripTrackerWidget extends StatelessWidget {
         badgeText = 'Landed';
         badgeBg = const Color(0xFFE3F6EC);
         badgeFg = const Color(0xFF1F7A4F);
-        bottomMain = 'Rahul is on his way';
+        bottomMain = '$partnerName is on the way';
         progress = 1.0;
         break;
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 358,
-        height: 174,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: const Color(0xFFF8D8E6), width: 1.5),
-        ),
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 358,
+          height: 174,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: const Color(0xFFF8D8E6), width: 1.5),
+          ),
         child: Stack(
           children: [
             // Top row
@@ -1937,49 +2013,67 @@ class TripTrackerWidget extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        originCode,
-                        style: GoogleFonts.nunito(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF2B1B26),
-                          height: 1.0,
+                  SizedBox(
+                    width: 68,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            originCode,
+                            style: GoogleFonts.nunito(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF2B1B26),
+                              height: 1.0,
+                            ),
+                          ),
                         ),
-                      ),
-                      Text(
-                        originCity,
-                        style: GoogleFonts.nunito(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF7A6672),
+                        Text(
+                          originCity,
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF7A6672),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        destCode,
-                        style: GoogleFonts.nunito(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF2B1B26),
-                          height: 1.0,
+                  SizedBox(
+                    width: 68,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            destCode,
+                            style: GoogleFonts.nunito(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF2B1B26),
+                              height: 1.0,
+                            ),
+                          ),
                         ),
-                      ),
-                      Text(
-                        destCity,
-                        style: GoogleFonts.nunito(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF7A6672),
+                        Text(
+                          destCity,
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF7A6672),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -2035,6 +2129,7 @@ class TripTrackerWidget extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -2069,17 +2164,19 @@ class NextEventWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 358,
-        height: 174,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: const Color(0xFFF8D8E6), width: 1.5),
-        ),
+    return _withClampedTextScale(
+      context,
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 358,
+          height: 174,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: const Color(0xFFF8D8E6), width: 1.5),
+          ),
         child: Stack(
           children: [
             // Top Header: UP NEXT
@@ -2136,6 +2233,7 @@ class NextEventWidget extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -2222,14 +2320,16 @@ class MemoryOfTheDayWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 358,
-      height: 358,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFE0ED),
-        borderRadius: BorderRadius.circular(36),
-      ),
+    return _withClampedTextScale(
+      context,
+      Container(
+        width: 358,
+        height: 358,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFE0ED),
+          borderRadius: BorderRadius.circular(36),
+        ),
       child: Stack(
         children: [
           // Ambient corner circle
@@ -2283,6 +2383,7 @@ class MemoryOfTheDayWidget extends StatelessWidget {
                   children: [
                     // Picture inside polaroid
                     Container(
+                      width: double.infinity,
                       height: 188,
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
@@ -2311,26 +2412,34 @@ class MemoryOfTheDayWidget extends StatelessWidget {
                     // Polaroid Caption
                     Positioned(
                       left: 4,
-                      bottom: -28,
-                      child: Text(
-                        memoryTitle,
-                        style: GoogleFonts.nunito(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF2B1B26),
-                        ),
-                      ),
-                    ),
-                    Positioned(
                       right: 4,
-                      bottom: -26,
-                      child: Text(
-                        memoryDate,
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF7A6672),
-                        ),
+                      bottom: -28,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              memoryTitle,
+                              style: GoogleFonts.nunito(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF2B1B26),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            memoryDate,
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF7A6672),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -2367,6 +2476,7 @@ class MemoryOfTheDayWidget extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -2379,6 +2489,8 @@ class CoupleDashboardWidget extends StatelessWidget {
   final String partnerName;
   final int battery;
   final int streak;
+  final bool isOnline;
+  final bool isPartnerHolding;
   final String myTime;
   final String partnerTime;
   final String distance;
@@ -2394,6 +2506,8 @@ class CoupleDashboardWidget extends StatelessWidget {
     this.partnerName = 'Rahul',
     this.battery = 64,
     this.streak = 42,
+    this.isOnline = true,
+    this.isPartnerHolding = false,
     this.myTime = '8:12 PM',
     this.partnerTime = '9:42 PM',
     this.distance = '8,420 km',
@@ -2407,51 +2521,54 @@ class CoupleDashboardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 358,
-      height: 358,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(36),
-        border: Border.all(color: const Color(0xFFF8D8E6), width: 1.5),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Row 1: Partner status + streak
-          Row(
-            children: [
-              const MascotHeart(color: MascotColor.violet, size: 40),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      partnerName,
-                      style: GoogleFonts.nunito(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF2B1B26),
-                        height: 1.1,
+    final safeBattery = battery.clamp(0, 100);
+    return _withClampedTextScale(
+      context,
+      Container(
+        width: 358,
+        height: 358,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(36),
+          border: Border.all(color: const Color(0xFFF8D8E6), width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Row 1: Partner status + streak
+            Row(
+              children: [
+                const MascotHeart(color: MascotColor.violet, size: 40),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        partnerName,
+                        style: GoogleFonts.nunito(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF2B1B26),
+                          height: 1.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      'Online now, battery $battery%',
-                      style: GoogleFonts.nunito(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF1F7A4F),
+                      Text(
+                        '${isOnline ? 'Online now' : 'Away'}, battery $safeBattery%',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: isOnline ? const Color(0xFF1F7A4F) : const Color(0xFF7A6672),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -2624,6 +2741,7 @@ class CoupleDashboardWidget extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: onHeartHold,
+                onLongPress: onHeartHold,
                 child: Container(
                   width: 50,
                   height: 50,
@@ -2666,8 +2784,8 @@ class CoupleDashboardWidget extends StatelessWidget {
                       maxLines: 1,
                     ),
                     Text(
-                      '$partnerName not holding',
-                      style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF7A6672)),
+                      isPartnerHolding ? '$partnerName is holding!' : '$partnerName not holding',
+                      style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w800, color: isPartnerHolding ? const Color(0xFFD81B6A) : const Color(0xFF7A6672)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -2742,6 +2860,7 @@ class CoupleDashboardWidget extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

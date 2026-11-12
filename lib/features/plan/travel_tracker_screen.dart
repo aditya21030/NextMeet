@@ -114,39 +114,42 @@ class _TravelTrackerScreenState extends State<TravelTrackerScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.partnerSoft,
-                                    borderRadius: BorderRadius.circular(8),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.partnerSoft,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.flight_rounded, color: AppColors.partner, size: 18),
                                   ),
-                                  child: const Icon(Icons.flight_rounded, color: AppColors.partner, size: 18),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Flight to $dest',
-                                        style: AppTextStyles.heading.copyWith(fontSize: 14),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        'Couple Reunion Route',
-                                        style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Flight to $dest',
+                                          style: AppTextStyles.heading.copyWith(fontSize: 14),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Couple Reunion Route',
+                                          style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
@@ -164,32 +167,45 @@ class _TravelTrackerScreenState extends State<TravelTrackerScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('DEP', style: AppTextStyles.display.copyWith(fontSize: 32, color: AppColors.partner)),
-                                Text('Origin', style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
-                                const SizedBox(height: 4),
-                                Text('10:45 AM', style: AppTextStyles.heading.copyWith(fontSize: 16)),
-                                Text('Gate B24', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
-                              ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('DEP', style: AppTextStyles.display.copyWith(fontSize: 32, color: AppColors.partner)),
+                                  Text('Origin', style: AppTextStyles.caption.copyWith(color: AppColors.muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 4),
+                                  Text('10:45 AM', style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                                  Text('Gate B24', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
+                                ],
+                              ),
                             ),
-                            Column(
-                              children: [
-                                const Icon(Icons.flight_takeoff_rounded, color: AppColors.primary, size: 28),
-                                const SizedBox(height: 4),
-                                Text('$daysToMeet days left', style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11)),
-                              ],
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Column(
+                                children: [
+                                  const Icon(Icons.flight_takeoff_rounded, color: AppColors.primary, size: 28),
+                                  const SizedBox(height: 4),
+                                  Text('$daysToMeet days left', style: AppTextStyles.caption.copyWith(color: AppColors.muted, fontSize: 11)),
+                                ],
+                              ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text('ARR', style: AppTextStyles.display.copyWith(fontSize: 32, color: AppColors.primary)),
-                                Text(dest, style: AppTextStyles.caption.copyWith(color: AppColors.muted)),
-                                const SizedBox(height: 4),
-                                Text('11:30 PM', style: AppTextStyles.heading.copyWith(fontSize: 16)),
-                                Text('Terminal 4', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
-                              ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('ARR', style: AppTextStyles.display.copyWith(fontSize: 32, color: AppColors.primary)),
+                                  Text(
+                                    dest,
+                                    style: AppTextStyles.caption.copyWith(color: AppColors.muted),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.end,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text('11:30 PM', style: AppTextStyles.heading.copyWith(fontSize: 16)),
+                                  Text('Terminal 4', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
+                                ],
+                              ),
                             ),
                           ],
                         ),

@@ -20,7 +20,7 @@ import 'auth_service.dart';
 class CloudRelationshipService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AuthService _auth = AuthService();
-  final SupabaseClient _supabase = Supabase.instance.client;
+  SupabaseClient get _supabase => Supabase.instance.client;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final NotificationService _notifications = NotificationService();
 
@@ -45,7 +45,15 @@ class CloudRelationshipService {
   CollectionReference get _invites => _firestore.collection('invites');
   CollectionReference get _users => _firestore.collection('users');
 
-  String? get currentUid => _auth.currentUid ?? _supabase.auth.currentUser?.id ?? FirebaseAuth.instance.currentUser?.uid;
+  String? get _safeSupabaseUid {
+    try {
+      return _supabase.auth.currentUser?.id;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? get currentUid => _auth.currentUid ?? _safeSupabaseUid ?? FirebaseAuth.instance.currentUser?.uid;
   String? get _currentUid => currentUid;
 
   // Reactive Single-Source-of-Truth in-memory state for instant UI updates
@@ -99,13 +107,24 @@ class CloudRelationshipService {
     File? imageFile,
     String emotion = 'Happy',
     bool isPrivate = false,
+    double? lat,
+    double? lng,
   }) async {
+    if (relId.isEmpty || relId == 'default_rel') return;
     if (isPrivate && imageFile != null) {
       await uploadPrivatePhotoFile(relId, imageFile, category: emotion);
       return;
     }
     if (imageFile != null) {
-      await addMemory(relId, imageFile, title, location);
+      await addMemory(
+        relId,
+        imageFile,
+        title,
+        location,
+        lat: lat,
+        lng: lng,
+        customDate: date,
+      );
     } else {
       final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
       final memory = MemoryModel(
@@ -114,6 +133,9 @@ class CloudRelationshipService {
         caption: title,
         location: location,
         date: date,
+        moodEmoji: emotion,
+        lat: lat,
+        lng: lng,
       );
       final currentList = _cachedMemoriesMap[relId] ?? [];
       final updatedList = [memory, ...currentList];
@@ -121,14 +143,34 @@ class CloudRelationshipService {
       _getMemoriesController(relId).add(List.from(updatedList));
 
       try {
+        await _supabase.from('memories').insert({
+          'relationship_id': relId,
+          'uploader_id': _currentUid,
+          'image_url': '',
+          'caption': title,
+          'location': location,
+          'mood_emoji': emotion,
+          'lat': lat,
+          'lng': lng,
+          'date': date.toIso8601String(),
+          'created_at': DateTime.now().toIso8601String(),
+        }).timeout(const Duration(seconds: 6));
+      } catch (e) {
+        debugPrint('Supabase insert memory without photo warning: $e');
+      }
+
+      try {
         await _firestore.collection('relationships').doc(relId).collection('memories').add({
           'imageUrl': '',
           'caption': title,
           'location': location,
           'emotion': emotion,
+          'moodEmoji': emotion,
+          'lat': lat,
+          'lng': lng,
           'date': Timestamp.fromDate(date),
           'addedBy': _currentUid,
-        });
+        }).timeout(const Duration(seconds: 6));
       } catch (_) {}
       await logActivity(relId, 'memory', 'New memory saved: $title');
       await incrementStat(relId, 'memories');
@@ -136,7 +178,7 @@ class CloudRelationshipService {
   }
 
   // Upload a memory with image
-  Future<void> addMemory(String relId, File image, String caption, String location, {bool isStory = false, double? lat, double? lng, DateTime? unlockDate}) async {
+  Future<void> addMemory(String relId, File image, String caption, String location, {bool isStory = false, double? lat, double? lng, DateTime? unlockDate, DateTime? customDate}) async {
     if (_currentUid == null) throw Exception('User not authenticated');
     
     // SECURITY: Enforce Memory limits
@@ -187,6 +229,8 @@ class CloudRelationshipService {
       imageUrl = await uploadTask.ref.getDownloadURL();
     }
 
+    final effectiveDate = customDate ?? DateTime.now();
+    final dateIso = effectiveDate.toIso8601String();
     final nowIso = DateTime.now().toIso8601String();
     final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
     final optimisticMemory = MemoryModel(
@@ -194,7 +238,7 @@ class CloudRelationshipService {
       imageUrl: imageUrl,
       caption: caption,
       location: location,
-      date: DateTime.now(),
+      date: effectiveDate,
       isStory: isStory,
       lat: lat,
       lng: lng,
@@ -217,7 +261,7 @@ class CloudRelationshipService {
         'is_story': isStory,
         'lat': lat,
         'lng': lng,
-        'date': nowIso,
+        'date': dateIso,
         'created_at': nowIso,
         'unlock_date': unlockDate?.toIso8601String(),
       }).select().maybeSingle();
@@ -243,7 +287,7 @@ class CloudRelationshipService {
         'imageUrl': imageUrl,
         'caption': caption,
         'location': location,
-        'date': FieldValue.serverTimestamp(),
+        'date': customDate != null ? Timestamp.fromDate(customDate) : FieldValue.serverTimestamp(),
         'addedBy': _currentUid,
         'isStory': isStory,
         'lat': lat,
@@ -1110,14 +1154,30 @@ class CloudRelationshipService {
       if (res != null) {
         final currentData = res['data'] is Map ? Map<String, dynamic>.from(res['data'] as Map) : <String, dynamic>{};
         updates.forEach((k, v) {
+          dynamic val;
           if (v is DateTime) {
-            currentData[k] = v.toIso8601String();
+            val = v.toIso8601String();
           } else if (v is Timestamp) {
-            currentData[k] = v.toDate().toIso8601String();
+            val = v.toDate().toIso8601String();
           } else if (v is FieldValue) {
-            currentData[k] = DateTime.now().toIso8601String();
+            val = DateTime.now().toIso8601String();
           } else {
-            currentData[k] = v;
+            val = v;
+          }
+
+          if (k.contains('.')) {
+            final parts = k.split('.');
+            if (parts.length == 2) {
+              final parentKey = parts[0];
+              final childKey = parts[1];
+              final parentMap = currentData[parentKey] is Map ? Map<String, dynamic>.from(currentData[parentKey] as Map) : <String, dynamic>{};
+              parentMap[childKey] = val;
+              currentData[parentKey] = parentMap;
+            } else {
+              currentData[k] = val;
+            }
+          } else {
+            currentData[k] = val;
           }
         });
 

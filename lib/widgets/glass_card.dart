@@ -55,29 +55,34 @@ class GlassCard extends StatelessWidget {
   }
 
   Widget _buildBody() {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
-        width: width,
-        height: height,
-        padding: padding ?? const EdgeInsets.all(AppSpacing.l),
-        decoration: BoxDecoration(
-          color: color ?? (useBlur ? Colors.white.withValues(alpha: opacity) : Colors.white.withValues(alpha: 0.85)),
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: color ?? (useBlur ? Colors.white.withValues(alpha: opacity) : Colors.white.withValues(alpha: 0.85)),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.15),
+          width: 0.5,
+        ),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.6),
-            width: 1.5,
+          child: Padding(
+            padding: padding ?? const EdgeInsets.all(AppSpacing.l),
+            child: child,
           ),
         ),
-        foregroundDecoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.15),
-            width: 0.5,
-          ),
-        ),
-        child: child,
       ),
     );
   }

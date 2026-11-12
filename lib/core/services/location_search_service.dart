@@ -12,11 +12,21 @@ class LocationResult {
 
   factory LocationResult.fromJson(Map<String, dynamic> json) {
     return LocationResult(
-      name: json['display_name'] ?? '',
-      lat: double.parse(json['lat']),
-      lng: double.parse(json['lon']),
+      name: json['display_name']?.toString() ?? '',
+      lat: double.tryParse(json['lat']?.toString() ?? '') ?? 0.0,
+      lng: double.tryParse(json['lon']?.toString() ?? '') ?? 0.0,
     );
   }
+
+  /// True when coordinates parsed cleanly and are not the unset (0, 0) sentinel.
+  bool get hasValidCoordinates =>
+      lat.isFinite &&
+      lng.isFinite &&
+      lat >= -90.0 &&
+      lat <= 90.0 &&
+      lng >= -180.0 &&
+      lng <= 180.0 &&
+      !(lat == 0.0 && lng == 0.0);
 }
 
 class LocationSearchService {
@@ -29,12 +39,14 @@ class LocationSearchService {
 
     try {
       final queryEncoded = Uri.encodeComponent(query);
-      final response = await http.get(
-        Uri.parse('$_baseUrl?q=$queryEncoded&format=json&limit=10&addressdetails=1'),
-        headers: {
-          'User-Agent': 'NextMeetApp/1.0',
-        },
-      );
+      final response = await http
+          .get(
+            Uri.parse('$_baseUrl?q=$queryEncoded&format=json&limit=10&addressdetails=1'),
+            headers: {
+              'User-Agent': 'NextMeetApp/1.0 (com.yousful.nextmeet)',
+            },
+          )
+          .timeout(const Duration(seconds: 6));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);

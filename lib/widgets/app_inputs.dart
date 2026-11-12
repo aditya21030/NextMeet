@@ -19,7 +19,7 @@ class AppInputs {
         fontWeight: FontWeight.w600,
       ),
       hintStyle: AppTextStyles.caption.copyWith(
-        color: AppColors.muted.withValues(alpha: 0.6),
+        color: AppColors.muted.withValues(alpha: 0.85),
       ),
       filled: true,
       fillColor: fillColor ?? AppColors.card,

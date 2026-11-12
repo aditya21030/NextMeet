@@ -80,7 +80,9 @@ exports.sendTouchNotification = functions.firestore
       const touchType = newData.lastTouchType;
       const relId = context.params.relId;
 
-      const receiverUid = newData.uids.find((uid) => uid !== senderUid);
+      const receiverUid = (newData.uids && Array.isArray(newData.uids))
+        ? newData.uids.find((uid) => uid !== senderUid)
+        : (senderUid === newData.uid1 ? newData.uid2 : newData.uid1);
       if (!receiverUid) return null;
 
       const userTokens = newData.userTokens || {};
@@ -105,6 +107,9 @@ exports.sendTouchNotification = functions.firestore
       } else if (touchType === "touch") {
         title = "Digital Touch! ⚡";
         body = `${senderName} just gave you a digital touch.`;
+      } else if (touchType === "hug") {
+        title = "Digital Hug! 🤗";
+        body = `${senderName} just sent you a warm hug.`;
       } else if (touchType === "emoji") {
         title = "Reaction! ✨";
         body = `${senderName} sent you a warm reaction.`;

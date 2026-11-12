@@ -47,10 +47,11 @@
                     android:paddingRight="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="🔋 87% • Online now"
+                    android:text="🔋 --% • Syncing"
                     android:textColor="#1F7A4F"
                     android:textSize="10sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:maxLines="1" />
             </LinearLayout>
 
             <!-- Middle Row: Big Distance & Partner / Reunion Pill -->
@@ -66,21 +67,24 @@
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="1,506 km"
+                    android:text="-- km"
                     android:textColor="#D81B6A"
                     android:textSize="26sp"
                     android:textStyle="bold"
-                    android:includeFontPadding="false" />
+                    android:includeFontPadding="false"
+                    android:maxLines="1" />
 
                 <TextView
                     android:id="@+id/widget_partner_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="❤️ Bibaaa"
+                    android:text="❤️ Partner"
                     android:textColor="#2B1B26"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginRight="6dp" />
+                    android:layout_marginRight="6dp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
 
                 <!-- Countdown Pill: Tappable to open Plan / Reunion -->
                 <TextView
@@ -92,10 +96,11 @@
                     android:paddingRight="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="7 DAYS"
+                    android:text="Soon ❤️"
                     android:textColor="#D81B6A"
                     android:textSize="10sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:maxLines="1" />
             </LinearLayout>
 
             <!-- Route Subtitle (Defaults to Cities, switches to feedback on button tap) -->
@@ -103,12 +108,13 @@
                 android:id="@+id/widget_route"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Howrah to Ratangarh"
+                android:text="Connected ❤️"
                 android:textColor="#7A6672"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:layout_marginTop="1dp"
-                android:maxLines="1" />
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <!-- Dynamic Feedback message on touch -->
             <TextView
@@ -195,8 +201,132 @@
                 android:text="💓 Sync"
                 android:textColor="#1F7A4F"
                 android:textSize="11sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:maxLines="1" />
 
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Mode 2: Pixel-faithful Rendered Flutter Widget (for custom themes & large cards) -->
+    <RelativeLayout
+        android:id="@+id/widget_rendered_wrapper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/widget_rendered_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:contentDescription="NextMeet Couple Widget" />
+
+        <TextView
+            android:id="@+id/widget_rendered_feedback"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/widget_pill_pink"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text=""
+            android:textColor="#D81B6A"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:visibility="gone" />
+    </RelativeLayout>
+
+    <!-- Mode 3: Interactive 2x2 Quick Touch Card (all 4 buttons execute directly) -->
+    <LinearLayout
+        android:id="@+id/widget_quick_touch_card"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/widget_background"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/qt_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SEND TO PARTNER"
+            android:textColor="#7A6672"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:layout_marginBottom="6dp">
+
+            <TextView
+                android:id="@+id/btn_qt_miss"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_pill_pink"
+                android:gravity="center"
+                android:text="❤️\nMiss you"
+                android:textColor="#D81B6A"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginRight="6dp" />
+
+            <TextView
+                android:id="@+id/btn_qt_hug"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_pill_purple"
+                android:gravity="center"
+                android:text="🤗\nHug"
+                android:textColor="#7B5CF0"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btn_qt_touch"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_pill_yellow"
+                android:gravity="center"
+                android:text="⚡\nTouch"
+                android:textColor="#7A5200"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginRight="6dp" />
+
+            <TextView
+                android:id="@+id/btn_qt_cheer"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_pill_mint"
+                android:gravity="center"
+                android:text="⭐\nCheer"
+                android:textColor="#1F7A4F"
+                android:textSize="11sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
     </LinearLayout>
