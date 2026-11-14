@@ -86,6 +86,7 @@ class _YourStoryScreenState extends State<YourStoryScreen> {
     );
 
     if (picked != null) {
+      if (!mounted) return;
       VibrationService.light();
       setState(() => onPicked(picked));
     }

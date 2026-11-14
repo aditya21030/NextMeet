@@ -27,7 +27,7 @@ class CoupleGameService {
         .doc(relId)
         .collection('games')
         .doc('tictactoe');
-    final doc = await docRef.get();
+    final doc = await docRef.get().timeout(const Duration(seconds: 8));
     if (!doc.exists) {
       await docRef.set({
         'board': List.filled(9, ''),
@@ -36,7 +36,7 @@ class CoupleGameService {
         'scoreU1': 0,
         'scoreU2': 0,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     }
   }
 
@@ -61,7 +61,7 @@ class CoupleGameService {
     };
     if (incrementU1) updates['scoreU1'] = FieldValue.increment(1);
     if (incrementU2) updates['scoreU2'] = FieldValue.increment(1);
-    await docRef.set(updates, SetOptions(merge: true));
+    await docRef.set(updates, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
   }
 
   Future<void> resetTicTacToe(String relId, String startingTurnUid) async {
@@ -76,7 +76,7 @@ class CoupleGameService {
       'winner': null,
       'lastReaction': null,
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    }, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
   }
 
   Future<void> sendGameReaction(String relId, String gameName, String reaction, String senderName) async {
@@ -89,7 +89,7 @@ class CoupleGameService {
       'lastReaction': reaction,
       'lastReactionBy': senderName,
       'reactionTime': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    }, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -110,7 +110,7 @@ class CoupleGameService {
         .doc(relId)
         .collection('games')
         .doc('connect_four');
-    final doc = await docRef.get();
+    final doc = await docRef.get().timeout(const Duration(seconds: 8));
     if (!doc.exists) {
       await docRef.set({
         // 6 rows x 7 cols = 42 cells (0: empty, 1: U1 Pink, 2: U2 Violet)
@@ -120,7 +120,7 @@ class CoupleGameService {
         'scoreU1': 0,
         'scoreU2': 0,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     }
   }
 
@@ -145,7 +145,7 @@ class CoupleGameService {
     };
     if (incrementU1) updates['scoreU1'] = FieldValue.increment(1);
     if (incrementU2) updates['scoreU2'] = FieldValue.increment(1);
-    await docRef.set(updates, SetOptions(merge: true));
+    await docRef.set(updates, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
   }
 
   Future<void> resetConnectFour(String relId, String startingTurnUid) async {
@@ -159,7 +159,7 @@ class CoupleGameService {
       'currentTurn': startingTurnUid,
       'winner': null,
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    }, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -180,19 +180,19 @@ class CoupleGameService {
         .doc(relId)
         .collection('games')
         .doc('never_have_i_ever');
-    final snap = await docRef.get();
+    final snap = await docRef.get().timeout(const Duration(seconds: 8));
     if (!snap.exists) {
       await docRef.set({
         'promptIndex': promptIndex,
         'answers': {uid: haveDone},
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     } else {
       await docRef.update({
         'promptIndex': promptIndex,
         'answers.$uid': haveDone,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     }
   }
 
@@ -206,7 +206,7 @@ class CoupleGameService {
       'promptIndex': nextIndex,
       'answers': {},
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -233,7 +233,7 @@ class CoupleGameService {
       'spunByName': spunByName,
       'spinTimestamp': DateTime.now().millisecondsSinceEpoch,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -257,7 +257,7 @@ class CoupleGameService {
     await docRef.set({
       'lines': serializedLines,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   Future<void> clearDrawing(String relId) async {
@@ -269,7 +269,7 @@ class CoupleGameService {
     await docRef.set({
       'lines': [],
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -290,7 +290,7 @@ class CoupleGameService {
         .doc(relId)
         .collection('games')
         .doc('dots_and_boxes');
-    final doc = await docRef.get();
+    final doc = await docRef.get().timeout(const Duration(seconds: 8));
     if (!doc.exists) {
       await docRef.set({
         'hLines': List.filled(12, 0),
@@ -301,7 +301,7 @@ class CoupleGameService {
         'scoreU2': 0,
         'winner': null,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     }
   }
 
@@ -329,7 +329,7 @@ class CoupleGameService {
       'scoreU2': scoreU2,
       'winner': winner,
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    }, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
   }
 
   Future<void> resetDotsAndBoxes(String relId, String startingTurnUid) async {
@@ -347,7 +347,7 @@ class CoupleGameService {
       'scoreU2': 0,
       'winner': null,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -368,7 +368,7 @@ class CoupleGameService {
         .doc(relId)
         .collection('games')
         .doc('rock_paper_kiss');
-    final snap = await docRef.get();
+    final snap = await docRef.get().timeout(const Duration(seconds: 8));
     if (!snap.exists) {
       await docRef.set({
         'moves': {uid: moveName},
@@ -376,12 +376,12 @@ class CoupleGameService {
         'scoreU1': 0,
         'scoreU2': 0,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     } else {
       await docRef.update({
         'moves.$uid': moveName,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     }
   }
 
@@ -398,7 +398,7 @@ class CoupleGameService {
     };
     if (scoreU1 != null) updates['scoreU1'] = scoreU1;
     if (scoreU2 != null) updates['scoreU2'] = scoreU2;
-    await docRef.set(updates, SetOptions(merge: true));
+    await docRef.set(updates, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
   }
 
   Future<void> resetRPSGame(String relId) async {
@@ -413,7 +413,7 @@ class CoupleGameService {
       'scoreU1': 0,
       'scoreU2': 0,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -434,19 +434,19 @@ class CoupleGameService {
         .doc(relId)
         .collection('games')
         .doc('would_you_rather');
-    final snap = await docRef.get();
+    final snap = await docRef.get().timeout(const Duration(seconds: 8));
     if (!snap.exists) {
       await docRef.set({
         'dilemmaIndex': dilemmaIndex,
         'choices': {uid: choiceIndex},
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     } else {
       await docRef.update({
         'dilemmaIndex': dilemmaIndex,
         'choices.$uid': choiceIndex,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     }
   }
 
@@ -460,7 +460,7 @@ class CoupleGameService {
       'dilemmaIndex': nextIndex,
       'choices': {},
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -481,19 +481,19 @@ class CoupleGameService {
         .doc(relId)
         .collection('games')
         .doc('couple_quiz');
-    final snap = await docRef.get();
+    final snap = await docRef.get().timeout(const Duration(seconds: 8));
     if (!snap.exists) {
       await docRef.set({
         'questionIndex': questionIndex,
         'answers': {uid: answerIndex},
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     } else {
       await docRef.update({
         'questionIndex': questionIndex,
         'answers.$uid': answerIndex,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
     }
   }
 
@@ -510,7 +510,7 @@ class CoupleGameService {
     };
     if (incrementScore1) updates['scoreU1'] = FieldValue.increment(1);
     if (incrementScore2) updates['scoreU2'] = FieldValue.increment(1);
-    await docRef.set(updates, SetOptions(merge: true));
+    await docRef.set(updates, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
   }
 
   Future<void> resetQuiz(String relId) async {
@@ -525,7 +525,7 @@ class CoupleGameService {
       'scoreU1': 0,
       'scoreU2': 0,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   // ===========================================================================
@@ -564,7 +564,7 @@ class CoupleGameService {
       'status': 'sent',
       'timestamp': DateTime.now().millisecondsSinceEpoch,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 
   Future<void> completeTruthOrDareChallenge(String relId) async {
@@ -576,6 +576,6 @@ class CoupleGameService {
     await docRef.update({
       'status': 'completed',
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(const Duration(seconds: 8));
   }
 }

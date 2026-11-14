@@ -40,10 +40,13 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
       builder: (context, snapshot) {
         final rel = snapshot.data;
         if (rel != null) {
-          ThemeService.instance.syncFromRelationshipData(
-            rel.toFirestore(),
-            currentUid: _cloudService.currentUid,
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ThemeService.instance.syncFromRelationshipData(
+              rel.toFirestore(),
+              currentUid: _cloudService.currentUid,
+            );
+          });
         }
         final currentUid = _cloudService.currentUid;
         final myName = rel?.getMyName(currentUid) ?? 'You';

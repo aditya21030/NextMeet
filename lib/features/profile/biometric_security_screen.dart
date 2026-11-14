@@ -140,6 +140,7 @@ class _BiometricSecurityScreenState extends State<BiometricSecurityScreen> {
         }
         await _securityService.setFingerprintEnabled(true);
         await _securityService.setLocalBiometricEnabled(true);
+        if (!mounted) return;
         setState(() => _masterBiometricsEnabled = true);
 
         VibrationService.success();

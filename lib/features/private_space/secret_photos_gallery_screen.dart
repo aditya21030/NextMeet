@@ -35,6 +35,7 @@ class _SecretPhotosGalleryScreenState extends State<SecretPhotosGalleryScreen> {
         imageQuality: 85,
       );
       if (picked == null) return;
+      if (!mounted) return;
 
       VibrationService.medium();
       setState(() => _isUploading = true);

@@ -249,10 +249,13 @@ class _HomeScreenState extends State<HomeScreen> {
             }
 
             if (rel != null) {
-              ThemeService.instance.syncFromRelationshipData(
-                rel.toFirestore(),
-                currentUid: _cloudService.currentUid,
-              );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                ThemeService.instance.syncFromRelationshipData(
+                  rel.toFirestore(),
+                  currentUid: _cloudService.currentUid,
+                );
+              });
             }
 
             if (isPaired && rel != null && (_lastWidgetSyncTime == null || DateTime.now().difference(_lastWidgetSyncTime!).inMinutes >= 2)) {

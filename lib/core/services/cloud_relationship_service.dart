@@ -850,7 +850,7 @@ class CloudRelationshipService {
           if (doc.id != relId) {
             final orphanData = doc.data() as Map<String, dynamic>?;
             final oldCode = orphanData?['inviteCode'] as String?;
-            await doc.reference.update({'status': 'abandoned'});
+            await doc.reference.update({'status': 'abandoned'}).timeout(const Duration(seconds: 5));
             if (oldCode != null && oldCode.isNotEmpty) {
               try {
                 await _invites.doc(oldCode).set({'status': 'abandoned'}, SetOptions(merge: true));
@@ -929,7 +929,7 @@ class CloudRelationshipService {
     } catch (_) {}
 
     try {
-      final doc = await _relationships.doc(relId).get();
+      final doc = await _relationships.doc(relId).get().timeout(const Duration(seconds: 8));
       if (doc.exists) {
         return RelationshipModel.fromFirestore(doc.data() as Map<String, dynamic>, id: doc.id);
       }
@@ -942,7 +942,7 @@ class CloudRelationshipService {
       await _relationships.doc(relId).update({
         'status': 'unpaired',
         'unpairedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(const Duration(seconds: 8));
       try {
         await _supabase.from('relationships').update({
           'status': 'unpaired',
